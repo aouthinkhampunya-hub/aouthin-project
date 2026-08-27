@@ -3,7 +3,6 @@ const path = require('path');
 
 const db = new Database(path.join(__dirname, 'store.db'));
 
-// สร้างตาราง products (ถ้ายังไม่มี)
 db.exec(`
   CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,7 +15,6 @@ db.exec(`
   )
 `);
 
-// สร้างตาราง orders (ถ้ายังไม่มี)
 db.exec(`
   CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,6 +23,14 @@ db.exec(`
     status TEXT DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
   )
 `);
 

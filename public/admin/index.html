@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <title>ຫຼັງບ້ານຮ້ານອາຫານ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>ຈັດການຮ້ານອາຫານ</h1>
+    <nav>
+      <a href="index.html">ເມນູ</a>
+      <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
+      <a href="qrcode.html">QR Code</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="add-form">
+      <h2>ເພີ່ມເມນູໃໝ່</h2>
+      <input type="text" id="name" placeholder="ຊື່ເມນູ">
+      <input type="number" id="price" placeholder="ລາຄາ">
+      <select id="size">
+        <option value="">ປະເພດອາຫານ</option>
+        <option value="ເຂົ້າ">ເຂົ້າ</option>
+        <option value="ເຄື່ອງດື່ມ">ເຄື່ອງດື່ມ</option>
+        <option value="ຂອງກິນຫລີ້ນ">ຂອງກິນຫລີ້ນ</option>
+        <option value="ເສັ້ນ">ເສັ້ນ</option>
+        <option value="ຕຳ">ຕຳ</option>
+      </select>
+      <select id="color">
+        <option value="">ລະດັບຄວາມເຜັດ</option>
+        <option value="ບໍ່ເຜັດ">ບໍ່ເຜັດ</option>
+        <option value="ເຜັດໜ້ອຍ">ເຜັດໜ້ອຍ</option>
+        <option value="ເຜັດປານກາງ">ເຜັດປານກາງ</option>
+        <option value="ເຜັດຫຼາຍ">ເຜັດຫຼາຍ</option>
+      </select>
+      <input type="number" id="stock" placeholder="ຈຳນວນ (ຈານ)">
+      <input type="file" id="image" accept="image/*">
+      <button onclick="addProduct()">ເພີ່ມເມນູ</button>
+    </section>
+
+    <section id="product-list">
+      <p>ກຳລັງໂຫລດ...</p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

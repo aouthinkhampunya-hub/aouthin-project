@@ -5,18 +5,19 @@ async function loadProducts() {
   const container = document.getElementById('product-list');
 
   if (products.length === 0) {
-    container.innerHTML = '<p>ยังไม่มีสินค้า</p>';
+    container.innerHTML = '<p>ຍັງບໍ່ມີອາຫານ</p>';
     return;
   }
 
   container.innerHTML = products.map(p => `
     <div class="product-card">
+      ${p.image ? `<img src="${p.image}" class="product-img">` : ''}
       <h3>${p.name}</h3>
-      <p>ไซส์: ${p.size} | สี: ${p.color}</p>
-      <p>คงเหลือ: ${p.stock} ชิ้น</p>
-      <p class="price">${p.price} บาท</p>
+      <p>ປະເພດ: ${p.size} | ລົດຊາດ: ${p.color}</p>
+      <p>ເຫຼືອ: ${p.stock} ຈານ</p>
+      <p class="price">${p.price} ກີບ</p>
       <button onclick="orderProduct(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>
-        ${p.stock <= 0 ? 'สินค้าหมด' : 'สั่งซื้อ'}
+        ${p.stock <= 0 ? 'ອາຫານໝົດ' : 'ສັ່ງອາຫານ'}
       </button>
     </div>
   `).join('');
@@ -32,10 +33,10 @@ async function orderProduct(id) {
   const data = await res.json();
 
   if (res.ok) {
-    alert('สั่งซื้อสำเร็จ! ✅');
-    loadProducts(); // โหลดสินค้าใหม่ (อัปเดตสต็อก)
+    alert('ສັ່ງອາຫານສຳເລັດ! 🍽️');
+    loadProducts();
   } else {
-    alert('เกิดข้อผิดพลาด: ' + data.error);
+    alert('ເກີດຂໍ້ຜິດພາດ: ' + data.error);
   }
 }
 

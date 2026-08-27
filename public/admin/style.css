@@ -1,0 +1,188 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Segoe UI', 'Noto Sans Lao', sans-serif;
+    background: #fff8f0;
+    color: #2b1a12;
+  }
+  
+  header {
+    background: linear-gradient(135deg, #7a1f0f, #b8380e);
+    color: #fff3e0;
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  
+  header h1 {
+    font-size: 20px;
+    letter-spacing: 0.5px;
+  }
+  
+  nav a {
+    color: #fff3e0;
+    text-decoration: none;
+    margin-left: 22px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+  }
+  
+  nav a:hover {
+    background: rgba(255, 243, 224, 0.15);
+  }
+  
+  main {
+    padding: 24px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .add-form {
+    background: white;
+    padding: 22px;
+    border-radius: 14px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+    border-top: 4px solid #b8380e;
+  }
+  
+  .add-form h2 {
+    width: 100%;
+    margin-bottom: 6px;
+    color: #7a1f0f;
+    font-size: 18px;
+  }
+  
+  .add-form input,
+  .add-form select {
+    padding: 10px 12px;
+    border: 1px solid #e8d5c4;
+    border-radius: 8px;
+    flex: 1;
+    min-width: 110px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  
+  .add-form input:focus,
+  .add-form select:focus {
+    outline: none;
+    border-color: #b8380e;
+  }
+  
+  .add-form button {
+    padding: 10px 20px;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s ease;
+  }
+  
+  .add-form button:hover {
+    background: #256428;
+  }
+  
+  table {
+    width: 100%;
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    border-collapse: collapse;
+    box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+  }
+  
+  th, td {
+    padding: 14px;
+    text-align: left;
+    border-bottom: 1px solid #f7ece0;
+    font-size: 14px;
+  }
+  
+  th {
+    background: #7a1f0f;
+    color: #fff3e0;
+    font-weight: 600;
+  }
+  
+  tr:hover td {
+    background: #fff8f0;
+  }
+  
+  .delete-btn {
+    background: #b8380e;
+    color: white;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s ease;
+  }
+  
+  .delete-btn:hover {
+    background: #932c0a;
+  }
+  
+  .login-box {
+    max-width: 380px;
+    margin: 100px auto;
+    background: white;
+    padding: 36px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(122,31,15,0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    border-top: 5px solid #b8380e;
+  }
+  
+  .login-box h1 {
+    font-size: 22px;
+    margin-bottom: 8px;
+    text-align: center;
+    color: #7a1f0f;
+  }
+  
+  .login-box input {
+    padding: 12px;
+    border: 1px solid #e8d5c4;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+  
+  .login-box input:focus {
+    outline: none;
+    border-color: #b8380e;
+  }
+  
+  .login-box button {
+    padding: 12px;
+    background: #b8380e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 15px;
+    transition: background 0.2s ease;
+  }
+  
+  .login-box button:hover {
+    background: #932c0a;
+  }
