@@ -2,25 +2,43 @@
 <html lang="lo">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ຮ້ານອາຫານຕາມສັ່ງAOUTHIN</title>
+  <title>ຄຳສັ່ງອາຫານ</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <div class="eyebrow">🍜 ສະແກນ • ສັ່ງ • ລໍຖ້າຮັບ</div>
-    <h1>ຮ້ານອາຫານຕາມສັ່ງAOUTHIN</h1>
-    <div class="divider"></div>
-    <p>ສະແກນສັ່ງອາຫານໄດ້ງ່າຍໆ ແຊບ ໄວ ສະດວກ</p>
+    <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
+    <p id="table-label"></p>
   </header>
 
   <main id="product-list">
     <p>ກຳລັງໂຫລດ...</p>
   </main>
 
-  <footer>
-    <p>© ຮ້ານອາຫານຕາມສັ່ງ — ອາຫານແຊບ ບໍລິການໄວ</p>
-  </footer>
+  <button id="cart-button" onclick="openCart()">
+    🛒 ກະຕ່າ (<span id="cart-count">0</span>)
+  </button>
+  <button id="bill-button" onclick="goToBill()">🧾 ເບິ່ງບິນ</button>
+  
+  <div id="cart-overlay" class="hidden">
+    <div class="cart-box">
+      <h2>ກະຕ່າອາຫານ</h2>
+      <div id="cart-items"></div>
+      <p class="cart-total">ລວມ: <span id="cart-total">0</span> ກີບ</p>
+      <button class="confirm-btn" onclick="confirmCartOrder()">ຢືນຢັນສັ່ງອາຫານ</button>
+      <button class="cancel-btn" onclick="closeCart()">ປິດ</button>
+    </div>
+  </div>
+
+  <!-- 👇 ໃສ່ຕົງນີ້ (ຫຼັງ cart-overlay, ກ່ອນ script.js) -->
+  <div id="success-overlay" class="hidden">
+    <div class="success-box">
+      <div class="success-icon">🍽️</div>
+      <h2>ສັ່ງອາຫານສຳເລັດ!</h2>
+      <p>ອາຫານຂອງທ່ານກຳລັງຖືກກຽມ ກະລຸນາລໍຖ້າບຶ່ງໜ້ອຍໜຶ່ງ</p>
+      <button class="success-btn" onclick="closeSuccess()">ຕົກລົງ</button>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>

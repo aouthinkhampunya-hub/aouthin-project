@@ -1,14 +1,21 @@
-const db = require('./db');
 const bcrypt = require('bcryptjs');
+const db = require('./db');
 
-const username = 'admin';
-const password = '123456';
+const username = process.argv[2];
+const password = process.argv[3];
+const name = process.argv[4];
 
-const hashedPassword = bcrypt.hashSync(password, 10);
+if (!username || !password || !name) {
+  console.log('ວິທີໃຊ້: node server/createAdmin.js <username> <password> "<ຊື່>"');
+  process.exit(1);
+}
+
+const hashed = bcrypt.hashSync(password, 10);
 
 try {
-  db.prepare('INSERT INTO admins (username, password) VALUES (?, ?)').run(username, hashedPassword);
-  console.log('ສ້າງບັນຊີແອດມິນສຳເລັດ: ' + username);
+  const stmt = db.prepare(`INSERT INTO admins (username, password, name) VALUES (?, ?, ?)`);
+  const result = stmt.run(username, hashed, name);
+  console.log(`ເພີ່ມ admin "${name}" (${username}) ສຳເລັດ, id: ${result.lastInsertRowid}`);
 } catch (err) {
-  console.log('ອາດຈະມີບັນຊີນີ້ຢູ່ແລ້ວ:', err.message);
+  console.error('ລົ້ມເຫລວ:', err.message);
 }

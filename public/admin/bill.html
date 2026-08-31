@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <title>ໃບບິນ - AOUTHIN</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .bill-page {
+      max-width: 500px;
+      margin: 30px auto;
+      padding: 0 16px 60px;
+    }
+    .receipt {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(43,27,14,0.1);
+    }
+    .receipt-header {
+      text-align: center;
+      border-bottom: 2px dashed var(--cream-dark);
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+    }
+    .receipt-header h2 {
+      color: var(--brown);
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+    .receipt-header p {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .receipt-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .receipt-table th {
+      text-align: left;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 4px;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+    .receipt-table td {
+      padding: 8px 4px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+    .receipt-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 2px dashed var(--cream-dark);
+      margin-bottom: 20px;
+    }
+    .receipt-total span:first-child {
+      font-size: 15px;
+      color: var(--muted);
+    }
+    .receipt-total span:last-child {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--brown);
+    }
+    .qr-section {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-top: 16px;
+      border-top: 2px dashed var(--cream-dark);
+    }
+    .qr-section p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .qr-section img {
+      width: 180px;
+      height: 180px;
+      border-radius: 10px;
+      border: 1px solid var(--cream-dark);
+    }
+    .bill-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .bill-actions button {
+      flex: 1;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-print {
+      background: var(--cream-dark);
+      color: var(--brown);
+    }
+    .btn-confirm {
+      background: var(--green);
+      color: white;
+    }
+    .btn-confirm:hover { background: var(--green-dark); }
+    @media print {
+      header, .bill-actions, #bill-button, #cart-button { display: none !important; }
+      body { background: white; }
+      .receipt { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <script src="auth-guard.js"></script>
+  <header>
+    <h1>ໃບບິນ</h1>
+  </header>
+
+  <main class="bill-page">
+    <div id="receipt-container">
+      <p style="text-align:center; padding:40px;">ກຳລັງໂຫລດ...</p>
+    </div>
+  </main>
+
+  <script src="bill.js"></script>
+</body>
+</html>
