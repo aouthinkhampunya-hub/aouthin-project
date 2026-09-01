@@ -6,6 +6,7 @@ const productsRouter = require('./routes/products');
 const ordersRouter = require('./routes/orders');
 const qrcodeRouter = require('./routes/qrcode');
 const settingsRouter = require('./routes/settings');
+const adminsRouter = require('./routes/admin');
 const authRouter = require('./routes/auth');
 const requireAuth = require('./middleware/requireAuth');
 
@@ -21,6 +22,7 @@ app.use('/api/products', productsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/qrcode', qrcodeRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/admins', adminsRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server ກຳລັງເຮດວຽກຢູ່' });

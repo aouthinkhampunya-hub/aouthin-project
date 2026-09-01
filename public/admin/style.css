@@ -186,3 +186,70 @@
   .login-box button:hover {
     background: #932c0a;
   }
+  /* ===== ตัวกรองวันที่ ===== */
+.date-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: white;
+  padding: 16px 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+  margin: 20px auto;
+  max-width: 1000px;
+}
+
+.date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.date-field label {
+  font-size: 12px;
+  color: #8a7c6a;
+  font-weight: 600;
+}
+
+.date-field input[type="date"] {
+  padding: 10px 12px;
+  border: 1px solid #e8d5c4;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #2b1a12;
+}
+
+.date-field input[type="date"]:focus {
+  outline: none;
+  border-color: #b8380e;
+}
+
+.filter-btn, .clear-btn {
+  padding: 11px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.filter-btn {
+  background: #b8380e;
+  color: white;
+}
+
+.filter-btn:hover {
+  background: #932c0a;
+}
+
+.clear-btn {
+  background: #f7ece0;
+  color: #7a1f0f;
+}
+
+.clear-btn:hover {
+  background: #eeddc9;
+}

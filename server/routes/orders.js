@@ -69,6 +69,22 @@ router.put('/:id', (req, res) => {
   res.json({ success: true });
 });
 
+router.delete('/:id', (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+
+  if (!order) {
+    return res.status(404).json({ error: 'ບໍ່ພົບອໍເດີ້ນີ້' });
+  }
+  if (order.status !== 'pending') {
+    return res.status(400).json({ error: 'ຍົກເລີກບໍ່ໄດ້ ຮ້ານເລີ່ມເຮັດອາຫານແລ້ວ' });
+  }
+
+  db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?').run(order.quantity, order.product_id);
+  db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
+
+  res.json({ success: true });
+});
+
 router.put('/bills/:id/close', (req, res) => {
   db.prepare(`UPDATE bills SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = ?`).run(req.params.id);
   res.json({ success: true });

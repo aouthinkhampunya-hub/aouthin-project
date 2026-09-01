@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <title>ລາຍງານ - AOUTHIN</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+      border-top: 4px solid #b8380e;
+    }
+    .stat-card .label { color: #8a7c6a; font-size: 13px; margin-bottom: 6px; }
+    .stat-card .value { color: #7a1f0f; font-size: 26px; font-weight: 800; }
+    .stat-card .sub { color: #8a7c6a; font-size: 12px; margin-top: 4px; }
+    .top-items {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+    }
+    .top-items h2 { color: #7a1f0f; margin-bottom: 14px; font-size: 17px; }
+    .top-item-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f7ece0;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <script src="auth-guard.js"></script>
+  <header>
+    <h1>ຈັດການຮ້ານອາຫານ</h1>
+    <nav>
+      <a href="index.html">ເມນູ</a>
+      <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
+      <a href="tables.html">ໂຕະອາຫານ</a>
+      <a href="qrcode.html">QR Code</a>
+      <a href="dashboard.html">ລາຍງານ</a>
+      <a href="staff.html">ພະນັກງານ</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="stats-grid" id="stats-grid">
+      <p>ກຳລັງໂຫລດ...</p>
+    </div>
+
+    <div class="top-items">
+      <h2>🔥 ເມນູຂາຍດີ (ອາທິດນີ້)</h2>
+      <div id="top-items-list"></div>
+    </div>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <title>ພະນັກງານ - AOUTHIN</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <script src="auth-guard.js"></script>
+  <header>
+    <h1>ຈັດການຮ້ານອາຫານ</h1>
+    <nav>
+      <a href="index.html">ເມນູ</a>
+      <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
+      <a href="tables.html">ໂຕະອາຫານ</a>
+      <a href="qrcode.html">QR Code</a>
+      <a href="dashboard.html">ລາຍງານ</a>
+      <a href="staff.html">ພະນັກງານ</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="add-form">
+      <h2>ເພີ່ມພະນັກງານໃໝ່</h2>
+      <input type="text" id="new-username" placeholder="Username">
+      <input type="password" id="new-password" placeholder="Password">
+      <input type="text" id="new-name" placeholder="ຊື່ພະນັກງານ">
+      <button onclick="addStaff()">ເພີ່ມ</button>
+    </div>
+
+    <table id="staff-table">
+      <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th></th></tr>
+    </table>
+  </main>
+
+  <script src="staff.js"></script>
+</body>
+</html>

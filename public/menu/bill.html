@@ -23,6 +23,17 @@
         ກັບໄປສັ່ງອາຫານເພີ່ມ
       </a>
   </main>
+  <div id="cancel-confirm-overlay" class="hidden">
+    <div class="confirm-box">
+      <div class="icon-circle">🗑️</div>
+      <h3>ຍົກເລີກອໍເດີ້</h3>
+      <p>ຢືນຢັນວ່າຈະຍົກເລີກລາຍການອາຫານນີ້?</p>
+      <div class="confirm-actions">
+        <button class="confirm-cancel-red" onclick="closeCancelConfirm()">ຍົກເລີກ</button>
+        <button class="confirm-yes" onclick="doCancelOrder()">ຢືນຢັນ</button>
+      </div>
+    </div>
+  </div>
 
   <script src="bill.js"></script>
 </body>

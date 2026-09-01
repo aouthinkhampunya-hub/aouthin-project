@@ -14,10 +14,25 @@
       <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
       <a href="tables.html">ໂຕະອາຫານ</a>
       <a href="qrcode.html">QR Code</a>
+      <a href="dashboard.html">ລາຍງານ</a>
+      <a href="staff.html">ພະນັກງານ</a>
     </nav>
   </header>
 
   <main>
+    <div class="date-filter-bar">
+      <div class="date-field">
+        <label>ຈາກວັນທີ</label>
+        <input type="date" id="date-from">
+      </div>
+      <div class="date-field">
+        <label>ຫາວັນທີ</label>
+        <input type="date" id="date-to">
+      </div>
+      <button class="filter-btn" onclick="applyDateFilter()">ກວດສອບ</button>
+      <button class="clear-btn" onclick="clearDateFilter()">ລ້າງ</button>
+    </div>
+
     <section id="order-list">
       <p>ກຳລັງໂຫລດ...</p>
     </section>
