@@ -4,7 +4,6 @@ const db = require('../db');
 const multer = require('multer');
 const path = require('path');
 
-// ตั้งค่า multer เก็บรูป QR ที่ public/uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../../public/uploads'));

@@ -65,21 +65,32 @@ async function loadBill() {
       `}
 
       <div class="bill-actions">
-        <button class="btn-print" onclick="window.print()">🖨️ ພິມບິນ</button>
-        <button class="btn-confirm" onclick="confirmPaid(${bill.id})">✅ ຢືນຢັນຮັບເງິນແລ້ວ</button>
+                <button class="btn-print" onclick="window.print()">🖨️ ພິມບິນ</button>
+        <button class="btn-confirm" onclick="confirmPaid(${bill.id})">🧾 ກວດສອບບິນ</button>
       </div>
     </div>
   `;
 }
 
-async function confirmPaid(id) {
-  if (!confirm('ຢືນຢັນວ່າໂຕະນີ້ຈ່າຍເງິນຄົບແລ້ວ?')) return;
+let pendingBillId = null;
 
-  await fetch(`/api/orders/bills/${id}/close`, {
+function confirmPaid(id) {
+  pendingBillId = id;
+  document.getElementById('confirm-overlay').classList.remove('hidden');
+}
+
+function closeConfirm() {
+  pendingBillId = null;
+  document.getElementById('confirm-overlay').classList.add('hidden');
+}
+
+async function doConfirmPaid() {
+  if (!pendingBillId) return;
+
+  await fetch(`/api/orders/bills/${pendingBillId}/close`, {
     method: 'PUT'
   });
 
-  alert('ປິດບິນສຳເລັດ! ✅');
   window.location.href = 'tables.html';
 }
 

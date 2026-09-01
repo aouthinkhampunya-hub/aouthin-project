@@ -22,14 +22,33 @@ async function loadProducts() {
   const res = await fetch('/api/products');
   allProducts = await res.json();
 
+  populateCategoryFilter();
+  renderProducts(allProducts);
+}
+
+function populateCategoryFilter() {
+  const select = document.getElementById('category-filter');
+  const categories = [...new Set(allProducts.map(p => p.size).filter(Boolean))];
+
+  select.innerHTML = '<option value="">ທຸກປະເພດ</option>' +
+    categories.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function filterProducts() {
+  const selected = document.getElementById('category-filter').value;
+  const filtered = selected ? allProducts.filter(p => p.size === selected) : allProducts;
+  renderProducts(filtered);
+}
+
+function renderProducts(products) {
   const container = document.getElementById('product-list');
 
-  if (allProducts.length === 0) {
-    container.innerHTML = '<p>ຍັງບໍ່ມີອາຫານ</p>';
+  if (products.length === 0) {
+    container.innerHTML = '<p>ບໍ່ພົບອາຫານໃນປະເພດນີ້</p>';
     return;
   }
 
-  container.innerHTML = allProducts.map(p => `
+  container.innerHTML = products.map(p => `
     <div class="product-card">
       ${p.image ? `<img src="${p.image}" class="product-img">` : ''}
       <h3>${p.name}</h3>
