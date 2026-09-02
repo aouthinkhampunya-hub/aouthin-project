@@ -11,8 +11,8 @@
   }
   
   header {
-    background: linear-gradient(135deg, #7a1f0f, #b8380e);
-    color: #fff3e0;
+    background: #ffffff;
+    color: #000000;
     padding: 18px 24px;
     display: flex;
     justify-content: space-between;
@@ -26,7 +26,7 @@
   }
   
   nav a {
-    color: #fff3e0;
+    color: #000000;
     text-decoration: none;
     margin-left: 22px;
     font-size: 14px;
@@ -38,6 +38,14 @@
   
   nav a:hover {
     background: rgba(255, 243, 224, 0.15);
+  }
+  nav a.active {
+    background: #1e88c7;
+    color: #fff3e0;
+  }
+  
+  nav a.active:hover {
+    background: #1670a3;
   }
   
   main {
@@ -252,4 +260,45 @@
 
 .clear-btn:hover {
   background: #eeddc9;
+}
+/* ===== ปั๊บแจ้งเตือนเอิ้นพะนักงาน ===== */
+#staff-calls-bar {
+  max-width: 1000px;
+  margin: 0 auto 20px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.staff-call-alert {
+  background: #fff3cd;
+  border: 2px solid #d4a017;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  color: #7a1f0f;
+  animation: pulseAlert 1.5s infinite;
+}
+
+.staff-call-alert button {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.staff-call-alert button:hover {
+  background: #256428;
+}
+
+@keyframes pulseAlert {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212,160,23,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(212,160,23,0); }
 }

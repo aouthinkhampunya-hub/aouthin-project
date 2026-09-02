@@ -47,6 +47,16 @@ db.exec(`
   )
 `);
 
+// ➕ ຕາຕະລາງແຈ້ງເຕືອນເອີ້ນພະນັກງານ
+db.exec(`
+  CREATE TABLE IF NOT EXISTS staff_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    table_number TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // ຕາຕະລາງບັນຊີແອດມິນ (admin account)
 db.exec(`CREATE TABLE IF NOT EXISTS admins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

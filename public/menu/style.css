@@ -207,6 +207,43 @@ footer {
 .hidden {
   display: none !important;
 }
+/* ===== ปุ่มลอยมุมซ้ายล่าง (บิล + เอิ้นพะนักงาน) ===== */
+.left-buttons {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+}
+
+#bill-button, #call-staff-button {
+  position: static;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  white-space: nowrap;
+}
+
+#bill-button {
+  background: var(--brown);
+  color: var(--yellow);
+}
+
+#call-staff-button {
+  background: #d4a017;
+  color: white;
+}
+
+#call-staff-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 
 /* ===== พื้นหลังมืดครอบทังจอ ===== */
 #cart-overlay {
@@ -619,3 +656,18 @@ footer {
   color: white;
 }
 .confirm-cancel-red:hover { background: #a5301f; }
+.qty-input {
+  width: 40px;
+  text-align: center;
+  border: 1px solid #e8d5c4;
+  border-radius: 6px;
+  padding: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
