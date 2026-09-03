@@ -20,10 +20,10 @@ function playBeep() {
     [0, 0.18].forEach(offset => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
-      osc.type = 'sine';
+      osc.type = 'square';
       osc.frequency.value = 880;
       gain.gain.setValueAtTime(0.001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.9, now + offset + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.15);
       osc.connect(gain);
       gain.connect(audioCtx.destination);

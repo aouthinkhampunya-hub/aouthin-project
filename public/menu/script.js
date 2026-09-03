@@ -78,6 +78,20 @@ function addToCart(id) {
     cart.push({ product_id: id, name: product.name, price: product.price, quantity: 1, stock: product.stock });
   }
   renderCart();
+  showToast(`✅ ເພີ່ມ "${product.name}" ແລ້ວ`);
+}
+
+let toastTimeout = null;
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 1800);
 }
 
 function changeCartQty(id, delta) {

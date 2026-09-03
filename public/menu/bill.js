@@ -35,7 +35,7 @@ async function loadBill() {
           <td>${i.price * i.quantity} ກີບ</td>
           <td>${statusLabel(i.status)}</td>
           <td>${i.status === 'pending' ? `<button class="cancel-order-btn" onclick="cancelOrder(${i.id})">ຍົກເລີກ</button>` : ''}</td>
-        </tr>
+        </tr>  
       `).join('')}
     </table>
     <p class="cart-total">ລວມທັງໝົດ: ${total} ກີບ</p>
@@ -43,7 +43,7 @@ async function loadBill() {
 }
 
 loadBill();
-setInterval(loadBill, 5000); // อัปเดตสถานะทุก 5 วินาที
+setInterval(loadBill, 5000); 
 let pendingCancelId = null;
 
 function cancelOrder(orderId) {

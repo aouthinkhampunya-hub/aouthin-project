@@ -69,5 +69,8 @@ const adminColumns = db.prepare(`PRAGMA table_info(admins)`).all().map(c => c.na
 if (!adminColumns.includes('name')) {
   db.exec(`ALTER TABLE admins ADD COLUMN name TEXT`);
 }
+if (!adminColumns.includes('role')) {
+  db.exec(`ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'staff'`);
+}
 
 module.exports = db;
