@@ -27,7 +27,8 @@ async function loadStaff() {
         <td>${a.role === 'owner' ? '👑 ເຈົ້າຂອງຮ້ານ' : '👤 ພະນັກງານ'}</td>
         <td>
           ${currentRole === 'owner' && a.role !== 'owner'
-            ? `<button class="delete-btn" onclick="deleteStaff(${a.id}, '${a.name}')">ລົບ</button>`
+            ? `<button class="delete-btn" onclick="deleteStaff(${a.id}, '${a.name}')">ລົບ</button>
+               <button class="reset-btn" onclick="resetPassword(${a.id}, '${a.name}')">ຣີເຊັດລະຫັດ</button>`
             : ''}
         </td>
       </tr>
@@ -70,6 +71,24 @@ async function deleteStaff(id, name) {
 
   if (res.ok) {
     loadStaff();
+  } else {
+    alert('ຜິດພາດ: ' + data.error);
+  }
+}
+
+async function resetPassword(id, name) {
+  const newPassword = prompt(`ໃສ່ລະຫັດຜ່ານໃໝ່ສຳລັບ "${name}" (ຢ່າງໜ້ອຍ 4 ໂຕ):`);
+  if (!newPassword) return;
+
+  const res = await fetch(`/api/admins/${id}/reset-password`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: newPassword })
+  });
+  const data = await res.json();
+
+  if (res.ok) {
+    alert(`ຣີເຊັດລະຫັດຜ່ານຂອງ "${name}" ສຳເລັດ! ລະຫັດຜ່ານໃໝ່: ${newPassword}`);
   } else {
     alert('ຜິດພາດ: ' + data.error);
   }

@@ -24,6 +24,22 @@ router.post('/', requireAuth, (req, res) => {
   res.json({ id: result.lastInsertRowid });
 });
 
+router.put('/:id/reset-password', requireOwner, (req, res) => {
+  const { password } = req.body;
+  if (!password || password.length < 4) {
+    return res.status(400).json({ error: 'ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 4 ໂຕ' });
+  }
+
+  const target = db.prepare('SELECT * FROM admins WHERE id = ?').get(req.params.id);
+  if (!target) {
+    return res.status(404).json({ error: 'ບໍ່ພົບພະນັກງານນີ້' });
+  }
+
+  const hashed = bcrypt.hashSync(password, 10);
+  db.prepare('UPDATE admins SET password = ? WHERE id = ?').run(hashed, req.params.id);
+  res.json({ success: true });
+});
+
 router.delete('/:id', requireOwner, (req, res) => {
   const count = db.prepare('SELECT COUNT(*) as c FROM admins').get().c;
   if (count <= 1) {

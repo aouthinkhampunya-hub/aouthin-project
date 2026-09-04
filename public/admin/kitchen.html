@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <title>ຄົວ - AOUTHIN</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .kitchen-page {
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .kitchen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .kitchen-card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 4px 14px rgba(122,31,15,0.1);
+      border-left: 6px solid #d4a017;
+    }
+    .kitchen-card.cooking { border-left-color: #e67e22; }
+    .kitchen-card h2 {
+      color: #7a1f0f;
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+    .kitchen-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f7ece0;
+    }
+    .kitchen-item:last-child { border-bottom: none; }
+    .kitchen-item-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2b1a12;
+    }
+    .kitchen-item-qty {
+      font-size: 16px;
+      color: #b8380e;
+      font-weight: 800;
+      margin-left: 8px;
+    }
+    .kitchen-item button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+    }
+    .btn-start { background: #e67e22; }
+    .btn-start:hover { background: #d3691a; }
+    .btn-done { background: #2e7d32; }
+    .btn-done:hover { background: #256428; }
+    .kitchen-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8a7c6a;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <script src="auth-guard.js"></script>
+  <header>
+    <h1>ຈັດການຮ້ານອາຫານ</h1>
+    <nav>
+      <a href="index.html">ເມນູ</a>
+      <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
+      <a href="tables.html">ໂຕະອາຫານ</a>
+      <a href="kitchen.html">ຄົວ</a>
+      <a href="qrcode.html">QR Code</a>
+      <a href="dashboard.html">ລາຍງານ</a>
+      <a href="staff.html">ພະນັກງານ</a>
+    </nav>
+  </header>
+
+  <main class="kitchen-page">
+    <div id="kitchen-content">
+      <p style="text-align:center; padding:40px;">ກຳລັງໂຫລດ...</p>
+    </div>
+  </main>
+
+  <script src="kitchen.js"></script>
+</body>
+</html>
