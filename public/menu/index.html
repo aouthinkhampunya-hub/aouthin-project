@@ -24,7 +24,11 @@
   <button id="cart-button" onclick="openCart()">
     🛒 ກະຕ່າ (<span id="cart-count">0</span>)
   </button>
-  <button id="bill-button" onclick="goToBill()">🧾 ເບິ່ງບິນ</button>
+
+  <div class="left-buttons">
+    <button id="bill-button" onclick="goToBill()">🧾 ເບິ່ງບິນ</button>
+    <button id="call-staff-button" onclick="callStaff()">🔔 ເອີ້ນພະນັກງານ</button>
+  </div>
   
   <div id="cart-overlay" class="hidden">
     <div class="cart-box">
@@ -41,11 +45,12 @@
     <div class="success-box">
       <div class="success-icon">🍽️</div>
       <h2>ສັ່ງອາຫານສຳເລັດ!</h2>
-      <p>ອາຫານຂອງທ່ານກຳລັງຖືກກຽມ ກະລຸນາລໍຖ້າບຶ່ງໜ້ອຍໜຶ່ງ</p>
+      <p>ອາຫານຂອງທ່ານກຳລັງຖືກກຽມ ກະລຸນາລໍຖ້າ</p>
       <button class="success-btn" onclick="closeSuccess()">ຕົກລົງ</button>
     </div>
   </div>
 
+  <div id="toast"></div>
   <script src="script.js"></script>
 </body>
 </html>

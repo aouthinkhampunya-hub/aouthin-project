@@ -153,14 +153,12 @@ footer {
   color: var(--muted);
   font-size: 12px;
 }
-/* ===== ป้ายเลขโต๊ะ ===== */
 #table-label {
   color: #ffd699;
   font-size: 15px;
   margin-top: 4px;
 }
 
-/* ===== ปุ่มตะกร้าลอย ===== */
 #cart-button {
   position: fixed;
   bottom: 24px;
@@ -207,8 +205,43 @@ footer {
 .hidden {
   display: none !important;
 }
+.left-buttons {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 100;
+}
 
-/* ===== พื้นหลังมืดครอบทังจอ ===== */
+#bill-button, #call-staff-button {
+  position: static;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  white-space: nowrap;
+}
+
+#bill-button {
+  background: var(--brown);
+  color: var(--yellow);
+}
+
+#call-staff-button {
+  background: #d4a017;
+  color: white;
+}
+
+#call-staff-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 #cart-overlay {
   position: fixed;
   top: 0;
@@ -229,7 +262,6 @@ footer {
   to { opacity: 1; }
 }
 
-/* ===== กล่องตะกร้า ===== */
 .cart-box {
   background: var(--cream);
   color: var(--text);
@@ -262,7 +294,6 @@ footer {
   content: "🛒 ";
 }
 
-/* ===== รายการในตะกร้า ===== */
 #cart-items {
   padding: 0 20px;
 }
@@ -322,7 +353,6 @@ footer {
   font-size: 14px;
 }
 
-/* ===== ยอดรวม ===== */
 .cart-total {
   text-align: right;
   font-size: 19px;
@@ -335,7 +365,7 @@ footer {
   color: var(--orange);
 }
 
-/* ===== ปุ่มยืนยัน/ปิด ===== */
+
 .cart-box .confirm-btn {
   display: block;
   width: calc(100% - 40px);
@@ -372,7 +402,7 @@ footer {
 .cart-box .cancel-btn:hover {
   background: var(--cream-dark);
 }
-/* ===== ป็อบอัพสำเร็จ ===== */
+
 #success-overlay {
   position: fixed;
   top: 0;
@@ -550,7 +580,7 @@ footer {
 .cancel-order-btn:hover {
   background: #a5301f;
 }
-/* ===== ปั๊บอัพยืนยันยกเลิก ===== */
+
 #cancel-confirm-overlay {
   position: fixed;
   top: 0; left: 0;
@@ -619,3 +649,53 @@ footer {
   color: white;
 }
 .confirm-cancel-red:hover { background: #a5301f; }
+.qty-input {
+  width: 40px;
+  text-align: center;
+  border: 1px solid #e8d5c4;
+  border-radius: 6px;
+  padding: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.back-link {
+  display: inline-flex;
+  margin: 32px 0 20px 24px;
+  width: fit-content;
+}
+
+.bill-page {
+  display: flex;
+  flex-direction: column;
+}
+
+#toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: rgba(43, 27, 14, 0.92);
+  color: var(--yellow);
+  padding: 14px 28px;
+  border-radius: 30px;
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 10000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  white-space: nowrap;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}

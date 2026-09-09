@@ -78,6 +78,20 @@ function addToCart(id) {
     cart.push({ product_id: id, name: product.name, price: product.price, quantity: 1, stock: product.stock });
   }
   renderCart();
+  showToast(`✅ ເພີ່ມ "${product.name}" ແລ້ວ`);
+}
+
+let toastTimeout = null;
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 1800);
 }
 
 function changeCartQty(id, delta) {
@@ -96,6 +110,23 @@ function changeCartQty(id, delta) {
   renderCart();
 }
 
+function setCartQty(id, value) {
+  const item = cart.find(i => i.product_id === id);
+  if (!item) return;
+
+  let newQty = parseInt(value, 10);
+
+  if (isNaN(newQty) || newQty < 1) {
+    newQty = 1;
+  } else if (newQty > item.stock) {
+    alert('ອາຫານໃນສະຕັອກບໍ່ພໍ (ເຫຼືອ ' + item.stock + ' ຈານ)');
+    newQty = item.stock;
+  }
+
+  item.quantity = newQty;
+  renderCart();
+}
+
 function renderCart() {
   document.getElementById('cart-count').textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
 
@@ -108,7 +139,14 @@ function renderCart() {
         <span>${item.name}</span>
         <div class="qty-control">
           <button onclick="changeCartQty(${item.product_id}, -1)">-</button>
-          <span>${item.quantity}</span>
+          <input
+            type="number"
+            class="qty-input"
+            value="${item.quantity}"
+            min="1"
+            max="${item.stock}"
+            onchange="setCartQty(${item.product_id}, this.value)"
+          >
           <button onclick="changeCartQty(${item.product_id}, 1)">+</button>
         </div>
         <span>${item.price * item.quantity} ກີບ</span>
@@ -163,3 +201,22 @@ loadProducts();
 function goToBill() {
   window.location.href = `bill.html?table=${tableNumber}`;
 }
+async function callStaff() {
+  const btn = document.getElementById('call-staff-button');
+  btn.disabled = true;
+  btn.textContent = '📞 ກຳລັງແຈ້ງ...';
+
+  await fetch('/api/staffcall', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ table_number: tableNumber })
+  });
+
+  btn.textContent = '✅ ແຈ້ງແລ້ວ ລໍຖ້າພະນັກງານ';
+
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = '🔔 ເອີ້ນພະນັກງານ';
+  }, 15000);
+}
+  

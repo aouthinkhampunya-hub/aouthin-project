@@ -3,22 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <title>QR Code ຮ້ານອາຫານ</title>
+  <link rel="stylesheet" href="style.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
+    .qr-page {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      font-family: 'Segoe UI', 'Noto Sans Lao', sans-serif;
+      padding: 60px 20px;
+      min-height: calc(100vh - 70px);
       background: linear-gradient(135deg, #7a1f0f, #b8380e);
     }
-    h1 {
+    .qr-page h2 {
       margin-bottom: 24px;
       color: #fff3e0;
       font-size: 22px;
@@ -31,25 +27,40 @@
       border-radius: 20px;
       box-shadow: 0 12px 30px rgba(0,0,0,0.3);
     }
-    img {
+    .qr-box img {
       border-radius: 10px;
       display: block;
     }
-    p {
+    .qr-page p {
       margin-top: 18px;
-      color: #ffd9b3;
+      color: #ffe0cc;
       font-size: 13px;
       text-align: center;
     }
   </style>
 </head>
 <body>
-  <script src="/admin/auth-guard.js"></script>
-  <h1>ສະແກນເພື່ອສັ່ງອາຫານ</h1>
-  <div class="qr-box">
-    <img id="qr-img" src="" alt="QR Code" width="280" height="280">
+  <script src="auth-guard.js"></script>
+  <script src="nav-active.js"></script>
+  <header>
+    <h1>ຈັດການຮ້ານອາຫານ</h1>
+    <nav>
+      <a href="index.html">ເມນູ</a>
+      <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
+      <a href="tables.html">ໂຕະອາຫານ</a>
+      <a href="qrcode.html">QR Code</a>
+      <a href="dashboard.html">ລາຍງານ</a>
+      <a href="staff.html">ພະນັກງານ</a>
+    </nav>
+  </header>
+
+  <div class="qr-page">
+    <h2>ສະແກນເພື່ອສັ່ງອາຫານ</h2>
+    <div class="qr-box">
+      <img id="qr-img" src="" alt="QR Code" width="280" height="280">
+    </div>
+    <p id="qr-url"></p>
   </div>
-  <p id="qr-url"></p>
 
   <script>
     async function loadQR() {
