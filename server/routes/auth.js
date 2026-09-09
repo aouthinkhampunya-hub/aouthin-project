@@ -16,7 +16,7 @@ router.post('/login', (req, res) => {
   if (!match) return res.status(401).json({ error: 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
 
   const token = jwt.sign(
-    { id: admin.id, username: admin.username, name: admin.name },
+    { id: admin.id, username: admin.username, name: admin.name, role: admin.role || 'staff' },
     JWT_SECRET,
     { expiresIn: '8h' }
   );
@@ -39,10 +39,11 @@ router.get('/me', (req, res) => {
   if (!token) return res.status(401).json({ error: 'ຍັງບໍ່ໄດ້ login' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    res.json({ id: decoded.id, username: decoded.username, name: decoded.name });
+    res.json({ id: decoded.id, username: decoded.username, name: decoded.name, role: decoded.role || 'staff' });
   } catch {
     res.status(401).json({ error: 'session หมดอายุ' });
   }
 });
 
 module.exports = router;
+module.exports.JWT_SECRET = JWT_SECRET;

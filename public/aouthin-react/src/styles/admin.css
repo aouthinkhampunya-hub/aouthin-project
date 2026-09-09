@@ -1,0 +1,104 @@
+/* ===== ຝັ່ງຫຼັງບ້ານ (admin) — ດຶງມາຈາກ public/admin/style.css ເກົ່າ ===== */
+body { font-family: 'Segoe UI', 'Noto Sans Lao', sans-serif; background: #fff8f0; color: #2b1a12; margin: 0; }
+.topbar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 8px 16px; background: #f2f2f2; }
+.topbar button { cursor: pointer; padding: 6px 12px; }
+
+header { background: linear-gradient(135deg, #7a1f0f, #b8380e); color: #fff3e0; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 20px; }
+nav a { color: #fff3e0; text-decoration: none; margin-left: 22px; font-size: 14px; font-weight: 600; padding: 6px 12px; border-radius: 6px; }
+nav a.active { background: #1e88e5; }
+
+main { padding: 24px; max-width: 1000px; margin: 0 auto; }
+
+.add-form { background: white; padding: 22px; border-radius: 14px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; border-top: 4px solid #b8380e; }
+.add-form h2 { width: 100%; color: #7a1f0f; font-size: 18px; }
+.add-form input, .add-form select { padding: 10px 12px; border: 1px solid #e8d5c4; border-radius: 8px; flex: 1; min-width: 110px; font-size: 14px; }
+.add-form button { padding: 10px 20px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+table { width: 100%; background: white; border-radius: 14px; overflow: hidden; border-collapse: collapse; }
+th, td { padding: 14px; text-align: left; border-bottom: 1px solid #f7ece0; font-size: 14px; }
+th { background: #7a1f0f; color: #fff3e0; }
+
+.delete-btn { background: #b8380e; color: white; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.reset-btn { background: #d4a017; color: white; border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-left: 6px; }
+
+.login-box { max-width: 380px; margin: 100px auto; background: white; padding: 36px; border-radius: 16px; display: flex; flex-direction: column; gap: 14px; border-top: 5px solid #b8380e; }
+.login-box h1 { font-size: 22px; text-align: center; color: #7a1f0f; }
+.login-box input { padding: 12px; border: 1px solid #e8d5c4; border-radius: 8px; font-size: 14px; }
+.login-box button { padding: 12px; background: #b8380e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+.date-filter-bar { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; background: white; padding: 16px 20px; border-radius: 14px; margin: 20px auto; max-width: 1000px; }
+.date-field { display: flex; flex-direction: column; gap: 6px; }
+.date-field input[type="date"] { padding: 10px 12px; border: 1px solid #e8d5c4; border-radius: 8px; }
+.filter-btn, .clear-btn { padding: 11px 20px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.filter-btn { background: #b8380e; color: white; }
+.clear-btn { background: #f7ece0; color: #7a1f0f; }
+
+#staff-calls-bar { max-width: 1000px; margin: 0 auto 20px; padding: 0 24px; display: flex; flex-direction: column; gap: 10px; }
+.staff-call-alert { background: #fff3cd; border: 2px solid #d4a017; border-radius: 12px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: #7a1f0f; }
+.staff-call-alert button { background: #2e7d32; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+
+#tables-dashboard { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; max-width: 1000px; margin: 0 auto; }
+.table-card { background: white; border-radius: 14px; padding: 16px; }
+.table-card h2 { color: #7a1f0f; margin-bottom: 10px; }
+.confirm-btn { width: 100%; padding: 12px; margin-top: 12px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+.kitchen-page { padding: 20px; max-width: 1200px; margin: 0 auto; }
+.kitchen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.kitchen-card { background: white; border-radius: 14px; padding: 18px; border-left: 6px solid #d4a017; }
+.kitchen-card.cooking { border-left-color: #e67e22; }
+.kitchen-card h2 { color: #7a1f0f; font-size: 22px; margin-bottom: 12px; }
+.kitchen-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f7ece0; }
+.kitchen-item-name { font-size: 18px; font-weight: 700; }
+.kitchen-item-qty { font-size: 16px; color: #b8380e; font-weight: 800; margin-left: 8px; }
+.kitchen-item button { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; color: white; }
+.btn-start { background: #e67e22; }
+.btn-done { background: #2e7d32; }
+.kitchen-empty { text-align: center; padding: 60px 20px; color: #8a7c6a; font-size: 18px; }
+
+.bill-page { max-width: 500px; margin: 30px auto; padding: 0 16px 60px; }
+.receipt { background: white; border-radius: 16px; padding: 24px; }
+.receipt-header { text-align: center; border-bottom: 2px dashed #FBEFD2; padding-bottom: 16px; margin-bottom: 16px; }
+.receipt-header h2 { color: #2B1B0E; font-size: 20px; }
+.receipt-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+.receipt-table th { text-align: left; font-size: 12px; color: #8a7c6a; padding: 6px 4px; border-bottom: 1px solid #FBEFD2; }
+.receipt-table td { padding: 8px 4px; font-size: 14px; border-bottom: 1px solid #FBEFD2; }
+.receipt-total { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 2px dashed #FBEFD2; margin-bottom: 20px; }
+.receipt-total span:last-child { font-size: 24px; font-weight: 800; color: #2B1B0E; }
+.qr-section { text-align: center; margin-bottom: 20px; padding-top: 16px; border-top: 2px dashed #FBEFD2; }
+.qr-section img { width: 180px; height: 180px; border-radius: 10px; }
+.bill-actions { display: flex; gap: 12px; }
+.bill-actions button { flex: 1; padding: 15px; border: none; border-radius: 14px; font-weight: 700; cursor: pointer; }
+.btn-print { background: #2B1B0E; color: #FFC93C; }
+.btn-confirm { background: #3C8031; color: white; }
+
+#confirm-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(20,12,6,0.75); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
+.confirm-box { background: #ffffff; border-radius: 22px; padding: 36px 28px 28px; text-align: center; max-width: 340px; width: 100%; }
+.confirm-box .icon-circle { width: 72px; height: 72px; background: linear-gradient(150deg, #FFC93C, #F2760C); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 34px; }
+.confirm-box h3 { color: #2B1B0E; font-size: 19px; font-weight: 800; margin-bottom: 8px; }
+.confirm-box p { color: #8a7c6a; font-size: 14px; margin-bottom: 26px; }
+.confirm-actions { display: flex; gap: 10px; }
+.confirm-actions button { flex: 1; padding: 13px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; }
+.confirm-yes { background: #3C8031; color: white; }
+.confirm-no { background: #FBEFD2; color: #2B1B0E; }
+
+.qr-page { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; min-height: calc(100vh - 70px); background: linear-gradient(135deg, #1b5e20, #2e7d32); }
+.qr-page h2 { margin-bottom: 24px; color: #e8f5e9; font-size: 22px; }
+.qr-box { background: white; padding: 24px; border-radius: 20px; }
+.qr-page p { margin-top: 18px; color: #c8e6c9; font-size: 13px; }
+
+.settings-page { max-width: 480px; margin: 40px auto; padding: 0 20px; }
+.settings-card { background: white; border-radius: 16px; padding: 28px; text-align: center; }
+.settings-card h2 { color: #7a1f0f; margin-bottom: 20px; }
+.qr-preview { width: 220px; height: 220px; border-radius: 12px; border: 2px dashed #e8d5c4; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; overflow: hidden; }
+.qr-preview img { width: 100%; height: 100%; object-fit: contain; }
+.upload-btn { width: 100%; padding: 13px; background: #2e7d32; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: 14px; padding: 20px; border-top: 4px solid #b8380e; }
+.stat-card .label { color: #8a7c6a; font-size: 13px; }
+.stat-card .value { color: #7a1f0f; font-size: 26px; font-weight: 800; }
+.top-items { background: white; border-radius: 14px; padding: 20px; }
+.top-items h2 { color: #7a1f0f; margin-bottom: 14px; }
+.top-item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f7ece0; }

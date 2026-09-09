@@ -47,6 +47,16 @@ db.exec(`
   )
 `);
 
+// ➕ ຕາຕະລາງແຈ້ງເຕືອນເອີ້ນພະນັກງານ
+db.exec(`
+  CREATE TABLE IF NOT EXISTS staff_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    table_number TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // ຕາຕະລາງບັນຊີແອດມິນ (admin account)
 db.exec(`CREATE TABLE IF NOT EXISTS admins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,6 +68,9 @@ db.exec(`CREATE TABLE IF NOT EXISTS admins (
 const adminColumns = db.prepare(`PRAGMA table_info(admins)`).all().map(c => c.name);
 if (!adminColumns.includes('name')) {
   db.exec(`ALTER TABLE admins ADD COLUMN name TEXT`);
+}
+if (!adminColumns.includes('role')) {
+  db.exec(`ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'staff'`);
 }
 
 module.exports = db;

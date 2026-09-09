@@ -1,0 +1,77 @@
+/* ===== ຝັ່ງລູກຄ້າ (menu / bill) — ດຶງມາຈາກ public/menu/style.css ເກົ່າ ===== */
+:root {
+  --brown: #2B1B0E;
+  --brown-soft: #3D2A18;
+  --cream: #FFF8E7;
+  --cream-dark: #FBEFD2;
+  --green: #3C8031;
+  --green-dark: #2C601E;
+  --orange: #F2760C;
+  --yellow: #FFC93C;
+  --text: #3A2E22;
+  --muted: #8a7c6a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', 'Noto Sans Lao', sans-serif; background: var(--cream); color: var(--text); }
+
+header { background: linear-gradient(150deg, var(--brown), var(--brown-soft)); color: var(--yellow); padding: 40px 20px 32px; text-align: center; }
+header h1 { font-size: 28px; font-weight: 700; }
+#table-label { color: #ffd699; font-size: 15px; margin-top: 4px; }
+
+.filter-bar { max-width: 1100px; margin: 0 auto; padding: 20px 24px 0; }
+#category-filter { padding: 12px 16px; border: 2px solid var(--cream-dark); border-radius: 12px; background: white; color: var(--text); font-size: 14px; min-width: 200px; }
+
+#product-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; padding: 30px 24px; max-width: 1100px; margin: 0 auto; }
+.product-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 14px rgba(43,27,14,0.06); border: 1px solid var(--cream-dark); }
+.product-img { width: 100%; height: 190px; object-fit: cover; border-radius: 10px; margin-bottom: 12px; }
+.product-card h3 { font-size: 17px; margin-bottom: 6px; color: var(--brown); }
+.product-card p { color: var(--muted); font-size: 13px; margin: 3px 0; }
+.product-card .price { color: var(--orange); font-weight: 700; font-size: 19px; margin-top: 10px; }
+.product-card button { margin-top: 12px; width: 100%; padding: 11px; background: var(--green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.product-card button:disabled { background: #ddd; color: #999; cursor: not-allowed; }
+
+.left-buttons { position: fixed; bottom: 24px; left: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
+#bill-button, #call-staff-button { padding: 12px 20px; border: none; border-radius: 30px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.25); white-space: nowrap; }
+#bill-button { background: var(--brown); color: var(--yellow); }
+#call-staff-button { background: #d4a017; color: white; }
+#call-staff-button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+#cart-button { position: fixed; bottom: 24px; right: 24px; background: var(--orange); color: #fff; border: none; border-radius: 30px; padding: 14px 24px; font-size: 16px; font-weight: bold; box-shadow: 0 6px 18px rgba(242,118,12,0.4); cursor: pointer; z-index: 100; }
+
+#cart-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(43,27,14,0.65); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+.cart-box { background: var(--cream); width: 100%; max-width: 420px; max-height: 85vh; border-radius: 18px; box-shadow: 0 20px 50px rgba(0,0,0,0.35); overflow-y: auto; padding-bottom: 20px; }
+.cart-box h2 { background: linear-gradient(150deg, var(--brown), var(--brown-soft)); color: var(--yellow); margin: 0 0 16px; padding: 18px 20px; text-align: center; border-radius: 18px 18px 0 0; }
+#cart-items { padding: 0 20px; }
+.cart-item { display: flex; align-items: center; gap: 10px; padding: 12px; margin-bottom: 8px; background: white; border-radius: 12px; }
+.cart-item span:first-child { flex: 1; font-weight: 600; color: var(--brown); }
+.qty-control { display: flex; align-items: center; gap: 8px; }
+.qty-control button { background: var(--orange); color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; }
+.qty-input { width: 40px; text-align: center; border: 1px solid var(--cream-dark); border-radius: 6px; }
+.cart-total { text-align: right; font-size: 19px; font-weight: bold; color: var(--brown); margin: 16px 20px; }
+.cart-box .confirm-btn { display: block; width: calc(100% - 40px); margin: 0 20px 10px; background: var(--green); color: #fff; border: none; padding: 13px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+.cart-box .cancel-btn { display: block; width: calc(100% - 40px); margin: 0 20px; background: transparent; color: var(--brown); border: 2px solid var(--cream-dark); padding: 11px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+
+#success-overlay, #cancel-success-overlay, #cancel-confirm-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(43,27,14,0.65); display: flex; align-items: center; justify-content: center; z-index: 300; padding: 16px; }
+.success-box { background: var(--cream); border-radius: 20px; padding: 32px 28px; text-align: center; max-width: 340px; width: 100%; }
+.success-icon { font-size: 48px; margin-bottom: 12px; }
+.success-box h2 { color: var(--green-dark); font-size: 20px; margin-bottom: 8px; }
+.success-box p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+.success-btn { width: 100%; padding: 12px; background: var(--green); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+.confirm-box { background: var(--cream); border-radius: 20px; padding: 32px 26px; text-align: center; max-width: 340px; width: 100%; }
+.confirm-box .icon-circle { width: 64px; height: 64px; background: linear-gradient(150deg, var(--yellow), var(--orange)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 30px; }
+.confirm-box h3 { color: var(--brown); font-size: 18px; margin-bottom: 8px; }
+.confirm-box p { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+.confirm-actions { display: flex; gap: 10px; }
+.confirm-actions button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
+.confirm-yes { background: var(--green); color: white; }
+.confirm-cancel-red { background: #c0392b; color: white; }
+
+#toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); background: rgba(43,27,14,0.92); color: var(--yellow); padding: 14px 28px; border-radius: 30px; font-size: 15px; font-weight: 700; z-index: 10000; white-space: nowrap; }
+
+.bill-page { max-width: 700px; margin: 0 auto; padding: 30px 20px 60px; }
+.bill-table { width: 100%; border-collapse: collapse; background: white; border-radius: 14px; overflow: hidden; }
+.bill-table th { background: linear-gradient(150deg, var(--brown), var(--brown-soft)); color: var(--yellow); padding: 14px 12px; text-align: left; }
+.bill-table td { padding: 12px; border-bottom: 1px solid var(--cream-dark); }
+.cancel-order-btn { background: #c0392b; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; margin: 32px 0 20px 24px; padding: 12px 22px; background: var(--orange); color: white; text-decoration: none; font-weight: 700; border-radius: 30px; cursor: pointer; width: fit-content; }
