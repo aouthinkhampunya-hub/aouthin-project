@@ -13,7 +13,21 @@ const requireAuth = require('./middleware/requireAuth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://aouthin-123.web.app',
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../public')));
@@ -27,7 +41,7 @@ app.use('/api/admins', adminsRouter);
 app.use('/api/staffcall', staffCallRouter);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server ກຳລັງເຮດວຽກຢູ່' });
+  res.json({ status: 'ok', message: 'Server ກລງເຮດວຽກຢູ' });
 });
 
 app.get('/', (req, res) => {
@@ -39,7 +53,7 @@ app.get('/admin', (req, res) => {
 });
 
 app.listen(PORT, async () => {
-  console.log(`Server ຣັນຢູ່ທີ່ http://localhost:${PORT}`);
+  console.log(`Server ຣັນຢູທ http://localhost:${PORT}`);
   
   const open = (await import('open')).default;
   open(`http://localhost:${PORT}/menu/index.html`);
