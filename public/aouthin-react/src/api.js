@@ -1,6 +1,3 @@
-// ===== ไฟล์รวมฟังก์ชันเรียก API ทั้งหมด (แทนที่ fetch() ที่กระจายอยู่ในไฟล์เดิม) =====
-// ทุก endpoint ตรงกับ backend เดิม (server/routes/*.js) ไม่มีการแก้ backend เลย
-
 const BASE = '/api';
 
 async function request(path, options = {}) {
