@@ -1,6 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_URL || '';
-const BASE = API_BASE + '/api';
+// ===== ไฟลรวมฟังกชนเรียก API ทั้งหมด (แทนที่ fetch() ที่กระจายอยู่ในไฟล์เดม) =====
+// ทุก endpoint ตรงกับ backend เดิม (server/routes/*.js) ไมมีการแก้ backend เลย
 
+export const API_BASE = import.meta.env.VITE_API_URL || '';
+const BASE = API_BASE + '/api';
 
 async function request(path, options = {}) {
   const res = await fetch(BASE + path, {
@@ -35,7 +37,7 @@ export const updateOrderStatus = (id, status) =>
 export const cancelOrder = (id) => request(`/orders/${id}`, { method: 'DELETE' });
 export const closeBill = (billId) => request(`/orders/bills/${billId}/close`, { method: 'PUT' });
 
-// ---- QR Code (ໜ້າ scan ເມນູ) ----
+// ---- QR Code (ໜາ scan ເມນ) ----
 export const getMenuQR = () => request('/qrcode');
 
 // ---- Settings (QR ຮັບເງິນ) ----
@@ -43,7 +45,7 @@ export const getPaymentQR = () => request('/settings/qr');
 export const uploadPaymentQR = (formData) =>
   request('/settings/qr', { method: 'POST', body: formData });
 
-// ---- Staff calls (ເອີ້ນພະນັກງານ) ----
+// ---- Staff calls (ເອນພະນກງານ) ----
 export const getStaffCalls = () => request('/staffcall');
 export const callStaff = (table_number) =>
   request('/staffcall', { method: 'POST', body: JSON.stringify({ table_number }) });

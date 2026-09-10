@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { getBills, cancelOrder } from '../../api.js';
 
 function statusLabel(status) {
-  if (status === 'pending') return '⏳ ລໍຖ້າ';
-  if (status === 'cooking') return '🔥 ກຳລັງເຮັດ';
-  if (status === 'completed') return '✅ ພ້ອມແລ້ວ';
+  if (status === 'pending') return '⏳ ລຖ້າ';
+  if (status === 'cooking') return '🔥 ກລງເຮັດ';
+  if (status === 'completed') return '✅ ພອມແລວ';
   return status;
 }
 
@@ -32,13 +32,14 @@ export default function CustomerBill() {
 
   async function doCancel() {
     if (!confirmId) return;
-    const res = await fetch(`/api/orders/${confirmId}`, { method: 'DELETE' }).then(r => r.json());
-    setConfirmId(null);
-    if (res.success) {
+    try {
+      await cancelOrder(confirmId);
+      setConfirmId(null);
       setCancelSuccess(true);
       load();
-    } else {
-      alert('ຍົກເລີກບໍ່ໄດ້: ' + res.error);
+    } catch (err) {
+      setConfirmId(null);
+      alert('ຍົກເລີກບໍ່ໄດ້: ' + (err.error || 'ບໍຮູສາເຫດ'));
     }
   }
 
