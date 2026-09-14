@@ -76,7 +76,7 @@ header p {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 20px;
-  padding: 30px 24px;
+    padding: 30px 24px 140px;
   max-width: 1100px;
   margin: 0 auto;
 }
@@ -698,4 +698,106 @@ footer {
 #toast.show {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
+}
+#table-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+#table-modal.hidden {
+  display: none;
+}
+.table-modal-box {
+  background: white;
+  padding: 32px 28px;
+  border-radius: 16px;
+  text-align: center;
+  width: 85%;
+  max-width: 320px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+}
+.table-modal-box h2 {
+  margin: 0 0 8px;
+  color: #7a1f0f;
+  font-size: 20px;
+}
+.table-modal-sub {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.table-modal-box input {
+  width: 100%;
+  padding: 12px;
+  font-size: 18px;
+  text-align: center;
+  border: 2px solid #b8380e;
+  border-radius: 10px;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+.table-error {
+  color: #d32f2f;
+  font-size: 13px;
+  margin: 4px 0 12px;
+}
+.table-error.hidden {
+  display: none;
+}
+.table-modal-box .confirm-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+  background: #2e8b3d;
+  color: white;
+  cursor: pointer;
+}
+@media (max-width: 480px) {
+  #product-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+      padding: 20px 12px 140px;
+  }
+  .product-img {
+    height: 110px;
+  }
+  .product-card {
+    padding: 10px;
+  }
+  .product-card h3 {
+    font-size: 14px;
+  }
+  .product-card .price {
+    font-size: 16px;
+  }
+  .product-card button {
+    padding: 9px;
+    font-size: 13px;
+  }
+}
+@media (max-width: 480px) {
+  .bill-page {
+    padding: 16px 12px 40px;
+  }
+  .bill-table {
+    font-size: 12px;
+  }
+  .bill-table th,
+  .bill-table td {
+    padding: 8px 6px;
+  }
+  .bill-page .cart-total {
+    font-size: 16px;
+    margin: 14px 4px;
+  }
+  .cancel-order-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
 }

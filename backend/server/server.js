@@ -14,15 +14,18 @@ const requireAuth = require('./middleware/requireAuth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
+  'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://aouthin-123.web.app',
+   'https://aouthin-123.web.app',
   'https://aouthin-123.firebaseapp.com',
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    const isLocalNetwork = origin && /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)\d+\.\d+(:\d+)?$/.test(origin);
+
+    if (!origin || allowedOrigins.includes(origin) || isLocalNetwork) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -43,7 +46,7 @@ app.use('/api/admins', adminsRouter);
 app.use('/api/staffcall', staffCallRouter);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Server ກລງເຮດວຽກຢູ' });
+  res.json({ status: 'ok', message: 'Server ກຳລັງເຮັດວຽກຢູ່' });
 });
 
 app.get('/', (req, res) => {
@@ -54,9 +57,17 @@ app.get('/admin', (req, res) => {
   res.redirect('/admin/index.html');
 });
 
+app.get('/app', (req, res) => {
+  res.redirect('/app/');
+});
+
+app.get(/^\/app\/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/app/index.html'));
+});
+
 app.listen(PORT, async () => {
-  console.log(`Server ຣັນຢູທ http://localhost:${PORT}`);
-  
+  console.log(`Server ຣັນຢູ່ທີ່ http://localhost:${PORT}`);
+
   const open = (await import('open')).default;
   open(`http://localhost:${PORT}/menu/index.html`);
   open(`http://localhost:${PORT}/admin/index.html`);

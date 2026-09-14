@@ -2,20 +2,38 @@ let cart = [];
 let allProducts = [];
 let tableNumber = null;
 
-function getTableNumber() {
+function initApp() {
   const params = new URLSearchParams(window.location.search);
-  let table = params.get('table');
+  let table = params.get('table') || sessionStorage.getItem('tableNumber');
 
-  if (!table) {
-    table = sessionStorage.getItem('tableNumber');
+  if (table) {
+    setTableNumber(table);
+  } else {
+    document.getElementById('table-modal').classList.remove('hidden');
   }
-  if (!table) {
-    table = prompt('ປ້ອນເລກໂຕະ (ສຳລັບທົດສອບ):');
-  }
+}
 
+function setTableNumber(table) {
+  tableNumber = table;
   sessionStorage.setItem('tableNumber', table);
   document.getElementById('table-label').textContent = `ໂຕະ ${table}`;
-  return table;
+  document.getElementById('table-modal').classList.add('hidden');
+  loadProducts();
+}
+
+function submitTableNumber() {
+  const input = document.getElementById('table-input');
+  const errorEl = document.getElementById('table-error');
+  const value = input.value.trim();
+
+  if (!value) {
+    errorEl.classList.remove('hidden');
+    input.focus();
+    return;
+  }
+
+  errorEl.classList.add('hidden');
+  setTableNumber(value);
 }
 
 async function loadProducts() {
@@ -195,9 +213,8 @@ async function confirmCartOrder() {
     alert('ເກີດຂໍ້ຜິດພາດ: ' + data.error);
   }
 }
+initApp();
 
-tableNumber = getTableNumber();
-loadProducts();
 function goToBill() {
   window.location.href = `bill.html?table=${tableNumber}`;
 }
