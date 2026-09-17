@@ -1,76 +1,110 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const mysql = require('mysql2/promise');
+require('dotenv').config();
 
-const db = new Database(path.join(__dirname, 'store.db'));
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    price REAL NOT NULL,
-    size TEXT,
-    color TEXT,
-    stock INTEGER DEFAULT 0,
-    image TEXT
-  )
-`);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL,
-    status TEXT DEFAULT 'pending',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id)
-  )
-`);
-
-// ➕ ເພີ່ມຖັນໃໝ່ໃສ່ orders (ຖ້າຍັງບໍ່ມີ) — ເບີໂທ, ທີ່ຢູ່, ຮູບສະລິບ
-const orderColumns = db.prepare(`PRAGMA table_info(orders)`).all().map(c => c.name);
-
-if (!orderColumns.includes('customer_phone')) {
-  db.exec(`ALTER TABLE orders ADD COLUMN customer_phone TEXT`);
-}
-if (!orderColumns.includes('customer_address')) {
-  db.exec(`ALTER TABLE orders ADD COLUMN customer_address TEXT`);
-}
-if (!orderColumns.includes('slip_image')) {
-  db.exec(`ALTER TABLE orders ADD COLUMN slip_image TEXT`);
+// ตรวจสอบว่าคอลัมน์มีอยู่ในตารางหรือยัง (แทน PRAGMA table_info ของ SQLite)
+async function columnExists(tableName, columnName) {
+  const [rows] = await pool.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [process.env.DB_NAME, tableName, columnName]
+  );
+  return rows.length > 0;
 }
 
-// ➕ ຕາຕະລາງໃໝ່ — ເກັບ QR ຮັບເງິນຂອງຮ້ານ (ໃຊ້ຮ່ວມກັນທຸກອໍເດີ)
-db.exec(`
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-  )
-`);
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      price DECIMAL(10,2) NOT NULL,
+      size VARCHAR(50),
+      color VARCHAR(50),
+      stock INT DEFAULT 0,
+      image VARCHAR(500)
+    )
+  `);
 
-// ➕ ຕາຕະລາງແຈ້ງເຕືອນເອີ້ນພະນັກງານ
-db.exec(`
-  CREATE TABLE IF NOT EXISTS staff_calls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    table_number TEXT NOT NULL,
-    status TEXT DEFAULT 'pending',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bills (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      table_number VARCHAR(50) NOT NULL,
+      status VARCHAR(20) DEFAULT 'open',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paid_at DATETIME
+    )
+  `);
 
-// ຕາຕະລາງບັນຊີແອດມິນ (admin account)
-db.exec(`CREATE TABLE IF NOT EXISTS admins (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      bill_id INT NOT NULL,
+      product_id INT NOT NULL,
+      quantity INT NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (product_id) REFERENCES products(id),
+      FOREIGN KEY (bill_id) REFERENCES bills(id)
+    )
+  `);
 
-const adminColumns = db.prepare(`PRAGMA table_info(admins)`).all().map(c => c.name);
-if (!adminColumns.includes('name')) {
-  db.exec(`ALTER TABLE admins ADD COLUMN name TEXT`);
+  // ➕ ເພີ່ມຖັນໃໝ່ໃສ່ orders (ຖ້າຍັງບໍ່ມີ) — ເບີໂທ, ທີ່ຢູ່, ຮູບສະລິບ
+  if (!(await columnExists('orders', 'customer_phone'))) {
+    await pool.query(`ALTER TABLE orders ADD COLUMN customer_phone VARCHAR(50)`);
+  }
+  if (!(await columnExists('orders', 'customer_address'))) {
+    await pool.query(`ALTER TABLE orders ADD COLUMN customer_address VARCHAR(500)`);
+  }
+  if (!(await columnExists('orders', 'slip_image'))) {
+    await pool.query(`ALTER TABLE orders ADD COLUMN slip_image VARCHAR(500)`);
+  }
+
+  // ➕ ຕາຕະລາງໃໝ່ — ເກັບ QR ຮັບເງິນຂອງຮ້ານ (ໃຊ້ຮ່ວມກັນທຸກອໍເດີ)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS settings (
+      \`key\` VARCHAR(100) PRIMARY KEY,
+      value TEXT
+    )
+  `);
+
+  // ➕ ຕາຕະລາງແຈ້ງເຕືອນເອີ້ນພະນັກງານ
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS staff_calls (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      table_number VARCHAR(50) NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // ຕາຕະລາງບັນຊີແອດມິນ (admin account)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admins (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      username VARCHAR(100) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  if (!(await columnExists('admins', 'name'))) {
+    await pool.query(`ALTER TABLE admins ADD COLUMN name VARCHAR(255)`);
+  }
+  if (!(await columnExists('admins', 'role'))) {
+    await pool.query(`ALTER TABLE admins ADD COLUMN role VARCHAR(20) DEFAULT 'staff'`);
+  }
+
+  console.log('✅ Database schema พร้อมใช้งาน');
 }
-if (!adminColumns.includes('role')) {
-  db.exec(`ALTER TABLE admins ADD COLUMN role TEXT DEFAULT 'staff'`);
-}
 
-module.exports = db;
+module.exports = { pool, initDb };

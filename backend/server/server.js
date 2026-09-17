@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const { initDb } = require('./db');
 const productsRouter = require('./routes/products');
 const ordersRouter = require('./routes/orders');
 const qrcodeRouter = require('./routes/qrcode');
@@ -65,10 +66,21 @@ app.get(/^\/app\/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, '../public/app/index.html'));
 });
 
-app.listen(PORT, async () => {
-  console.log(`Server ຣັນຢູ່ທີ່ http://localhost:${PORT}`);
+async function startServer() {
+  try {
+    await initDb();
 
-  const open = (await import('open')).default;
-  open(`http://localhost:${PORT}/menu/index.html`);
-  open(`http://localhost:${PORT}/admin/index.html`);
-});
+    app.listen(PORT, async () => {
+      console.log(`Server ຣັນຢູ່ທີ່ http://localhost:${PORT}`);
+
+      const open = (await import('open')).default;
+      open(`http://localhost:${PORT}/menu/index.html`);
+      open(`http://localhost:${PORT}/admin/index.html`);
+    });
+  } catch (err) {
+    console.error('❌ ບໍ່ສາມາດເຊື່ອມຕໍ່ຖານຂໍ້ມູນ:', err);
+    process.exit(1);
+  }
+}
+
+startServer();

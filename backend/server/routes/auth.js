@@ -1,32 +1,38 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../db');
+const { pool } = require('../db');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ປ່ຽນລະຫັດນີ້ໃນ production';
 
-router.post('/login', (req, res) => {
-  const { username, password } = req.body;
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-  const admin = db.prepare(`SELECT * FROM admins WHERE username = ?`).get(username);
-  if (!admin) return res.status(401).json({ error: 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
+    const [rows] = await pool.query(`SELECT * FROM admins WHERE username = ?`, [username]);
+    const admin = rows[0];
+    if (!admin) return res.status(401).json({ error: 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
 
-  const match = bcrypt.compareSync(password, admin.password);
-  if (!match) return res.status(401).json({ error: 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
+    const match = bcrypt.compareSync(password, admin.password);
+    if (!match) return res.status(401).json({ error: 'ຊື່ຜູ້ໃຊ້ ຫຼື ລະຫັດຜ່ານບໍ່ຖືກຕ້ອງ' });
 
-  const token = jwt.sign(
-    { id: admin.id, username: admin.username, name: admin.name, role: admin.role || 'staff' },
-    JWT_SECRET,
-    { expiresIn: '8h' }
-  );
+    const token = jwt.sign(
+      { id: admin.id, username: admin.username, name: admin.name, role: admin.role || 'staff' },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
 
-  res.cookie('token', token, {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production'
-  });
-  res.json({ success: true, name: admin.name });
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    });
+    res.json({ success: true, name: admin.name });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 router.post('/logout', (req, res) => {

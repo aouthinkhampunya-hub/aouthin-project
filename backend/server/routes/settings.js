@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../db');
 const multer = require('multer');
 const path = require('path');
 
@@ -16,26 +16,49 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // ດຶງ QR ຮັບເງິນ
-router.get('/qr', (req, res) => {
-  const row = db.prepare(`SELECT value FROM settings WHERE key = 'payment_qr'`).get();
-  res.json({ qrImage: row ? row.value : null });
+router.get('/qr', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT value FROM settings WHERE `key` = 'payment_qr'"
+    );
+    const row = rows[0];
+    res.json({ qrImage: row ? row.value : null });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // ອັບໂຫລດ / ປ່ຽນ QR ຮັບເງິນ
-router.post('/qr', upload.single('qr'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'ບໍ່ພົບໄຟລ໌ຮູບ' });
-  }
-  const imagePath = '/uploads/' + req.file.filename;
+router.post('/qr', upload.single('qr'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'ບໍ່ພົບໄຟລ໌ຮູບ' });
+    }
+    const imagePath = '/uploads/' + req.file.filename;
 
-  const existing = db.prepare(`SELECT * FROM settings WHERE key = 'payment_qr'`).get();
-  if (existing) {
-    db.prepare(`UPDATE settings SET value = ? WHERE key = 'payment_qr'`).run(imagePath);
-  } else {
-    db.prepare(`INSERT INTO settings (key, value) VALUES ('payment_qr', ?)`).run(imagePath);
-  }
+    const [rows] = await pool.query(
+      "SELECT * FROM settings WHERE `key` = 'payment_qr'"
+    );
+    const existing = rows[0];
 
-  res.json({ success: true, qrImage: imagePath });
+    if (existing) {
+      await pool.query(
+        "UPDATE settings SET value = ? WHERE `key` = 'payment_qr'",
+        [imagePath]
+      );
+    } else {
+      await pool.query(
+        "INSERT INTO settings (`key`, value) VALUES ('payment_qr', ?)",
+        [imagePath]
+      );
+    }
+
+    res.json({ success: true, qrImage: imagePath });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 module.exports = router;

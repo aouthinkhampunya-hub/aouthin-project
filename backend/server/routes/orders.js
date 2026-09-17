@@ -1,93 +1,162 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
-router.get('/', (req, res) => {
-  const orders = db.prepare(`
-    SELECT orders.*, products.name AS product_name, products.price, bills.table_number
-    FROM orders
-    JOIN products ON orders.product_id = products.id
-    JOIN bills ON orders.bill_id = bills.id
-    ORDER BY orders.created_at DESC
-  `).all();
-  res.json(orders);
-});
+const { pool } = require('../db');
 
-router.get('/bills', (req, res) => {
-  const bills = db.prepare(`SELECT * FROM bills WHERE status = 'open' ORDER BY table_number`).all();
-
-  const billsWithItems = bills.map(bill => {
-    const items = db.prepare(`
-      SELECT orders.*, products.name AS product_name, products.price
+router.get('/', async (req, res) => {
+  try {
+    const [orders] = await pool.query(`
+      SELECT orders.*, products.name AS product_name, products.price, bills.table_number
       FROM orders
       JOIN products ON orders.product_id = products.id
-      WHERE orders.bill_id = ?
-      ORDER BY orders.created_at
-    `).all(bill.id);
-    return { ...bill, items };
-  });
-
-  res.json(billsWithItems);
+      JOIN bills ON orders.bill_id = bills.id
+      ORDER BY orders.created_at DESC
+    `);
+    res.json(orders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-router.post('/', (req, res) => {
+router.get('/bills', async (req, res) => {
+  try {
+    const [bills] = await pool.query(
+      `SELECT * FROM bills WHERE status = 'open' ORDER BY table_number`
+    );
+
+    const billsWithItems = await Promise.all(
+      bills.map(async (bill) => {
+        const [items] = await pool.query(
+          `SELECT orders.*, products.name AS product_name, products.price
+           FROM orders
+           JOIN products ON orders.product_id = products.id
+           WHERE orders.bill_id = ?
+           ORDER BY orders.created_at`,
+          [bill.id]
+        );
+        return { ...bill, items };
+      })
+    );
+
+    res.json(billsWithItems);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+router.post('/', async (req, res) => {
   const { table_number, items } = req.body;
 
   if (!table_number || !items || items.length === 0) {
     return res.status(400).json({ error: 'ຂໍ້ມູນບໍ່ຄບ' });
   }
 
-  let bill = db.prepare(`SELECT * FROM bills WHERE table_number = ? AND status = 'open'`).get(table_number);
-  if (!bill) {
-    const result = db.prepare(`INSERT INTO bills (table_number) VALUES (?)`).run(table_number);
-    bill = { id: result.lastInsertRowid };
-  }
+  const connection = await pool.getConnection();
 
-  for (const item of items) {
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(item.product_id);
-    if (!product) {
-      return res.status(404).json({ error: `ไม่พบเมนู id ${item.product_id}` });
+  try {
+    await connection.beginTransaction();
+
+    let [bills] = await connection.query(
+      `SELECT * FROM bills WHERE table_number = ? AND status = 'open'`,
+      [table_number]
+    );
+    let bill = bills[0];
+
+    if (!bill) {
+      const [result] = await connection.query(
+        `INSERT INTO bills (table_number) VALUES (?)`,
+        [table_number]
+      );
+      bill = { id: result.insertId };
     }
-    if (product.stock < item.quantity) {
-      return res.status(400).json({ error: `${product.name} ไม่พอ` });
+
+    for (const item of items) {
+      const [products] = await connection.query(
+        'SELECT * FROM products WHERE id = ? FOR UPDATE',
+        [item.product_id]
+      );
+      const product = products[0];
+
+      if (!product) {
+        await connection.rollback();
+        connection.release();
+        return res.status(404).json({ error: `ไม่พบเมนู id ${item.product_id}` });
+      }
+      if (product.stock < item.quantity) {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({ error: `${product.name} ไม่พอ` });
+      }
     }
+
+    for (const item of items) {
+      await connection.query(
+        'INSERT INTO orders (bill_id, product_id, quantity) VALUES (?, ?, ?)',
+        [bill.id, item.product_id, item.quantity]
+      );
+      await connection.query(
+        'UPDATE products SET stock = stock - ? WHERE id = ?',
+        [item.quantity, item.product_id]
+      );
+    }
+
+    await connection.commit();
+    connection.release();
+
+    res.json({ bill_id: bill.id, message: 'ສັ່ງອາຫານສເລັດ' });
+  } catch (err) {
+    await connection.rollback();
+    connection.release();
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
   }
-
-  const insertOrder = db.prepare('INSERT INTO orders (bill_id, product_id, quantity) VALUES (?, ?, ?)');
-  const updateStock = db.prepare('UPDATE products SET stock = stock - ? WHERE id = ?');
-
-  for (const item of items) {
-    insertOrder.run(bill.id, item.product_id, item.quantity);
-    updateStock.run(item.quantity, item.product_id);
-  }
-
-  res.json({ bill_id: bill.id, message: 'ສັ່ງອາຫານສເລັດ' });
 });
 
-router.put('/:id', (req, res) => {
-  const { status } = req.body;
-  db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, req.params.id);
-  res.json({ success: true });
+router.put('/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
-router.delete('/:id', (req, res) => {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+router.delete('/:id', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+    const order = rows[0];
 
-  if (!order) {
-    return res.status(404).json({ error: 'ບໍ່ພົບອໍເດີ້ນີ້' });
+    if (!order) {
+      return res.status(404).json({ error: 'ບໍ່ພົບອໍເດີ້ນີ້' });
+    }
+    if (order.status !== 'pending') {
+      return res.status(400).json({ error: 'ຍົກເລີກບໍ່ໄດ້ ຮ້ານເລີ່ມເຮັດອາຫານແລ້ວ' });
+    }
+
+    await pool.query('UPDATE products SET stock = stock + ? WHERE id = ?', [order.quantity, order.product_id]);
+    await pool.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
   }
-  if (order.status !== 'pending') {
-    return res.status(400).json({ error: 'ຍົກເລີກບໍ່ໄດ້ ຮ້ານເລີ່ມເຮັດອາຫານແລ້ວ' });
-  }
-
-  db.prepare('UPDATE products SET stock = stock + ? WHERE id = ?').run(order.quantity, order.product_id);
-  db.prepare('DELETE FROM orders WHERE id = ?').run(req.params.id);
-
-  res.json({ success: true });
 });
 
-router.put('/bills/:id/close', (req, res) => {
-  db.prepare(`UPDATE bills SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = ?`).run(req.params.id);
-  res.json({ success: true });
+router.put('/bills/:id/close', async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE bills SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 module.exports = router;

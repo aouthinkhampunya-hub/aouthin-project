@@ -4,10 +4,12 @@
     "better-sqlite3": "^13.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.3.0",
     "muter": "^0.7.0",
+    "mysql2": "^3.24.4",
     "open": "^11.0.2",
     "qrcode": "^1.5.4"
   },

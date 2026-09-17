@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { pool } = require('../db');
 const multer = require('multer');
 const path = require('path');
 
@@ -19,34 +19,49 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // ดึงสินค้าทั้งหมด
-router.get('/', (req, res) => {
-  const products = db.prepare('SELECT * FROM products').all();
-  res.json(products);
+router.get('/', async (req, res) => {
+  try {
+    const [products] = await pool.query('SELECT * FROM products');
+    res.json(products);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // เพิ่มสินค้าใหม่ (รับไฟล์รูปภาพด้วย)
-router.post('/', upload.single('image'), (req, res) => {
-  const { name, price, size, color, stock } = req.body;
-  const image = req.file ? '/uploads/' + req.file.filename : '';
+router.post('/', upload.single('image'), async (req, res) => {
+  try {
+    const { name, price, size, color, stock } = req.body;
+    const image = req.file ? '/uploads/' + req.file.filename : '';
 
-  const stmt = db.prepare(
-    'INSERT INTO products (name, price, size, color, stock, image) VALUES (?, ?, ?, ?, ?, ?)'
-  );
-  const result = stmt.run(name, price, size, color, stock, image);
-  res.json({ id: result.lastInsertRowid });
+    const [result] = await pool.query(
+      'INSERT INTO products (name, price, size, color, stock, image) VALUES (?, ?, ?, ?, ?, ?)',
+      [name, price, size, color, stock, image]
+    );
+    res.json({ id: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // ลบสินค้า (ลบออເດີ້ທີ່ກຽວຂ້ອງກ່ອນ ເພື່ອບໍ່ໃຫ້ຕິດ FOREIGN KEY)
-router.delete('/:id', (req, res) => {
-  const productId = req.params.id;
+router.delete('/:id', async (req, res) => {
+  try {
+    const productId = req.params.id;
 
-  // ลบออเดอร์ที่ผูกกับสินค้านี้กอน
-  db.prepare('DELETE FROM orders WHERE product_id = ?').run(productId);
+    // ลบออเดอร์ที่ผูกกับสินค้านี้กอน
+    await pool.query('DELETE FROM orders WHERE product_id = ?', [productId]);
 
-  // แล้วค่อยลบสินค้า
-  db.prepare('DELETE FROM products WHERE id = ?').run(productId);
+    // แล้วค่อยลบสินค้า
+    await pool.query('DELETE FROM products WHERE id = ?', [productId]);
 
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 module.exports = router;
