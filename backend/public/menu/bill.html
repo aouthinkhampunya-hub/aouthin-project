@@ -24,7 +24,7 @@
         ກັບ
       </a>
   </main>
-  <div id="cancel-confirm-overlay" class="hidden">
+  <div id="cancel-confirm-overlay" class="overlay hidden">
     <div class="confirm-box">
       <div class="icon-circle">🗑️</div>
       <h3>ຍົກເລີກອໍເດີ້</h3>
@@ -35,6 +35,16 @@
       </div>
     </div>
   </div>
+  <div id="cancel-success-overlay" class="overlay hidden">
+  <div class="confirm-box">
+    <div class="icon-circle">✅</div>
+    <h3>ຍົກເລີກສຳເລັດ</h3>
+    <p>ລາຍການອາຫານຖືກຍົກເລີກແລ້ວ</p>
+    <div class="confirm-actions">
+      <button class="confirm-yes" onclick="closeCancelSuccess()">ຕົກລົງ</button>
+    </div>
+  </div>
+</div>
 
   <script src="bill.js"></script>
 </body>

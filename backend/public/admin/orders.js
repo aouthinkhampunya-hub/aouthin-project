@@ -1,7 +1,10 @@
 async function checkAuth() {
-  const res = await fetch('/api/auth/check');
-  const data = await res.json();
-  if (!data.loggedIn) {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) {
+      window.location.href = 'login.html';
+    }
+  } catch (err) {
     window.location.href = 'login.html';
   }
 }

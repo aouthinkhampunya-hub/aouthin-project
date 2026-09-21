@@ -1,7 +1,10 @@
 async function checkAuth() {
-  const res = await fetch('/api/auth/check');
-  const data = await res.json();
-  if (!data.loggedIn) {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) {
+      window.location.href = 'login.html';
+    }
+  } catch (err) {
     window.location.href = 'login.html';
   }
 }
@@ -62,7 +65,6 @@ async function loadTables() {
   const res = await fetch('/api/orders/bills');
   const bills = await res.json();
 
-  // ກວດອໍເດີ້ໃໝ່
   const currentOrderIds = new Set();
   bills.forEach(bill => bill.items.forEach(item => currentOrderIds.add(item.id)));
 
@@ -85,6 +87,9 @@ async function loadTables() {
   container.innerHTML = bills.map(bill => {
     const total = bill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const allServed = bill.items.every(i => i.status === 'completed');
+    const pendingIds = bill.items
+      .filter(i => i.status !== 'completed')
+      .map(i => i.id);
 
     return `
       <div class="table-card">
@@ -107,6 +112,11 @@ async function loadTables() {
           `).join('')}
         </table>
         <p class="cart-total">ລວມ: ${total} ກີບ</p>
+        ${pendingIds.length > 0 ? `
+          <button class="confirm-btn" onclick='markAllReady(${JSON.stringify(pendingIds)})'>
+            ✅ ພ້ອມທັງໝົດ
+          </button>
+        ` : ''}
         <button class="confirm-btn" onclick="goToBill(${bill.id})" ${!allServed ? 'disabled' : ''}>
           ${allServed ? 'ອອກບິນ / ຈ່າຍແລ້ວ' : 'ລໍຖ້າອາຫານໃຫ້ພ້ອມກ່ອນ'}
         </button>
@@ -124,6 +134,19 @@ async function updateItemStatus(orderId, status) {
   loadTables();
 }
 
+async function markAllReady(itemIds) {
+  await Promise.all(
+    itemIds.map(id =>
+      fetch(`/api/orders/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' })
+      })
+    )
+  );
+  loadTables();
+}
+
 function goToBill(billId) {
   window.location.href = `bill.html?bill=${billId}`;
 }
@@ -132,7 +155,6 @@ async function loadStaffCalls() {
   const res = await fetch('/api/staffcall');
   const calls = await res.json();
 
-  // ກວດການເອີ້ນພະນັກງານໃໝ່
   const currentCallIds = new Set(calls.map(c => c.id));
 
   if (!firstLoad) {
@@ -164,7 +186,6 @@ async function ackStaffCall(id) {
   loadStaffCalls();
 }
 
-// ຕ້ອງລໍໃຫ້ browser ອະນຸຍາດສຽງກ່ອນ (ຕ້ອງມີການຄລິກຢ່າງໜ້ອຍ 1 ຄັ້ງ)
 document.addEventListener('click', () => {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();

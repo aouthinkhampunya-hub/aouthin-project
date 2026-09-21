@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <title>ເພີ່ມເມນູໃໝ່</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <script src="/admin/auth-guard.js"></script>
+  <header>
+    <h1>ຈັດການຮ້ານອາຫານ</h1>
+    <nav>
+      <a href="index.html">ເມນູ</a>
+      <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
+      <a href="tables.html">ໂຕະອາຫານ</a>
+      <a href="kitchen.html">ຄົວ</a>
+      <a href="qrcode.html">QR Code</a>
+      <a href="dashboard.html">ລາຍງານ</a>
+      <a href="staff.html">ພະນັກງານ</a>
+    </nav>
+  </header>
+
+  <main>
+   <a href="index.html" class="back-link">
+  <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12"></line>
+    <polyline points="12 19 5 12 12 5"></polyline>
+  </svg>
+  ກັບ
+</a>
+    <section class="add-form">
+      <h2>ເພີ່ມເມນູໃໝ່</h2>
+      <input type="text" id="name" placeholder="ຊື່ເມນູ">
+      <input type="number" id="price" placeholder="ລາຄາ" max="1000000" min="0">
+
+      <div style="display:flex; gap:4px; align-items:center;">
+        <select id="size" style="flex:1;"></select>
+        <button type="button" onclick="addOption('category')" title="ເພີ່ມປະເພດໃໝ່" style="padding:8px 12px;">+</button>
+        <button type="button" onclick="removeOption('category')" title="ລຶບປະເພດທີ່ເລືອກ" style="padding:8px 12px; background:#b8380e;">🗑</button>
+      </div>
+
+      <div style="display:flex; gap:4px; align-items:center;">
+        <select id="color" style="flex:1;"></select>
+        <button type="button" onclick="addOption('spice')" title="ເພີ່ມລະດັບໃໝ່" style="padding:8px 12px;">+</button>
+        <button type="button" onclick="removeOption('spice')" title="ລຶບລະດັບທີ່ເລືອກ" style="padding:8px 12px; background:#b8380e;">🗑</button>
+      </div>
+
+      <input type="number" id="stock" placeholder="ຈຳນວນ (ຈານ)" max="100" min="0">
+
+      <input type="file" id="image" accept="image/*">
+      <button onclick="addProduct()">ບັນທຶກເມນູ</button>
+    </section>
+  </main>
+
+  <script src="add-product.js"></script>
+</body>
+</html>

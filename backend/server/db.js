@@ -104,7 +104,7 @@ async function initDb() {
     await pool.query(`ALTER TABLE admins ADD COLUMN role VARCHAR(20) DEFAULT 'staff'`);
   }
 
-  console.log('✅ Database schema พร้อมใช้งาน');
+  console.log('✅ Database schema ກຳລັງເຮັດວຽກ');
 }
 
 module.exports = { pool, initDb };

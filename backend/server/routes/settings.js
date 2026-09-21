@@ -61,4 +61,89 @@ router.post('/qr', upload.single('qr'), async (req, res) => {
   }
 });
 
+// ===== ຈັດການ ປະເພດອາຫານ / ລະດັບຄວາມເຜັດ =====
+// type ຕ້ອງເປັນ 'category' ຫຼື 'spice' ເທົ່ານັ້ນ
+const SETTINGS_KEY = {
+  category: 'product_categories',
+  spice: 'spice_levels'
+};
+
+const DEFAULTS = {
+  category: ['ເຂົ້າ', 'ເຄື່ອງດື່ມ', 'ຂອງກິນຫລີ້ນ', 'ເສັ້ນ', 'ຕຳ'],
+  spice: ['ບໍ່ເຜັດ', 'ເຜັດໜ້ອຍ', 'ເຜັດປານກາງ', 'ເຜັດຫຼາຍ']
+};
+
+async function getOptionList(type) {
+  const key = SETTINGS_KEY[type];
+  const [rows] = await pool.query('SELECT value FROM settings WHERE `key` = ?', [key]);
+  if (rows[0]) {
+    try {
+      return JSON.parse(rows[0].value);
+    } catch {
+      return DEFAULTS[type];
+    }
+  }
+  return DEFAULTS[type];
+}
+
+async function saveOptionList(type, list) {
+  const key = SETTINGS_KEY[type];
+  const json = JSON.stringify(list);
+  const [rows] = await pool.query('SELECT * FROM settings WHERE `key` = ?', [key]);
+  if (rows[0]) {
+    await pool.query('UPDATE settings SET value = ? WHERE `key` = ?', [json, key]);
+  } else {
+    await pool.query('INSERT INTO settings (`key`, value) VALUES (?, ?)', [key, json]);
+  }
+}
+
+// ດຶງລາຍການ ປະເພດ + ຄວາມເຜັດ ພ້ອມກັນ
+router.get('/options', async (req, res) => {
+  try {
+    const categories = await getOptionList('category');
+    const spiceLevels = await getOptionList('spice');
+    res.json({ categories, spiceLevels });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ເພີ່ມຕົວເລືອກໃໝ່
+router.post('/options/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    const { value } = req.body;
+    if (!SETTINGS_KEY[type]) return res.status(400).json({ error: 'ປະເພດບໍ່ຖືກຕ້ອງ' });
+    if (!value || !value.trim()) return res.status(400).json({ error: 'ກະລຸນາໃສ່ຊື່' });
+
+    const list = await getOptionList(type);
+    if (!list.includes(value.trim())) {
+      list.push(value.trim());
+      await saveOptionList(type, list);
+    }
+    res.json({ success: true, list });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ລຶບຕົວເລືອກ
+router.delete('/options/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    const { value } = req.body;
+    if (!SETTINGS_KEY[type]) return res.status(400).json({ error: 'ປະເພດບໍ່ຖືກຕ້ອງ' });
+
+    let list = await getOptionList(type);
+    list = list.filter(v => v !== value);
+    await saveOptionList(type, list);
+    res.json({ success: true, list });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 module.exports = router;

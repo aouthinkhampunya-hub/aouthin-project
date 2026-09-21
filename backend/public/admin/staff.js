@@ -36,33 +36,6 @@ async function loadStaff() {
   `;
 }
 
-async function addStaff() {
-  const username = document.getElementById('new-username').value.trim();
-  const password = document.getElementById('new-password').value.trim();
-  const name = document.getElementById('new-name').value.trim();
-
-  if (!username || !password || !name) {
-    alert('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ');
-    return;
-  }
-
-  const res = await fetch('/api/admins', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, name })
-  });
-  const data = await res.json();
-
-  if (res.ok) {
-    document.getElementById('new-username').value = '';
-    document.getElementById('new-password').value = '';
-    document.getElementById('new-name').value = '';
-    loadStaff();
-  } else {
-    alert('ຜິດພາດ: ' + data.error);
-  }
-}
-
 async function deleteStaff(id, name) {
   if (!confirm(`ຢືນຢັນລົບພະນັກງານ "${name}"?`)) return;
 
