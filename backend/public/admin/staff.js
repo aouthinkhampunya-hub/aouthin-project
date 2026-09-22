@@ -1,4 +1,15 @@
 let currentRole = null;
+let resetTargetId = null;
+let deleteTargetId = null;
+
+function showNotice(message) {
+  document.getElementById('notice-modal-text').textContent = message;
+  document.getElementById('notice-modal').style.display = 'flex';
+}
+
+document.getElementById('notice-modal-ok').addEventListener('click', () => {
+  document.getElementById('notice-modal').style.display = 'none';
+});
 
 async function checkAuth() {
   const res = await fetch('/api/auth/me', { credentials: 'include' });
@@ -36,24 +47,49 @@ async function loadStaff() {
   `;
 }
 
-async function deleteStaff(id, name) {
-  if (!confirm(`ຢືນຢັນລົບພະນັກງານ "${name}"?`)) return;
+function deleteStaff(id, name) {
+  deleteTargetId = id;
+  document.getElementById('delete-modal-text').textContent = `ຢືນຢັນລົບພະນັກງານ "${name}"?`;
+  document.getElementById('delete-modal').style.display = 'flex';
+}
 
-  const res = await fetch(`/api/admins/${id}`, { method: 'DELETE' });
+document.getElementById('delete-modal-cancel').addEventListener('click', () => {
+  document.getElementById('delete-modal').style.display = 'none';
+});
+
+document.getElementById('delete-modal-ok').addEventListener('click', async () => {
+  document.getElementById('delete-modal').style.display = 'none';
+
+  const res = await fetch(`/api/admins/${deleteTargetId}`, { method: 'DELETE' });
   const data = await res.json();
 
   if (res.ok) {
     loadStaff();
   } else {
-    alert('ຜິດພາດ: ' + data.error);
+    showNotice('ຜິດພາດ: ' + data.error);
   }
+});
+
+function resetPassword(id, name) {
+  resetTargetId = id;
+  document.getElementById('reset-modal-text').textContent = `ໃສ່ລະຫັດຜ່ານໃໝ່ສຳລັບ "${name}" (ຢ່າງໜ້ອຍ 4 ໂຕ):`;
+  document.getElementById('reset-modal-input').value = '';
+  document.getElementById('reset-modal').style.display = 'flex';
 }
 
-async function resetPassword(id, name) {
-  const newPassword = prompt(`ໃສ່ລະຫັດຜ່ານໃໝ່ສຳລັບ "${name}" (ຢ່າງໜ້ອຍ 4 ໂຕ):`);
-  if (!newPassword) return;
+document.getElementById('reset-modal-cancel').addEventListener('click', () => {
+  document.getElementById('reset-modal').style.display = 'none';
+});
 
-  const res = await fetch(`/api/admins/${id}/reset-password`, {
+document.getElementById('reset-modal-ok').addEventListener('click', async () => {
+  const newPassword = document.getElementById('reset-modal-input').value;
+  if (!newPassword || newPassword.length < 4) {
+    showNotice('ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 4 ໂຕ');
+    return;
+  }
+  document.getElementById('reset-modal').style.display = 'none';
+
+  const res = await fetch(`/api/admins/${resetTargetId}/reset-password`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: newPassword })
@@ -61,10 +97,10 @@ async function resetPassword(id, name) {
   const data = await res.json();
 
   if (res.ok) {
-    alert(`ຣີເຊັດລະຫັດຜ່ານຂອງ "${name}" ສຳເລັດ! ລະຫັດຜ່ານໃໝ່: ${newPassword}`);
+    showNotice(`ຣີເຊັດລະຫັດຜ່ານສຳເລັດ! ລະຫັດຜ່ານໃໝ່: ${newPassword}`);
   } else {
-    alert('ຜິດພາດ: ' + data.error);
+    showNotice('ຜິດພາດ: ' + data.error);
   }
-}
+});
 
 loadStaff();

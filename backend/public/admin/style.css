@@ -348,3 +348,126 @@
 .back-link .arrow {
   flex-shrink: 0;
 }
+.confirm-btn {
+  display: inline-block;
+  padding: 11px 22px;
+  background: #2e7d32;
+  color: white !important;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none !important;
+  transition: background 0.2s ease;
+}
+
+.confirm-btn:hover {
+  background: #256428;
+}
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-box {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  text-align: center;
+  min-width: 300px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.modal-box p {
+  color: #b03a2e;
+  font-weight: bold;
+  margin-bottom: 16px;
+}
+.modal-box input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.modal-buttons button {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+}
+.cancel-btn {
+  background: #a1887f;
+  color: white;
+}
+/* ===== ຕາຕະລາງເລື່ອນໄດ້ໃນຈໍນ້ອຍ ===== */
+#order-list {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#order-list table {
+  min-width: 650px;
+}
+
+/* ===== ປັບຂະໜາດສຳລັບມືຖື ===== */
+@media (max-width: 600px) {
+  main {
+    padding: 12px;
+  }
+
+  header {
+    padding: 10px 16px;
+  }
+
+  header h1 {
+    font-size: 16px;
+  }
+
+  nav a {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  th, td {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .date-filter-bar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .filter-btn, .clear-btn {
+    padding: 9px 16px;
+    font-size: 13px;
+  }
+}
+#product-list {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#product-list table {
+  min-width: 650px;
+}
+#staff-list table {
+ overflow-x: auto;
+ -webkit-overflow-scrolling: touch;
+}
+#staff-list table {
+  min-width: 650px;
+}

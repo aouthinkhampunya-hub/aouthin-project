@@ -2,6 +2,7 @@
 <html lang="lo">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ເພີ່ມພະນັກງານໃໝ່</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -36,6 +37,14 @@
       <input type="text" id="new-name" placeholder="ຊື່ພະນັກງານ">
       <button onclick="addStaff()">ບັນທຶກ</button>
     </div>
+    <div id="notice-modal" class="modal-overlay">
+  <div class="modal-box">
+    <p id="notice-modal-text"></p>
+    <div class="modal-buttons">
+      <button id="notice-modal-ok" class="confirm-btn">OK</button>
+    </div>
+  </div>
+</div>
   </main>
 
   <script src="add-staff.js"></script>

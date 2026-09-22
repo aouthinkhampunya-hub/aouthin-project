@@ -2,6 +2,7 @@
 <html lang="lo">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ພະນັກງານ - AOUTHIN</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -26,6 +27,33 @@
     <table id="staff-table">
       <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th></th></tr>
     </table>
+    <div id="reset-modal" class="modal-overlay">
+  <div class="modal-box">
+    <p id="reset-modal-text">ໃສ່ລະຫັດຜ່ານໃໝ່</p>
+    <input type="text" id="reset-modal-input" placeholder="ລະຫັດຜ່ານໃໝ່">
+    <div class="modal-buttons">
+      <button id="reset-modal-ok" class="confirm-btn">ບັນທຶກ</button>
+      <button id="reset-modal-cancel" class="cancel-btn">ຍົກເລີກ</button>
+    </div>
+  </div>
+</div>
+<div id="delete-modal" class="modal-overlay">
+  <div class="modal-box">
+    <p id="delete-modal-text">ຢືນຢັນລົບ?</p>
+    <div class="modal-buttons">
+      <button id="delete-modal-ok" class="delete-btn">ລົບ</button>
+      <button id="delete-modal-cancel" class="cancel-btn">ຍົກເລີກ</button>
+    </div>
+  </div>
+</div>
+<div id="notice-modal" class="modal-overlay">
+  <div class="modal-box">
+    <p id="notice-modal-text"></p>
+    <div class="modal-buttons">
+      <button id="notice-modal-ok" class="confirm-btn">OK</button>
+    </div>
+  </div>
+</div>
   </main>
 
   <script src="staff.js"></script>

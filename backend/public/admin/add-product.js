@@ -1,5 +1,14 @@
-// ✅ ถ้าพิมพ์แล้วเกินขีดจำกัด ให้ดีดกลับไปค่าล่าสุดที่ถูกต้อง (ไม่กระโดดไปที่ max)
+function showAlert(message) {
+  document.getElementById('alert-modal-text').textContent = message;
+  document.getElementById('alert-modal').classList.remove('hidden');
+}
+
+function closeAlertModal() {
+  document.getElementById('alert-modal').classList.add('hidden');
+}
 function restrictMaxValue(input, max) {
+  if (!input) return;
+
   input.dataset.lastValid = input.value === '' ? '' : Math.min(Number(input.value), max);
 
   input.addEventListener('input', function () {
@@ -16,8 +25,10 @@ function restrictMaxValue(input, max) {
   });
 }
 
-restrictMaxValue(document.getElementById('price'), 1000000);
-restrictMaxValue(document.getElementById('stock'), 100);
+document.addEventListener('DOMContentLoaded', function () {
+  restrictMaxValue(document.getElementById('price'), 1000000);
+  restrictMaxValue(document.getElementById('stock'), 100);
+});
 
 async function checkAuth() {
   try {
@@ -44,37 +55,69 @@ async function loadOptions(keepSize, keepColor) {
 }
 loadOptions();
 
-async function addOption(type) {
-  const label = type === 'category' ? 'ປະເພດອາຫານ' : 'ລະດັບຄວາມເຜັດ';
-  const value = prompt(`ໃສ່ຊື່ ${label} ໃໝ່:`);
-  if (!value || !value.trim()) return;
+let currentOptionType = null;
 
-  await fetch(`/api/settings/options/${type}`, {
+function openAddOptionModal(type) {
+  currentOptionType = type;
+  const title = type === 'category' ? 'ໃສ່ຊື່ ປະເພດອາຫານ ໃໝ່' : 'ໃສ່ຊື່ ລະດັບຄວາມເຜັດ ໃໝ່';
+  document.getElementById('option-modal-title').textContent = title;
+  document.getElementById('option-modal-input').value = '';
+  document.getElementById('option-modal').classList.remove('hidden');
+  document.getElementById('option-modal-input').focus();
+}
+
+function closeOptionModal() {
+  currentOptionType = null;
+  document.getElementById('option-modal').classList.add('hidden');
+}
+
+async function submitOptionModal() {
+  const value = document.getElementById('option-modal-input').value.trim();
+  if (!value) return;
+
+  await fetch(`/api/settings/options/${currentOptionType}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: value.trim() })
+    body: JSON.stringify({ value })
   });
 
+  closeOptionModal();
   await loadOptions();
 }
 
-async function removeOption(type) {
+let pendingDeleteType = null;
+let pendingDeleteValue = null;
+
+function removeOption(type) {
   const selectId = type === 'category' ? 'size' : 'color';
   const select = document.getElementById(selectId);
   const value = select.value;
 
   if (!value) {
-    alert('ກະລຸນາເລືອກຕົວເລືອກທີ່ຢາກລຶບກ່ອນ');
+    showAlert('ກະລຸນາເລືອກຕົວເລືອກທີ່ຢາກລຶບກ່ອນ');
     return;
   }
-  if (!confirm(`ລຶບ "${value}" ອອກບໍ?`)) return;
 
-  await fetch(`/api/settings/options/${type}`, {
+  pendingDeleteType = type;
+  pendingDeleteValue = value;
+  document.getElementById('confirm-delete-text').textContent = `ລຶບ "${value}" ອອກບໍ?`;
+  document.getElementById('confirm-delete-modal').classList.remove('hidden');
+}
+
+function confirmDeleteNo() {
+  pendingDeleteType = null;
+  pendingDeleteValue = null;
+  document.getElementById('confirm-delete-modal').classList.add('hidden');
+}
+
+async function confirmDeleteYes() {
+  await fetch(`/api/settings/options/${pendingDeleteType}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value })
+    body: JSON.stringify({ value: pendingDeleteValue })
   });
 
+  document.getElementById('confirm-delete-modal').classList.add('hidden');
   await loadOptions();
 }
 
