@@ -15,7 +15,6 @@ pool.on('error', (err) => {
   console.error('⚠️ MySQL pool error (ignored, pool will reconnect):', err.code || err.message);
 });
 
-// ตรวจสอบว่าคอลัมน์มีอยู่ในตารางหรือยัง (แทน PRAGMA table_info ของ SQLite)
 async function columnExists(tableName, columnName) {
   const [rows] = await pool.query(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
@@ -61,7 +60,6 @@ async function initDb() {
     )
   `);
 
-  // ➕ ເພີ່ມຖັນໃໝ່ໃສ່ orders (ຖ້າຍັງບໍ່ມີ) — ເບີໂທ, ທີ່ຢູ່, ຮູບສະລິບ
   if (!(await columnExists('orders', 'customer_phone'))) {
     await pool.query(`ALTER TABLE orders ADD COLUMN customer_phone VARCHAR(50)`);
   }
@@ -72,7 +70,6 @@ async function initDb() {
     await pool.query(`ALTER TABLE orders ADD COLUMN slip_image VARCHAR(500)`);
   }
 
-  // ➕ ຕາຕະລາງໃໝ່ — ເກັບ QR ຮັບເງິນຂອງຮ້ານ (ໃຊ້ຮ່ວມກັນທຸກອໍເດີ)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS settings (
       \`key\` VARCHAR(100) PRIMARY KEY,
@@ -80,7 +77,6 @@ async function initDb() {
     )
   `);
 
-  // ➕ ຕາຕະລາງແຈ້ງເຕືອນເອີ້ນພະນັກງານ
   await pool.query(`
     CREATE TABLE IF NOT EXISTS staff_calls (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -90,7 +86,6 @@ async function initDb() {
     )
   `);
 
-  // ຕາຕະລາງບັນຊີແອດມິນ (admin account)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admins (
       id INT AUTO_INCREMENT PRIMARY KEY,
