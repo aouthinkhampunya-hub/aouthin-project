@@ -11,6 +11,9 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 });
+pool.on('error', (err) => {
+  console.error('⚠️ MySQL pool error (ignored, pool will reconnect):', err.code || err.message);
+});
 
 // ตรวจสอบว่าคอลัมน์มีอยู่ในตารางหรือยัง (แทน PRAGMA table_info ของ SQLite)
 async function columnExists(tableName, columnName) {

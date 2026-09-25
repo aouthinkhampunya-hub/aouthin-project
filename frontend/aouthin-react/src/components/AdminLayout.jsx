@@ -28,9 +28,37 @@ export default function AdminLayout() {
 
   return (
     <>
-      <div className="topbar">
-        <span>ສະບາຍດີ, {admin.name}</span>
-        <button onClick={handleLogout}>ອອກຈາກລະບົບ</button>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: '16px',
+        padding: '10px 24px',
+        background: 'linear-gradient(to right, #8B0000, #a30000)',
+        color: 'white',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+        fontSize: '14px'
+      }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          👋 ສະບາຍດີແອັດມິນ <strong>{admin.name}</strong>
+        </span>
+        <button
+          onClick={handleLogout}
+          style={{
+            cursor: 'pointer',
+            padding: '6px 16px',
+            background: 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.4)',
+            borderRadius: '6px',
+            color: 'white',
+            fontSize: '13px',
+            transition: 'background 0.2s'
+          }}
+          onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+          onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+        >
+          ອອກຈາກລະບົບ
+        </button>
       </div>
       <header>
         <h1>ຈັດການຮ້ານອາຫານ</h1>

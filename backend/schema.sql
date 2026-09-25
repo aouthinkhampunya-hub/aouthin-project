@@ -1,4 +1,4 @@
-﻿USE aouthin;
+﻿
 
 CREATE TABLE products (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -12,7 +12,7 @@ CREATE TABLE products (
 
 CREATE TABLE bills (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  table_number INT NOT NULL,
+     table_number VARCHAR(50) NOT NULL,
   status VARCHAR(20) DEFAULT 'open',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   paid_at DATETIME

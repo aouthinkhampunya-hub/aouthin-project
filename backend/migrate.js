@@ -6,12 +6,12 @@ const sqliteDb = new Database('./server/store.db', { readonly: true });
 const tableOrder = ['products', 'bills', 'admins', 'settings', 'staff_calls', 'orders'];
 
 async function run() {
-  const pool = await mysql.createConnection({
-    host: 'localhost',
-    port: 3307,
+    const pool = await mysql.createConnection({
+    host: 'yamabiko.proxy.rlwy.net',
+    port: 32913,
     user: 'root',
-    password: 'Aouthinkpy/11',
-    database: 'aouthin',
+    password: 'TBACcRSLsewUgXdaJBnXIAgoklEAKVZq',
+    database: 'railway',
   });
 
   for (const table of tableOrder) {

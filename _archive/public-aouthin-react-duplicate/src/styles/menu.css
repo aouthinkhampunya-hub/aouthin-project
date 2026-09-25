@@ -12,7 +12,6 @@
   --muted: #8a7c6a;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Segoe UI', 'Noto Sans Lao', sans-serif; background: var(--cream); color: var(--text); }
 
 header { background: linear-gradient(150deg, var(--brown), var(--brown-soft)); color: var(--yellow); padding: 40px 20px 32px; text-align: center; }
 header h1 { font-size: 28px; font-weight: 700; }
