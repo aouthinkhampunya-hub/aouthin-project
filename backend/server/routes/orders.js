@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
 
+// pending = ລໍຖ້າ, cooking = ກຳລັງເຮັດ, ready = ຄົວເຮັດແລ້ວ ລໍເສີບ, completed = ເສີບແລ້ວ
+const ALLOWED_STATUSES = ['pending', 'cooking', 'ready', 'completed'];
+
 router.get('/', async (req, res) => {
   try {
     const [orders] = await pool.query(`
@@ -116,6 +119,11 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { status } = req.body;
+
+    if (!ALLOWED_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'ສະຖານະບໍ່ຖືກຕ້ອງ' });
+    }
+
     await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
     res.json({ success: true });
   } catch (err) {

@@ -64,8 +64,8 @@ export default function AdminLayout() {
         <h1>ຈັດການຮ້ານອາຫານ</h1>
         <nav>
           <Link to="/admin" className={isActive('/admin')}>ເມນູ</Link>
-          <Link to="/admin/orders" className={isActive('/admin/orders')}>ຄຳສັ່ງອາຫານ</Link>
-          <Link to="/admin/tables" className={isActive('/admin/tables')}>ໂຕະອາຫານ</Link>
+          <Link to="/admin/orders" className={isActive('/admin/orders')}>ບັນທືກການສັ່ງ</Link>
+          <Link to="/admin/tables" className={isActive('/admin/tables')}>ອໍເດີ້ອາຫານ</Link>
           <Link to="/admin/kitchen" className={isActive('/admin/kitchen')}>ຄົວ</Link>
           <Link to="/admin/qrcode" className={isActive('/admin/qrcode')}>QR Code</Link>
           <Link to="/admin/dashboard" className={isActive('/admin/dashboard')}>ລາຍງານ</Link>

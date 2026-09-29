@@ -40,7 +40,7 @@ function renderOrders(orders) {
           <td>${statusLabel(o.status)}</td>
           <td>${new Date(o.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Vientiane' })}</td>
           <td>
-            ${o.status === 'pending' ? `<button class="delete-btn" onclick="completeOrder(${o.id})">ເສີບແລ້ວ</button>` : ''}
+            ${o.status === 'ready' ? `<button class="delete-btn" onclick="completeOrder(${o.id})">ເສີບແລ້ວ</button>` : ''}
           </td>
         </tr>
       `).join('')}
@@ -77,8 +77,10 @@ function clearDateFilter() {
 }
 
 function statusLabel(status) {
-  if (status === 'pending') return 'ກຳລັງເຮັດ';
-  if (status === 'completed') return 'ເສີບແລ້ວ';
+  if (status === 'pending') return 'ລໍຖ້າ';
+  if (status === 'cooking') return 'ກຳລັງເຮັດ';
+  if (status === 'ready') return '🍽️ ເຮັດແລ້ວ ລໍເສີບ';
+  if (status === 'completed') return '✅ ເສີບແລ້ວ';
   return status;
 }
 

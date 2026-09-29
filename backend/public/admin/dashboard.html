@@ -14,43 +14,99 @@
       margin-bottom: 24px;
     }
     .chart-box h2 { color: #7a1f0f; margin-bottom: 20px; font-size: 17px; }
-    .bar-chart {
+
+    /* ແຖບເລືອກຊ່ວງເວລາ (ກົດອັນໃດ ໂຊອັນນັ້ນ) */
+    .period-tabs {
       display: flex;
-      align-items: flex-end;
-      justify-content: space-around;
-      height: 220px;
-      gap: 20px;
-      padding: 0 10px;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
     }
-    .bar-col {
+    .period-tab {
+      flex: 1;
+      min-width: 120px;
+      background: #fbf3ea;
+      border: 2px solid #f0e0cf;
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+    }
+    .period-tab:active { transform: scale(0.98); }
+    .period-tab .pt-label { color: #8a7c6a; font-size: 12px; margin-bottom: 4px; }
+    .period-tab .pt-value { color: #7a1f0f; font-size: 16px; font-weight: 800; }
+    .period-tab.active {
+      background: linear-gradient(135deg, #f2760c, #b8380e);
+      border-color: #b8380e;
+    }
+    .period-tab.active .pt-label { color: #ffe3c9; }
+    .period-tab.active .pt-value { color: #fff; }
+
+    /* ສະຫຼຸບຂອງຊ່ວງທີ່ເລືອກ */
+    .period-summary {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+    .period-summary .ps-title { color: #7a1f0f; font-size: 15px; font-weight: 700; }
+    .period-summary .ps-value { color: #b8380e; font-size: 30px; font-weight: 800; }
+    .period-summary .ps-sub { color: #8a7c6a; font-size: 13px; }
+
+    /* ວົງມົນ (donut chart) ທຽບເມນູ */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+    .donut {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      position: relative;
+    }
+    .donut-hole {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 68%; height: 68%;
+      background: #fff;
+      border-radius: 50%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      flex: 1;
-      height: 100%;
-      justify-content: flex-end;
-    }
-    .bar-value {
-      font-size: 12px;
-      font-weight: 700;
-      color: #7a1f0f;
-      margin-bottom: 6px;
-      white-space: nowrap;
-    }
-    .bar-fill {
-      width: 60%;
-      max-width: 70px;
-      background: linear-gradient(180deg, #f2760c, #b8380e);
-      border-radius: 8px 8px 0 0;
-      transition: height 0.4s ease;
-      min-height: 4px;
-    }
-    .bar-label {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #8a7c6a;
+      justify-content: center;
       text-align: center;
+      box-shadow: inset 0 0 0 1px rgba(122,31,15,0.05);
     }
+    .donut-total { color: #7a1f0f; font-size: 17px; font-weight: 800; }
+    .donut-sub { color: #8a7c6a; font-size: 11px; margin-top: 2px; }
+    .donut-legend {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .donut-legend-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+    .donut-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+    .donut-legend-name { flex: 1; color: #4a3b2e; }
+    .donut-legend-qty { color: #7a1f0f; font-weight: 700; }
+    .donut-legend-pct { color: #8a7c6a; font-size: 12px; width: 42px; text-align: right; }
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -89,8 +145,8 @@
     <h1>ຈັດການຮ້ານອາຫານ</h1>
     <nav>
       <a href="index.html">ເມນູ</a>
-      <a href="orders.html">ຄຳສັ່ງອາຫານ</a>
-      <a href="tables.html">ໂຕະອາຫານ</a>
+      <a href="orders.html">ບັນທືກການສັ່ງ</a>
+      <a href="tables.html">ອໍເດີ້ອາຫານ</a>
       <a href="kitchen.html">ຄົວ</a>
       <a href="qrcode.html">QR Code</a>
       <a href="dashboard.html">ລາຍງານ</a>
@@ -99,17 +155,18 @@
   </header>
 
   <main>
-        <div class="chart-box">
-      <h2>📊 ປຽບທຽບຍອດຂາຍ</h2>
-      <div class="bar-chart" id="revenue-chart"></div>
-    </div>
-
-    <div class="stats-grid" id="stats-grid">
-      <p>ກຳລັງໂຫລດ...</p>
+    <div class="chart-box">
+      <h2>📊 ປຽບທຽບຍອດຂາຍ (ກົດເລືອກຊ່ວງເວລາ)</h2>
+      <div class="period-tabs" id="period-tabs"></div>
+      <div class="period-summary" id="period-summary"></div>
+      <div class="donut-wrap">
+        <div class="donut" id="revenue-donut"></div>
+        <div class="donut-legend" id="revenue-legend"></div>
+      </div>
     </div>
 
     <div class="top-items">
-      <h2>🔥 ເມນູຂາຍດີ (ອາທິດນີ້)</h2>
+      <h2 id="top-items-title">🔥 ເມນູຂາຍດີ</h2>
       <div id="top-items-list"></div>
     </div>
   </main>

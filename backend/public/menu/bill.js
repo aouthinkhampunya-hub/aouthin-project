@@ -6,8 +6,17 @@ document.getElementById('table-label').textContent = `ໂຕະ ${tableNumber}`;
 function statusLabel(status) {
   if (status === 'pending') return '⏳ ລໍຖ້າ';
   if (status === 'cooking') return '🔥 ກຳລັງເຮັດ';
+  if (status === 'ready') return '⏳ ລໍຖ້າ'; // ຄົວເຮັດແລ້ວ ແຕ່ແອັດມິນຍັງບໍ່ເສີບ
   if (status === 'completed') return '✅ ພ້ອມແລ້ວ';
   return status;
+}
+
+let qrImage = null;
+
+async function loadQr() {
+  const res = await fetch('/api/settings/qr');
+  const data = await res.json();
+  qrImage = data.qrImage;
 }
 
 async function loadBill() {
@@ -39,11 +48,18 @@ async function loadBill() {
       `).join('')}
     </table>
     <p class="cart-total">ລວມທັງໝົດ: ${total} ກີບ</p>
+    ${qrImage ? `
+      <div class="qr-payment-section">
+        <p class="qr-payment-label">ສະແກນ QR ນີ້ເພື່ອຈ່າຍເງິນ</p>
+        <img src="${qrImage}" alt="QR ຊຳລະເງິນ" class="qr-payment-image">
+      </div>
+    ` : ''}
   `;
 }
 
-loadBill();
-setInterval(loadBill, 5000); 
+loadQr().then(loadBill);
+setInterval(loadBill, 5000);
+
 let pendingCancelId = null;
 
 function cancelOrder(orderId) {

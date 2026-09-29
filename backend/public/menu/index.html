@@ -6,6 +6,7 @@
   <title>ຄຳສັ່ງອາຫານ</title>
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <header>
     <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
@@ -22,10 +23,33 @@
     <p>ກຳລັງໂຫລດ...</p>
   </main>
 
+  <div id="billModal" class="bill-overlay" style="display:none;">
+    <div class="bill-box">
+      <button class="bill-close" onclick="closeBillModal()">✕</button>
+      <div class="bill-box-scroll">
+        <h2 id="billShopName">ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
+        <div id="billMeta" class="bill-meta"></div>
+
+        <table class="bill-table">
+          <thead>
+            <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາ</th></tr>
+          </thead>
+          <tbody id="billItems"></tbody>
+        </table>
+
+        <div class="bill-total">
+          <span>ຍອດລວມທັງໝົດ</span>
+          <strong id="billTotal">0 ກີບ</strong>
+        </div>
+
+        <div id="billQrArea" class="bill-qr"></div>
+      </div>
+    </div>
+  </div>
+
   <button id="cart-button" onclick="openCart()">
     🛒 ກະຕ່າ (<span id="cart-count">0</span>)
   </button>
-
   <div class="left-buttons">
     <button id="bill-button" onclick="goToBill()">🧾 ເບິ່ງບິນ</button>
     <button id="call-staff-button" onclick="callStaff()">🔔 ເອີ້ນພະນັກງານ</button>

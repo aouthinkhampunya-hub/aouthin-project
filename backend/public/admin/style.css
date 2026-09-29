@@ -3,6 +3,15 @@
     padding: 0;
     box-sizing: border-box;
   }
+
+  html {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html::-webkit-scrollbar {
+    display: none;
+  }
   
   body {
     font-family: 'Segoe UI', 'Noto Sans Lao', sans-serif;
@@ -472,4 +481,70 @@
 }
 #staff-list table {
   min-width: 650px;
+}
+/* ===== ບິນອໍເດີ້ (ໜ້າລູກຄ້າ) ===== */
+.bill-table {
+  table-layout: fixed;
+}
+
+.bill-table th:nth-child(1),
+.bill-table td:nth-child(1) {
+  width: 42%;
+  white-space: normal;
+  word-break: break-word;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.bill-table th:nth-child(2),
+.bill-table td:nth-child(2) {
+  width: 14%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.bill-table th:nth-child(3),
+.bill-table td:nth-child(3) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #b8380e;
+}
+
+.bill-table th:nth-child(4),
+.bill-table td:nth-child(4) {
+  width: 18%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.bill-table th:nth-child(5),
+.bill-table td:nth-child(5) {
+  width: 8%;
+  text-align: center;
+}
+
+.cart-total {
+  margin-top: 16px;
+  text-align: right;
+  font-size: 22px;
+  font-weight: 800;
+  color: #7a1f0f;
+  padding: 14px 18px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+}
+
+@media (max-width: 600px) {
+  .bill-table th:nth-child(1),
+  .bill-table td:nth-child(1) {
+    font-size: 15px;
+    width: 36%;
+  }
+  .cart-total {
+    font-size: 18px;
+  }
 }

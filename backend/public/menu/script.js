@@ -19,6 +19,7 @@ function setTableNumber(table) {
   document.getElementById('table-label').textContent = `ໂຕະ ${table}`;
   document.getElementById('table-modal').classList.add('hidden');
   loadProducts();
+  restoreStaffCooldown();
 }
 
 function submitTableNumber() {
@@ -215,25 +216,317 @@ async function confirmCartOrder() {
 }
 initApp();
 
-function goToBill() {
-  window.location.href = `bill.html?table=${tableNumber}`;
+// ===== ເບິ່ງບິນ: ເດັ້ງເປັນ popup (ແທນການໄປໜ້າ bill.html) =====
+
+function escapeHtml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
+
+function billStatusLabel(status) {
+  if (status === 'pending') return '⏳ ລໍຖ້າ';
+  if (status === 'cooking') return '🔥 ກຳລັງເຮັດ';
+  if (status === 'ready') return '⏳ ລໍຖ້າ'; // ຄົວເຮັດແລ້ວ ແຕ່ແອັດມິນຍັງບໍ່ເສີບ
+  if (status === 'completed') return '✅ ພ້ອມແລ້ວ';
+  return status;
+}
+
+// ປຸ່ມ "ເບິ່ງບິນ" ເອີ້ນຟັງຊັນນີ້ຢູ່ແລ້ວ (ບໍ່ຕ້ອງແກ້ HTML ຂອງປຸ່ມ)
+function goToBill() {
+  openBillModal();
+}
+
+async function openBillModal() {
+  const modal = document.getElementById('billModal');
+  const itemsEl = document.getElementById('billItems');
+  const totalEl = document.getElementById('billTotal');
+  const metaEl = document.getElementById('billMeta');
+  const qrEl = document.getElementById('billQrArea');
+
+  modal.style.display = 'flex';
+  itemsEl.innerHTML = '<tr><td colspan="3">ກຳລັງໂຫລດ...</td></tr>';
+  totalEl.textContent = '0 ກີບ';
+  qrEl.innerHTML = '';
+  metaEl.textContent = `ໂຕະ ${tableNumber} • ${new Date().toLocaleString('en-GB')}`;
+
+  try {
+    const res = await fetch('/api/orders/bills');
+    if (!res.ok) throw new Error('bill api failed');
+    const bills = await res.json();
+
+    const myBill = bills.find(b => String(b.table_number) === String(tableNumber));
+
+    if (!myBill || myBill.items.length === 0) {
+      itemsEl.innerHTML = '<tr><td colspan="3">ຍັງບໍ່ມີການສັ່ງອາຫານ</td></tr>';
+      return;
+    }
+
+    const total = myBill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+    itemsEl.innerHTML = myBill.items.map(i => `
+      <tr>
+        <td>
+          ${escapeHtml(i.product_name)}
+          <div class="bill-item-status">
+            <span>${billStatusLabel(i.status)}</span>
+            ${i.status === 'pending'
+              ? `<button type="button" class="bill-cancel-link" onclick="askCancelOrder(${i.id})">ຍົກເລີກ</button>`
+              : ''}
+          </div>
+        </td>
+        <td>${i.quantity}</td>
+        <td>${i.price * i.quantity} ກີບ</td>
+      </tr>
+    `).join('');
+    totalEl.textContent = `${total} ກີບ`;
+  } catch (err) {
+    itemsEl.innerHTML = '<tr><td colspan="3">ໂຫລດບິນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່</td></tr>';
+    return;
+  }
+
+  // QR ຈ່າຍເງິນ (ຖ້າໂຫລດບໍ່ໄດ້ກໍຂ້າມໄປ ບໍ່ໃຫ້ກະທົບຕາຕະລາງບິນ)
+  try {
+    const qres = await fetch('/api/settings/qr');
+    const qdata = await qres.json();
+    if (qdata.qrImage) {
+      qrEl.innerHTML = `<p>ສະແກນ QR ນີ້ເພື່ອຈ່າຍເງິນ</p><img src="${qdata.qrImage}" alt="QR ຊຳລະເງິນ">`;
+    }
+  } catch (e) {}
+}
+
+function closeBillModal() {
+  document.getElementById('billModal').style.display = 'none';
+}
+
+// ----- ປັອບອັບຢືນຢັນຍົກເລີກລາຍການ (ພາຍໃນປັອບອັບບິນ) -----
+(function addBillCancelStyle() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .bill-item-status {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 4px; font-size: 12px; color: #8a7c6a;
+    }
+    .bill-cancel-link {
+      background: none; border: none; color: #b3261e; font-weight: 700;
+      font-size: 12px; text-decoration: underline; cursor: pointer;
+      padding: 0; margin: 0; width: auto;
+    }
+    .bc-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      width: 100vw; height: 100vh; background: rgba(20, 12, 6, 0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10001; padding: 20px; animation: bcFadeIn 0.2s ease;
+    }
+    .bc-box {
+      background: #fff; border-radius: 22px; width: 100%; max-width: 340px;
+      padding: 36px 28px 28px; text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45); animation: bcPopIn 0.25s ease;
+    }
+    .bc-icon {
+      width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 50%; font-size: 34px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(150deg, #FFC93C, #F2760C);
+      box-shadow: 0 8px 20px rgba(242,118,12,0.35);
+    }
+    .bc-box h3 { margin: 0 0 8px; color: #2B1B0E; font-size: 19px; font-weight: 800; }
+    .bc-box p { margin: 0 0 24px; color: #6b5a4a; font-size: 14px; line-height: 1.5; }
+    .bc-actions { display: flex; gap: 10px; }
+    .bc-actions button {
+      flex: 1; padding: 13px; border: none; border-radius: 12px; font-size: 15px;
+      font-weight: 700; cursor: pointer; margin: 0; width: auto;
+    }
+    .bc-no { background: #8a7c6a; color: #fff; }
+    .bc-no:hover { background: #6f6355; }
+    .bc-yes { background: #c0392b; color: #fff; box-shadow: 0 6px 16px rgba(192,57,43,0.35); }
+    .bc-yes:hover { background: #a5301f; }
+    .bc-yes:disabled { opacity: 0.6; cursor: default; }
+    .bc-toast {
+      position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
+      background: #2B1B0E; color: #FFC93C; padding: 12px 22px; border-radius: 999px;
+      font-weight: 700; font-size: 15px; z-index: 10002;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    @keyframes bcFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes bcPopIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  `;
+  document.head.appendChild(s);
+})();
+
+let cancelOrderId = null;
+
+function showBillCancelToast(message) {
+  const old = document.getElementById('bc-toast');
+  if (old) old.remove();
+  const t = document.createElement('div');
+  t.id = 'bc-toast';
+  t.className = 'bc-toast';
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+function askCancelOrder(orderId) {
+  cancelOrderId = orderId;
+
+  let overlay = document.getElementById('bill-cancel-modal');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'bill-cancel-modal';
+    overlay.className = 'bc-overlay';
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeCancelOrder();
+    });
+    document.body.appendChild(overlay);
+  }
+
+  overlay.innerHTML = `
+    <div class="bc-box">
+      <div class="bc-icon">🗑️</div>
+      <h3>ຍົກເລີກອໍເດີ້</h3>
+      <p>ຢືນຢັນວ່າຈະຍົກເລີກລາຍການອາຫານນີ້?</p>
+      <div class="bc-actions">
+        <button class="bc-no" onclick="closeCancelOrder()">ຍົກເລີກ</button>
+        <button class="bc-yes" id="bill-cancel-yes" onclick="doCancelOrder()">ຢືນຢັນ</button>
+      </div>
+    </div>
+  `;
+}
+
+function closeCancelOrder() {
+  const overlay = document.getElementById('bill-cancel-modal');
+  if (overlay) overlay.remove();
+  cancelOrderId = null;
+}
+
+async function doCancelOrder() {
+  if (cancelOrderId === null) return;
+  const id = cancelOrderId;
+
+  const btn = document.getElementById('bill-cancel-yes');
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      closeCancelOrder();
+      showBillCancelToast('❌ ' + (data.error || 'ຍົກເລີກບໍ່ໄດ້'));
+      return;
+    }
+  } catch (err) {
+    closeCancelOrder();
+    showBillCancelToast('❌ ຍົກເລີກບໍ່ໄດ້');
+    return;
+  }
+
+  closeCancelOrder();
+  await openBillModal();
+  showBillCancelToast('✅ ຍົກເລີກລາຍການແລ້ວ');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('bill-cancel-modal')) closeCancelOrder();
+});
+
+// ===== ເອີ້ນພະນັກງານ: ລັອກປຸ່ມ 60 ວິນາທີ (ຈື່ໄວ້ ຖ້າຣີເຟຣຊໜ້າກໍຍັງລັອກ) =====
+const STAFF_CALL_COOLDOWN_MS = 60000;
+const STAFF_CALL_LABEL = '🔔 ເອີ້ນພະນັກງານ';
+let staffCooldownTimer = null;
+
+function staffCallKey() {
+  return `staffCallUntil_${tableNumber}`;
+}
+
+function getStaffCooldownUntil() {
+  try {
+    return Number(localStorage.getItem(staffCallKey())) || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function setStaffCooldownUntil(until) {
+  try {
+    localStorage.setItem(staffCallKey(), String(until));
+  } catch (e) {}
+}
+
+function clearStaffCooldown() {
+  try {
+    localStorage.removeItem(staffCallKey());
+  } catch (e) {}
+}
+
+function startStaffCooldown(until) {
+  const btn = document.getElementById('call-staff-button');
+  if (!btn) return;
+
+  if (staffCooldownTimer) clearInterval(staffCooldownTimer);
+  btn.disabled = true;
+
+  const tick = () => {
+    const left = Math.ceil((until - Date.now()) / 1000);
+    if (left <= 0) {
+      clearInterval(staffCooldownTimer);
+      staffCooldownTimer = null;
+      clearStaffCooldown();
+      btn.disabled = false;
+      btn.textContent = STAFF_CALL_LABEL;
+      return;
+    }
+    btn.textContent = `✅ ແຈ້ງແລ້ວ ລໍຖ້າ ${left} ວິ`;
+  };
+
+  tick();
+  staffCooldownTimer = setInterval(tick, 1000);
+}
+
+function restoreStaffCooldown() {
+  if (!tableNumber) return;
+  const until = getStaffCooldownUntil();
+  if (until > Date.now()) startStaffCooldown(until);
+}
+
 async function callStaff() {
   const btn = document.getElementById('call-staff-button');
+
+  // ຍັງຢູ່ໃນເວລາລັອກ ບໍ່ໃຫ້ເອີ້ນຊ້ຳ
+  const existing = getStaffCooldownUntil();
+  if (existing > Date.now()) {
+    startStaffCooldown(existing);
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = '📞 ກຳລັງແຈ້ງ...';
 
-  await fetch('/api/staffcall', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table_number: tableNumber })
-  });
+  let until = Date.now() + STAFF_CALL_COOLDOWN_MS;
 
-  btn.textContent = '✅ ແຈ້ງແລ້ວ ລໍຖ້າພະນັກງານ';
+  try {
+    const res = await fetch('/api/staffcall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ table_number: tableNumber })
+    });
 
-  setTimeout(() => {
+    if (res.status === 429) {
+      // ເຊີເວີບອກວ່າເອີ້ນຖີ່ເກີນໄປ: ໃຊ້ເວລາທີ່ເຊີເວີບອກ (ຖ້າມີ)
+      const data = await res.json().catch(() => ({}));
+      const waitSec = Number(data.retryAfter) || 60;
+      until = Date.now() + waitSec * 1000;
+    } else if (!res.ok) {
+      throw new Error('staffcall failed');
+    }
+  } catch (err) {
     btn.disabled = false;
-    btn.textContent = '🔔 ເອີ້ນພະນັກງານ';
-  }, 15000);
+    btn.textContent = STAFF_CALL_LABEL;
+    alert('ແຈ້ງພະນັກງານບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່ອີກຄັ້ງ');
+    return;
+  }
+
+  setStaffCooldownUntil(until);
+  startStaffCooldown(until);
 }
-  

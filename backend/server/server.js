@@ -18,7 +18,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
-   'https://aouthin-123.web.app',
+  'https://aouthin-123.web.app',
   'https://aouthin-123.firebaseapp.com',
 ];
 
@@ -73,9 +73,17 @@ async function startServer() {
     app.listen(PORT, async () => {
       console.log(`Server ຣັນຢູ່ທີ່ http://localhost:${PORT}`);
 
-      const open = (await import('open')).default;
-      open(`http://localhost:${PORT}/menu/index.html`);
-      open(`http://localhost:${PORT}/admin/index.html`);
+      // ເປີດເບຣົາເຊີອັດຕະໂນມັດສະເພາະຕອນຣັນໃນເຄື່ອງ (ບໍ່ເປີດເທິງ Render)
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const open = (await import('open')).default;
+          await open(`http://localhost:${PORT}/menu/index.html`);
+          await open(`http://localhost:${PORT}/admin/index.html`);
+        } catch (err) {
+          console.log('ເປີດເບຣົາເຊີອັດຕະໂນມັດບໍ່ໄດ້ (ບໍ່ເປັນຫຍັງ):', err.code || err.message);
+          console.log(`ເປີດເອງທີ່ http://localhost:${PORT}/menu/index.html`);
+        }
+      }
     });
   } catch (err) {
     console.error('❌ ບໍ່ສາມາດເຊື່ອມຕໍ່ຖານຂໍ້ມູນ:', err);

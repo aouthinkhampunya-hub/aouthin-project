@@ -2,9 +2,12 @@ const params = new URLSearchParams(window.location.search);
 const billId = params.get('bill');
 
 async function checkAuth() {
-  const res = await fetch('/api/auth/check');
-  const data = await res.json();
-  if (!data.loggedIn) {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) {
+      window.location.href = 'login.html';
+    }
+  } catch (err) {
     window.location.href = 'login.html';
   }
 }
@@ -65,7 +68,7 @@ async function loadBill() {
       `}
 
       <div class="bill-actions">
-                <button class="btn-print" onclick="window.print()">🖨️ ພິມບິນ</button>
+        <button class="btn-print" onclick="window.print()">🖨️ ພິມບິນ</button>
         <button class="btn-confirm" onclick="confirmPaid(${bill.id})">🧾 ກວດສອບບິນ</button>
       </div>
     </div>
