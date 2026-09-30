@@ -15,9 +15,9 @@ let allOrders = [];
 async function loadOrders() {
   const res = await fetch('/api/orders');
   allOrders = await res.json();
+  allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   renderOrders(allOrders);
 }
-
 function renderOrders(orders) {
   const container = document.getElementById('order-list');
 
@@ -26,22 +26,30 @@ function renderOrders(orders) {
     return;
   }
 
-  container.innerHTML = `
+    container.innerHTML = `
     <table>
       <tr>
         <th>ລະຫັດ</th><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາລວມ</th><th>ສະຖານະ</th><th>ເວລາສັ່ງ</th><th></th>
       </tr>
-      ${orders.map(o => `
+      ${orders.map((o, index) => `
         <tr>
-          <td>${o.id}</td>
+          <td>${index + 1}</td>
           <td>${o.product_name}</td>
           <td>${o.quantity}</td>
           <td>${o.price * o.quantity} ກີບ</td>
           <td>${statusLabel(o.status)}</td>
-          <td>${new Date(o.created_at).toLocaleString('en-GB', { timeZone: 'Asia/Vientiane' })}</td>
-          <td>
-            ${o.status === 'ready' ? `<button class="delete-btn" onclick="completeOrder(${o.id})">ເສີບແລ້ວ</button>` : ''}
-          </td>
+          <td class="time-column">
+  <div class="time-content">
+    ${new Date(o.created_at).toLocaleString('en-GB', {
+      timeZone: 'Asia/Vientiane'
+    })}
+
+    ${o.status === 'ready'
+      ? `<button class="delete-btn" onclick="completeOrder(${o.id})">ເສີບແລ້ວ</button>`
+      : ''
+    }
+  </div>
+</td>
         </tr>
       `).join('')}
     </table>

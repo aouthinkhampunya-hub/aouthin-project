@@ -39,7 +39,6 @@ function playBeep() {
 }
 
 let knownOrderIds = new Set();
-let knownCallIds = new Set();
 let knownReadyIds = new Set();
 let firstLoad = true;
 
@@ -160,23 +159,19 @@ function billEsc(value) {
 (function addBillPopupStyle() {
   const s = document.createElement('style');
   s.textContent = `
-        .bp-overlay {
+    .bp-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       width: 100vw; height: 100vh; background: rgba(20, 12, 6, 0.75);
       display: flex; align-items: center; justify-content: center;
       z-index: 9999; padding: 20px; animation: bpFadeIn 0.2s ease;
-      scrollbar-width: none; -ms-overflow-style: none;
     }
-    .bp-overlay::-webkit-scrollbar { display: none; }
     .bp-overlay.top { z-index: 10001; }
-        .bp-box {
+    .bp-box {
       position: relative; background: #fff; border-radius: 22px;
       width: 100%; max-width: 460px; max-height: 92vh; overflow-y: auto;
       padding: 26px 24px 22px; box-shadow: 0 24px 60px rgba(0,0,0,0.45);
       animation: bpPopIn 0.25s ease;
-      scrollbar-width: none; -ms-overflow-style: none;
     }
-    .bp-box::-webkit-scrollbar { display: none; }
     .bp-close {
       position: absolute; top: 12px; right: 14px; width: 32px; height: 32px;
       border: none; border-radius: 50%; background: #f3ece4; color: #7a1f10;
@@ -422,215 +417,6 @@ document.addEventListener('keydown', (e) => {
   else if (document.getElementById('bill-popup-modal')) closeBillPopup();
 });
 
-// ===== ປຸ່ມກະດິ່ງແຈ້ງເຕືອນເອີ້ນພະນັກງານ + ປັອບອັບ (ຊ້ອນຢູ່ເທິງໜ້າ) =====
-let staffCallsOpen = false;
-let staffCallsData = [];
-
-// ===== ຍ້າຍປຸ່ມ 🔔 ເອີ້ນພະນັກງານ ໄປຢູ່ແຖບເມນູເທິງ (ຂວາສຸດ) =====
-(function relocateStaffCallBar() {
-  function moveBar() {
-    const bar = document.getElementById('staff-calls-bar');
-    const nav = document.querySelector('header nav') || document.querySelector('header');
-    if (!bar || !nav || bar.parentElement === nav) return;
-
-    nav.style.display = 'flex';
-    nav.style.alignItems = 'center';
-    nav.style.flexWrap = 'wrap';
-
-    bar.style.marginLeft = 'auto';
-    bar.style.display = 'inline-flex';
-    bar.style.alignItems = 'center';
-
-    nav.appendChild(bar);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', moveBar);
-  } else {
-    moveBar();
-  }
-})();
-
-(function addStaffBellStyle() {
-  const s = document.createElement('style');
-  s.textContent = `
-    .staff-bell-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      width: fit-content !important; max-width: max-content; flex: 0 0 auto;
-      align-self: flex-start; justify-self: start; margin: 0;
-      background: #d9a520; border: none; color: #fff;
-      font-weight: 700; font-size: 13px; line-height: 1.2; padding: 5px 12px;
-      border-radius: 999px; cursor: pointer;
-    }
-    .staff-bell-btn .bell-icon { display: inline-block; transform-origin: 50% 10%; }
-    .staff-bell-btn.ringing .bell-icon { animation: staffBellShake 1.4s ease-in-out infinite; }
-    .staff-bell-btn .badge {
-      background: #d32f2f; color: #fff; min-width: 18px; height: 18px;
-      border-radius: 999px; display: inline-flex; align-items: center;
-      justify-content: center; font-size: 12px; padding: 0 5px;
-    }
-    @keyframes staffBellShake {
-      0%, 50%, 100% { transform: rotate(0); }
-      10%, 30% { transform: rotate(-18deg); }
-      20%, 40% { transform: rotate(18deg); }
-    }
-
-    /* ປັອບອັບລາຍການເອີ້ນພະນັກງານ */
-    .staff-modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(20, 12, 6, 0.75);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999; padding: 20px;
-      animation: staffFadeIn 0.2s ease;
-    }
-    .staff-modal-box {
-      background: #fff; border-radius: 22px;
-      width: 100%; max-width: 420px; max-height: 80vh;
-      display: flex; flex-direction: column;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-      animation: staffPopIn 0.25s ease;
-      overflow: hidden;
-    }
-    .staff-modal-head {
-      position: relative; text-align: center;
-      padding: 26px 20px 14px;
-    }
-    .staff-modal-icon {
-      width: 60px; height: 60px; margin: 0 auto 10px;
-      border-radius: 50%; font-size: 28px;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(150deg, #FFC93C, #F2760C);
-      box-shadow: 0 8px 20px rgba(242, 118, 12, 0.35);
-    }
-    .staff-modal-head h3 {
-      margin: 0; color: #2B1B0E; font-size: 18px; font-weight: 800;
-    }
-    .staff-modal-close {
-      position: absolute; top: 12px; right: 14px;
-      width: 32px; height: 32px; border: none; border-radius: 50%;
-      background: #f3ece4; color: #7a1f10; font-size: 16px; font-weight: 700;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      padding: 0; margin: 0;
-    }
-    .staff-modal-close:hover { background: #e8dccf; }
-    .staff-modal-list {
-      padding: 6px 18px 22px; overflow-y: auto;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .staff-modal-item {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      background: #fff3cd; border: 2px solid #d9a520; border-radius: 14px;
-      padding: 12px 14px; color: #7a1f10; font-weight: 700;
-    }
-    .staff-modal-item button {
-      background: #3C8031; color: #fff; border: none; border-radius: 10px;
-      padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
-      width: auto; margin: 0; flex: 0 0 auto;
-    }
-    .staff-modal-item button:hover { background: #2C601E; }
-    @keyframes staffFadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes staffPopIn {
-      from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-  `;
-  document.head.appendChild(s);
-})();
-
-function renderStaffModal() {
-  let overlay = document.getElementById('staff-call-modal');
-
-  // ບໍ່ມີລາຍການແລ້ວ ຫຼືປິດຢູ່ -> ລຶບປັອບອັບ
-  if (staffCallsData.length === 0) staffCallsOpen = false;
-  if (!staffCallsOpen) {
-    if (overlay) overlay.remove();
-    return;
-  }
-
-  const key = staffCallsData.map(c => c.id).join(',');
-
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'staff-call-modal';
-    overlay.className = 'staff-modal-overlay';
-    // ກົດພື້ນມືດນອກກ່ອງເພື່ອປິດ
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) toggleStaffCalls();
-    });
-    document.body.appendChild(overlay);
-  } else if (overlay.dataset.key === key) {
-    return; // ລາຍການບໍ່ປ່ຽນ ບໍ່ຕ້ອງວາດໃໝ່
-  }
-
-  overlay.dataset.key = key;
-  overlay.innerHTML = `
-    <div class="staff-modal-box">
-      <div class="staff-modal-head">
-        <div class="staff-modal-icon">🔔</div>
-        <h3>ລູກຄ້າເອີ້ນພະນັກງານ</h3>
-        <button class="staff-modal-close" onclick="toggleStaffCalls()">✕</button>
-      </div>
-      <div class="staff-modal-list">
-        ${staffCallsData.map(c => `
-          <div class="staff-modal-item">
-            <span>🔔 ໂຕະ ${c.table_number}</span>
-            <button onclick="ackStaffCall(${c.id})">ຮັບຮູ້ແລ້ວ</button>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-}
-
-function toggleStaffCalls() {
-  staffCallsOpen = !staffCallsOpen;
-  renderStaffModal();
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && staffCallsOpen) toggleStaffCalls();
-});
-
-async function loadStaffCalls() {
-  const res = await fetch('/api/staffcall');
-  const calls = await res.json();
-
-  const currentCallIds = new Set(calls.map(c => c.id));
-
-  if (!firstLoad) {
-    let hasNew = false;
-    currentCallIds.forEach(id => {
-      if (!knownCallIds.has(id)) hasNew = true;
-    });
-    if (hasNew) playBeep();
-  }
-  knownCallIds = currentCallIds;
-
-  staffCallsData = calls;
-
-  const bar = document.getElementById('staff-calls-bar');
-
-  if (calls.length === 0) {
-    bar.innerHTML = '';
-    renderStaffModal();
-    return;
-  }
-
-  bar.innerHTML = `
-    <button class="staff-bell-btn ringing" onclick="toggleStaffCalls()">
-      <span class="bell-icon">🔔</span> <span>ເອີ້ນພະນັກງານ</span> <span class="badge">${calls.length}</span>
-    </button>
-  `;
-
-  renderStaffModal();
-}
-
-async function ackStaffCall(id) {
-  await fetch(`/api/staffcall/${id}/ack`, { method: 'PUT' });
-  loadStaffCalls();
-}
-
 document.addEventListener('click', () => {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -639,12 +425,10 @@ document.addEventListener('click', () => {
 
 async function initTables() {
   await loadTables();
-  await loadStaffCalls();
   firstLoad = false;
 }
 
 initTables();
 setInterval(() => {
   loadTables();
-  loadStaffCalls();
 }, 5000);

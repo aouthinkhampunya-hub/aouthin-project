@@ -76,7 +76,7 @@
       margin-left: 6px;
       white-space: nowrap;
     }
-        .kitchen-item-actions {
+            .kitchen-item-actions {
       display: flex;
       flex-direction: row;
       gap: 6px;
@@ -92,6 +92,16 @@
       cursor: pointer;
       color: white;
       text-align: center;
+    }
+        @media (max-width: 640px) {
+      .kitchen-item-actions {
+        flex-direction: column;
+        width: 110px;
+      }
+      .kitchen-item-actions button {
+        width: 100%;
+        box-sizing: border-box;
+      }
     }
     .btn-start { background: #e67e22; }
     .btn-start:hover { background: #d3691a; }
@@ -115,7 +125,7 @@
       <a href="index.html">ເມນູ</a>
       <a href="orders.html">ບັນທືກການສັ່ງ</a>
       <a href="tables.html">ອໍເດີ້ອາຫານ</a>
-      <a href="kitchen.html" class="active">ຄົວ</a>
+      <a href="kitchen.html">ຄົວ</a>
       <a href="qrcode.html">QR Code</a>
       <a href="dashboard.html">ລາຍງານ</a>
       <a href="staff.html">ພະນັກງານ</a>
@@ -129,5 +139,6 @@
   </main>
 
   <script src="kitchen.js"></script>
+  <script src="nav-active.js"></script>
 </body>
 </html>

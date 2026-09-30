@@ -46,8 +46,9 @@ checkAuth();
 (function addEditProductStyle() {
   const s = document.createElement('style');
   s.textContent = `
-    .action-cell { white-space: nowrap; }
-    .action-cell button { margin-right: 6px; }
+  .action-cell { white-space: nowrap; text-align: right; width: 1%; }
+.action-cell button { margin-left: 6px; margin-right: 0; }
+.action-cell button:first-child { margin-left: 0; }
     .edit-btn {
       background: #d9a520; color: #fff; border: none; border-radius: 8px;
       padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
@@ -518,7 +519,7 @@ function deleteProduct(id) {
       <h3>ລຶບເມນູ</h3>
       <p>ຢືນຢັນວ່າຈະລຶບ <span class="del-modal-name">${escapeHtml(p.name)}</span> ອອກຈາກເມນູ?</p>
       <p class="del-modal-warn">ການລຶບບໍ່ສາມາດກູ້ຄືນໄດ້</p>
-      <div class="del-actions">
+                  <div class="del-actions">
         <button class="del-cancel" onclick="closeDeleteProduct()">ຍົກເລີກ</button>
         <button class="del-confirm" id="delete-confirm-btn" onclick="confirmDeleteProduct()">ລຶບ</button>
       </div>

@@ -27,19 +27,21 @@ async function loadStaff() {
   const res = await fetch('/api/admins');
   const admins = await res.json();
 
-  const table = document.getElementById('staff-table');
+    const table = document.getElementById('staff-table');
   table.innerHTML = `
     <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th>ບົດບາດ</th><th></th></tr>
-    ${admins.map(a => `
+    ${admins.map((a, index) => `
       <tr>
-        <td>${a.id}</td>
+        <td>${index + 1}</td>
         <td>${a.username}</td>
         <td>${a.name}</td>
         <td>${a.role === 'owner' ? '👑 ເຈົ້າຂອງຮ້ານ' : '👤 ພະນັກງານ'}</td>
-        <td>
+                        <td>
           ${currentRole === 'owner' && a.role !== 'owner'
-            ? `<button class="delete-btn" onclick="deleteStaff(${a.id}, '${a.name}')">ລົບ</button>
-               <button class="reset-btn" onclick="resetPassword(${a.id}, '${a.name}')">ຣີເຊັດລະຫັດ</button>`
+            ? `<div class="staff-actions">
+                 <button class="delete-btn" onclick="deleteStaff(${a.id}, '${a.name}')">ລົບ</button>
+                 <button class="reset-btn" onclick="resetPassword(${a.id}, '${a.name}')">ຣີເຊັດລະຫັດ</button>
+               </div>`
             : ''}
         </td>
       </tr>

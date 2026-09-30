@@ -79,7 +79,7 @@
     <div class="table-modal-box">
       <h2>ກະລຸນາປ້ອນເລກໂຕະ</h2>
       <p class="table-modal-sub">ຕ້ອງໃສ່ເລກໂຕະກ່ອນຈຶ່ງເບິ່ງເມນູໄດ້</p>
-      <input type="text" id="table-input" inputmode="numeric" autofocus>   
+           <input type="text" id="table-input" inputmode="numeric" pattern="[0-9]*" maxlength="2" autofocus oninput="this.value = this.value.replace(/[^0-9]/g, '')">
       <p id="table-error" class="table-error hidden">⚠️ ກະລຸນາໃສ່ເລກໂຕະ</p>
       <button class="confirm-btn" onclick="submitTableNumber()">ຢືນຢັນ</button>
     </div>

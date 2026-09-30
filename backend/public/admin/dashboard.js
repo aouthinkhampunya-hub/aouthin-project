@@ -30,12 +30,17 @@ const PERIODS = [
 const DONUT_COLORS = ['#b8380e', '#f2760c', '#d9a520', '#3C8031', '#2b6cb0', '#8a7c6a'];
 
 let allCompletedOrders = [];
+let allProductsCache = [];
 let periodStats = {}; // key -> { revenue, count, itemSales: {name: qty} }
 let selectedPeriod = 'today';
 
 async function loadDashboard() {
-  const res = await fetch('/api/orders');
-  const orders = await res.json();
+  const [ordersRes, productsRes] = await Promise.all([
+    fetch('/api/orders'),
+    fetch('/api/products')
+  ]);
+  const orders = await ordersRes.json();
+  allProductsCache = await productsRes.json().catch(() => []);
   allCompletedOrders = orders.filter(o => o.status === 'completed');
 
   const todayStr = getVientianeDateStr(new Date());
@@ -102,6 +107,24 @@ function renderSelectedPeriod() {
 
   renderDonut(stat.itemSales);
   renderTopItems(period.label, stat.itemSales);
+  renderUnsoldItems(period.label, stat.itemSales);
+}
+
+function renderUnsoldItems(periodLabel, itemSales) {
+  document.getElementById('unsold-title').textContent = `🚫 ເມນູທີ່ບໍ່ໄດ້ຂາຍ (${periodLabel})`;
+
+  const unsold = allProductsCache.filter(p => !itemSales[p.name]);
+  const list = document.getElementById('unsold-list');
+
+  if (allProductsCache.length === 0) {
+    list.innerHTML = '<p style="color:#8a7c6a;">ຍັງບໍ່ມີຂໍ້ມູນເມນູ</p>';
+  } else if (unsold.length === 0) {
+    list.innerHTML = '<p class="unsold-empty">✅ ທຸກເມນູມີການສັ່ງໃນຊ່ວງນີ້</p>';
+  } else {
+    list.innerHTML = `<div class="unsold-list">${
+      unsold.map(p => `<span class="unsold-chip">${p.name}</span>`).join('')
+    }</div>`;
+  }
 }
 
 function renderDonut(itemSales) {

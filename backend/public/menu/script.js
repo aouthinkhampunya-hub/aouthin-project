@@ -2,6 +2,18 @@ let cart = [];
 let allProducts = [];
 let tableNumber = null;
 
+const CATEGORY_ORDER = ['ເຂົ້າ', 'ຕຳ', 'ເສັ້ນ', 'ຂອງກິນຫຼິ້ນ', 'ເຄື່ອງດື່ມ'];
+
+function sortByCategoryOrder(items, getCategory) {
+  return [...items].sort((a, b) => {
+    const ai = CATEGORY_ORDER.indexOf(getCategory(a));
+    const bi = CATEGORY_ORDER.indexOf(getCategory(b));
+    const aPos = ai === -1 ? CATEGORY_ORDER.length : ai;
+    const bPos = bi === -1 ? CATEGORY_ORDER.length : bi;
+    return aPos - bPos;
+  });
+}
+
 function initApp() {
   const params = new URLSearchParams(window.location.search);
   let table = params.get('table') || sessionStorage.getItem('tableNumber');
@@ -27,7 +39,16 @@ function submitTableNumber() {
   const errorEl = document.getElementById('table-error');
   const value = input.value.trim();
 
-  if (!value) {
+  if (!value || !/^[0-9]+$/.test(value)) {
+    errorEl.textContent = '⚠️ ກະລຸນາໃສ່ຕົວເລກໂຕະເທົ່ານັ້ນ';
+    errorEl.classList.remove('hidden');
+    input.focus();
+    return;
+  }
+
+  const tableNum = Number(value);
+  if (tableNum < 1 || tableNum > 20) {
+    errorEl.textContent = '⚠️ ເລກໂຕະຕ້ອງຢູ່ລະຫວ່າງ 1-20';
     errorEl.classList.remove('hidden');
     input.focus();
     return;
@@ -40,6 +61,7 @@ function submitTableNumber() {
 async function loadProducts() {
   const res = await fetch('/api/products');
   allProducts = await res.json();
+  allProducts = sortByCategoryOrder(allProducts, p => p.size);
 
   populateCategoryFilter();
   renderProducts(allProducts);
@@ -47,7 +69,10 @@ async function loadProducts() {
 
 function populateCategoryFilter() {
   const select = document.getElementById('category-filter');
-  const categories = [...new Set(allProducts.map(p => p.size).filter(Boolean))];
+  const categories = sortByCategoryOrder(
+    [...new Set(allProducts.map(p => p.size).filter(Boolean))],
+    c => c
+  );
 
   select.innerHTML = '<option value="">ທຸກປະເພດ</option>' +
     categories.map(c => `<option value="${c}">${c}</option>`).join('');

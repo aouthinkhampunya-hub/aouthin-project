@@ -137,6 +137,22 @@
       border-bottom: 1px solid #f7ece0;
       font-size: 14px;
     }
+    .unsold-box {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+      margin-top: 24px;
+      border-left: 4px solid #b3261e;
+    }
+    .unsold-box h2 { color: #7a1f0f; margin-bottom: 6px; font-size: 17px; }
+    .unsold-box .unsold-hint { color: #8a7c6a; font-size: 12px; margin-bottom: 14px; }
+    .unsold-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .unsold-chip {
+      background: #fdecea; color: #b3261e; border-radius: 999px;
+      padding: 7px 14px; font-size: 13px; font-weight: 700;
+    }
+    .unsold-empty { color: #3C8031; font-size: 14px; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -168,6 +184,12 @@
     <div class="top-items">
       <h2 id="top-items-title">🔥 ເມນູຂາຍດີ</h2>
       <div id="top-items-list"></div>
+    </div>
+
+    <div class="unsold-box">
+      <h2 id="unsold-title">🚫 ເມນູທີ່ບໍ່ໄດ້ຂາຍ</h2>
+      <div class="unsold-hint">ອາຫານໃນລາຍການເມນູ ທີ່ບໍ່ມີໃຜສັ່ງເລີຍໃນຊ່ວງນີ້ — ພິຈາລະນາເອົາອອກ ຫຼືປັບປຸງ</div>
+      <div id="unsold-list"></div>
     </div>
   </main>
 

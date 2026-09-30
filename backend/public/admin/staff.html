@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ພະນັກງານ - AOUTHIN</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .staff-actions {
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+    }
+    .staff-actions button {
+      width: 110px;
+      box-sizing: border-box;
+    }
+    @media (max-width: 640px) {
+      .staff-actions {
+        flex-direction: column;
+        width: 110px;
+      }
+      .staff-actions button {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
   <script src="auth-guard.js"></script>
@@ -32,8 +52,8 @@
     <p id="reset-modal-text">ໃສ່ລະຫັດຜ່ານໃໝ່</p>
     <input type="text" id="reset-modal-input" placeholder="ລະຫັດຜ່ານໃໝ່">
     <div class="modal-buttons">
-      <button id="reset-modal-ok" class="confirm-btn">ບັນທຶກ</button>
       <button id="reset-modal-cancel" class="cancel-btn">ຍົກເລີກ</button>
+      <button id="reset-modal-ok" class="confirm-btn">ບັນທຶກ</button>
     </div>
   </div>
 </div>
@@ -41,8 +61,8 @@
   <div class="modal-box">
     <p id="delete-modal-text">ຢືນຢັນລົບ?</p>
     <div class="modal-buttons">
-      <button id="delete-modal-ok" class="delete-btn">ລົບ</button>
       <button id="delete-modal-cancel" class="cancel-btn">ຍົກເລີກ</button>
+      <button id="delete-modal-ok" class="delete-btn">ລົບ</button>
     </div>
   </div>
 </div>
