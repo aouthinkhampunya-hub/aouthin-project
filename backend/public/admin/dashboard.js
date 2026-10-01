@@ -120,10 +120,13 @@ function renderUnsoldItems(periodLabel, itemSales) {
     list.innerHTML = '<p style="color:#8a7c6a;">ຍັງບໍ່ມີຂໍ້ມູນເມນູ</p>';
   } else if (unsold.length === 0) {
     list.innerHTML = '<p class="unsold-empty">✅ ທຸກເມນູມີການສັ່ງໃນຊ່ວງນີ້</p>';
-  } else {
-    list.innerHTML = `<div class="unsold-list">${
-      unsold.map(p => `<span class="unsold-chip">${p.name}</span>`).join('')
-    }</div>`;
+    } else {
+    list.innerHTML = unsold.map((p, i) => `
+      <div class="top-item-row">
+        <span>${i + 1}. ${p.name}</span>
+        <strong>0 ຈານ</strong>
+      </div>
+    `).join('');
   }
 }
 

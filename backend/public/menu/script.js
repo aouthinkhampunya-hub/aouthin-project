@@ -2,18 +2,6 @@ let cart = [];
 let allProducts = [];
 let tableNumber = null;
 
-const CATEGORY_ORDER = ['ເຂົ້າ', 'ຕຳ', 'ເສັ້ນ', 'ຂອງກິນຫຼິ້ນ', 'ເຄື່ອງດື່ມ'];
-
-function sortByCategoryOrder(items, getCategory) {
-  return [...items].sort((a, b) => {
-    const ai = CATEGORY_ORDER.indexOf(getCategory(a));
-    const bi = CATEGORY_ORDER.indexOf(getCategory(b));
-    const aPos = ai === -1 ? CATEGORY_ORDER.length : ai;
-    const bPos = bi === -1 ? CATEGORY_ORDER.length : bi;
-    return aPos - bPos;
-  });
-}
-
 function initApp() {
   const params = new URLSearchParams(window.location.search);
   let table = params.get('table') || sessionStorage.getItem('tableNumber');
@@ -34,7 +22,7 @@ function setTableNumber(table) {
   restoreStaffCooldown();
 }
 
-function submitTableNumber() {
+async function submitTableNumber() {
   const input = document.getElementById('table-input');
   const errorEl = document.getElementById('table-error');
   const value = input.value.trim();
@@ -55,24 +43,36 @@ function submitTableNumber() {
   }
 
   errorEl.classList.add('hidden');
+
+  // ກວດວ່າໂຕະນີ້ມີຄົນນັ່ງ/ມີອໍເດີ້ຄ້າງຢູ່ແລ້ວບໍ່ (ກັນສອງໂຕະໃສ່ເລກດຽວກັນ ແລ້ວບິນປົນກັນ)
+  try {
+    const res = await fetch('/api/orders/bills');
+    const bills = await res.json();
+    const taken = bills.some(b => String(b.table_number) === value);
+    if (taken) {
+      errorEl.textContent = `⚠️ ໂຕະ ${value} ມີຄົນນັ່ງຢູ່ແລ້ວ ກະລຸນາເລືອກເລກໂຕະອື່ນ ຫຼືສອບຖາມພະນັກງານ`;
+      errorEl.classList.remove('hidden');
+      input.focus();
+      return;
+    }
+  } catch (e) {
+    // ຖ້າເຊັກບໍ່ໄດ້ (ເນັດຫຼຸດ) ບໍ່ບລັອກລູກຄ້າ ປ່ອຍໃຫ້ຜ່ານໄປກ່ອນ
+  }
+
   setTableNumber(value);
 }
 
 async function loadProducts() {
   const res = await fetch('/api/products');
   allProducts = await res.json();
-  allProducts = sortByCategoryOrder(allProducts, p => p.size);
 
-  populateCategoryFilter();
-  renderProducts(allProducts);
+    populateCategoryFilter();
+  filterProducts();
 }
 
 function populateCategoryFilter() {
   const select = document.getElementById('category-filter');
-  const categories = sortByCategoryOrder(
-    [...new Set(allProducts.map(p => p.size).filter(Boolean))],
-    c => c
-  );
+  const categories = [...new Set(allProducts.map(p => p.size).filter(Boolean))];
 
   select.innerHTML = '<option value="">ທຸກປະເພດ</option>' +
     categories.map(c => `<option value="${c}">${c}</option>`).join('');
@@ -80,7 +80,14 @@ function populateCategoryFilter() {
 
 function filterProducts() {
   const selected = document.getElementById('category-filter').value;
-  const filtered = selected ? allProducts.filter(p => p.size === selected) : allProducts;
+  const keyword = document.getElementById('search-input').value.trim().toLowerCase();
+
+  const filtered = allProducts.filter(p => {
+    const matchCategory = !selected || p.size === selected;
+    const matchName = String(p.name ?? '').toLowerCase().includes(keyword);
+    return matchCategory && matchName;
+  });
+
   renderProducts(filtered);
 }
 
@@ -88,7 +95,7 @@ function renderProducts(products) {
   const container = document.getElementById('product-list');
 
   if (products.length === 0) {
-    container.innerHTML = '<p>ບໍ່ພົບອາຫານໃນປະເພດນີ້</p>';
+    container.innerHTML = '<p>ບໍ່ພົບເມນູທີ່ຄົ້ນຫາ</p>';
     return;
   }
 
@@ -172,6 +179,7 @@ function setCartQty(id, value) {
 }
 
 function renderCart() {
+  document.getElementById('cart-error').classList.add('hidden');
   document.getElementById('cart-count').textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   const container = document.getElementById('cart-items');
@@ -203,6 +211,7 @@ function renderCart() {
 }
 
 function openCart() {
+  document.getElementById('cart-error').classList.add('hidden');
   document.getElementById('cart-overlay').classList.remove('hidden');
 }
 
@@ -215,8 +224,8 @@ function closeSuccess() {
 }
 
 async function confirmCartOrder() {
-  if (cart.length === 0) {
-    alert('ຍັງບໍ່ໄດ້ເລືອກອາຫານ');
+   if (cart.length === 0) {
+    document.getElementById('cart-error').classList.remove('hidden');
     return;
   }
 
@@ -230,8 +239,9 @@ async function confirmCartOrder() {
 
   const data = await res.json();
 
-  if (res.ok) {
+    if (res.ok) {
     cart = [];
+    renderCart();
     closeCart();
     loadProducts();
     document.getElementById('success-overlay').classList.remove('hidden');

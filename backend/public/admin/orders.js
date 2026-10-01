@@ -29,8 +29,8 @@ function renderOrders(orders) {
     container.innerHTML = `
     <table>
       <tr>
-        <th>ລະຫັດ</th><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາລວມ</th><th>ສະຖານະ</th><th>ເວລາສັ່ງ</th><th></th>
-      </tr>
+        
+      <th>ລະຫັດ</th><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາລວມ</th><th>ສະຖານະ</th><th>ເວລາສັ່ງ</th>
       ${orders.map((o, index) => `
         <tr>
           <td>${index + 1}</td>
@@ -38,18 +38,11 @@ function renderOrders(orders) {
           <td>${o.quantity}</td>
           <td>${o.price * o.quantity} ກີບ</td>
           <td>${statusLabel(o.status)}</td>
-          <td class="time-column">
-  <div class="time-content">
-    ${new Date(o.created_at).toLocaleString('en-GB', {
-      timeZone: 'Asia/Vientiane'
-    })}
-
-    ${o.status === 'ready'
-      ? `<button class="delete-btn" onclick="completeOrder(${o.id})">ເສີບແລ້ວ</button>`
-      : ''
-    }
-  </div>
-</td>
+                    <td class="time-column">
+            ${new Date(o.created_at).toLocaleString('en-GB', {
+              timeZone: 'Asia/Vientiane'
+            })}
+          </td>
         </tr>
       `).join('')}
     </table>

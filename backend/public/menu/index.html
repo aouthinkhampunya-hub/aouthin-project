@@ -13,10 +13,12 @@
     <p id="table-label"></p>
   </header>
 
-  <div class="filter-bar">
+    <div class="filter-bar">
     <select id="category-filter" onchange="filterProducts()">
       <option value="">ທຸກປະເພດ</option>
     </select>
+
+    <input type="text" id="search-input" placeholder="🔍 ຄົ້ນຫາເມນູ..." oninput="filterProducts()">
   </div>
 
   <main id="product-list">
@@ -55,11 +57,12 @@
     <button id="call-staff-button" onclick="callStaff()">🔔 ເອີ້ນພະນັກງານ</button>
   </div>
   
-  <div id="cart-overlay" class="hidden">
+   <div id="cart-overlay" class="hidden">
     <div class="cart-box">
       <h2>ກະຕ່າອາຫານ</h2>
       <div id="cart-items"></div>
       <p class="cart-total">ລວມ: <span id="cart-total">0</span> ກີບ</p>
+      <p id="cart-error" class="cart-error hidden">⚠️ ກະລຸນາເພີ່ມອາຫານໃສ່ກະຕ່າກ່ອນ</p>
       <button class="confirm-btn" onclick="confirmCartOrder()">ຢືນຢັນສັ່ງອາຫານ</button>
       <button class="cancel-btn" onclick="closeCart()">ປິດ</button>
     </div>

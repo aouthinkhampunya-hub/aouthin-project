@@ -20,6 +20,7 @@ const allowedOrigins = [
   'http://localhost:5174',
   'https://aouthin-123.web.app',
   'https://aouthin-123.firebaseapp.com',
+  'https://aouthin-project-1.onrender.com',
 ];
 
 app.use(cors({

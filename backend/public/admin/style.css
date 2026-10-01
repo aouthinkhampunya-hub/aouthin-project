@@ -548,3 +548,82 @@
     font-size: 18px;
   }
 }
+#order-list table {
+  width: 100%;
+  max-width: none;
+  table-layout: fixed;
+}
+
+#order-list th,
+#order-list td {
+  text-align: left;
+  padding: 14px 16px;
+}
+
+/* ລະຫັດ */
+#order-list th:nth-child(1),
+#order-list td:nth-child(1) { width: 70px; }
+
+/* ເມນູ: ກວ້າງພໍໃຫ້ "ຈຳນວນ" ເລີ່ມທີ່ເສັ້ນຟ້າທີ 1 */
+#order-list th:nth-child(2),
+#order-list td:nth-child(2) { width: 390px; }
+
+/* ຈຳນວນ: ກວ້າງພໍໃຫ້ "ລາຄາລວມ" ເລີ່ມທີ່ເສັ້ນຟ້າທີ 2 */
+#order-list th:nth-child(3),
+#order-list td:nth-child(3) { width: 485px; }
+
+/* ລາຄາລວມ */
+#order-list th:nth-child(4),
+#order-list td:nth-child(4) { width: 270px; }
+
+/* ສະຖານະ */
+#order-list th:nth-child(5),
+#order-list td:nth-child(5) { width: 300px; }
+
+/* ເວລາສັ່ງ: ຮັບພື້ນທີ່ທີ່ເຫຼືອ ແລະ ຊິດຊ້າຍ */
+#order-list th:nth-child(6),
+#order-list td:nth-child(6) { width: auto; }
+#order-list {
+  overflow-x: auto; /* ຈໍນ້ອຍຫຼາຍ ໃຫ້ເລື່ອນຊ້າຍຂວາໄດ້ ແທນທີ່ຈະພັງ */
+}
+
+#order-list table {
+  width: 100%;
+  min-width: 700px;
+  table-layout: fixed;
+}
+
+#order-list th,
+#order-list td {
+  text-align: left;
+  padding: 14px 12px;
+  word-wrap: break-word;
+}
+
+/* ແບ່ງເປັນ % ລວມກັນ = 100% */
+#order-list th:nth-child(1),
+#order-list td:nth-child(1) { width: 11%; }   /* ລະຫັດ */
+
+#order-list th:nth-child(2),
+#order-list td:nth-child(2) { width: 20%; }  /* ເມນູ */
+
+#order-list th:nth-child(3),
+#order-list td:nth-child(3) { width: 20%; }  /* ຈຳນວນ */
+
+#order-list th:nth-child(4),
+#order-list td:nth-child(4) { width: 25%; }  /* ລາຄາລວມ */
+
+#order-list th:nth-child(5),
+#order-list td:nth-child(5) { width: 20%; }  /* ສະຖານະ */
+
+#order-list th:nth-child(6),
+#order-list td:nth-child(6) { width: 15%; }  /* ເວລາສັ່ງ */
+
+/* ຈໍນ້ອຍ: ຫຼຸດຂະໜາດຕົວອັກສອນແລະໄລຍະຫ່າງ */
+@media (max-width: 900px) {
+  #order-list th,
+  #order-list td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+}

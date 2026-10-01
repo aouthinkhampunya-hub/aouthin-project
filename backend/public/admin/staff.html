@@ -5,20 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ພະນັກງານ - AOUTHIN</title>
   <link rel="stylesheet" href="style.css">
-  <style>
+    <style>
+    #staff-table {
+      width: 100%;
+    }
+
+    /* ຄໍລຳສຸດທ້າຍ (ປຸ່ມ): ຫຍໍ້ຕາມເນື້ອໃນ ແລະ ຊິດຂວາ */
+    #staff-table th:last-child,
+    #staff-table td:last-child {
+      white-space: nowrap;
+      text-align: right;
+    }
+
     .staff-actions {
       display: flex;
       flex-direction: row;
+      justify-content: flex-end;
       gap: 6px;
     }
     .staff-actions button {
       width: 110px;
       box-sizing: border-box;
     }
+
     @media (max-width: 640px) {
       .staff-actions {
         flex-direction: column;
         width: 110px;
+        margin-left: auto;
       }
       .staff-actions button {
         width: 100%;

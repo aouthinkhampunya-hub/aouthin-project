@@ -50,6 +50,82 @@ function statusLabel(status) {
   return status;
 }
 
+// ===== ກະດານໂຕະ 1-20 (ເຫັນທຸກໂຕະພ້ອມກັນ ວ່າງ/ມີຄົນ) =====
+const TOTAL_TABLES = 20;
+
+(function addTableBoardStyle() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .table-board {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .board-cell {
+      border-radius: 12px; padding: 10px 6px; text-align: center;
+      cursor: default; user-select: none;
+      border: 2px solid transparent;
+    }
+    .board-cell .board-num { font-size: 16px; font-weight: 800; }
+    .board-cell .board-sub { font-size: 11px; margin-top: 2px; }
+    .board-cell.empty { background: #f3ece4; color: #9a8a7a; }
+    .board-cell.occupied {
+      background: #fff3cd; border-color: #d9a520; color: #7a1f10; cursor: pointer;
+    }
+    .board-cell.occupied:hover { background: #ffe9a8; }
+    .board-cell.occupied .board-num { color: #7a1f10; }
+  `;
+  document.head.appendChild(s);
+})();
+
+function ensureTableBoard() {
+  let board = document.getElementById('table-board');
+  if (board) return board;
+  const container = document.getElementById('tables-dashboard');
+  if (!container) return null;
+  board = document.createElement('div');
+  board.id = 'table-board';
+  board.className = 'table-board';
+  container.parentNode.insertBefore(board, container);
+  return board;
+}
+
+function renderTableBoard(bills) {
+  const board = ensureTableBoard();
+  if (!board) return;
+
+  const byTable = {};
+  bills.forEach(b => { byTable[b.table_number] = b; });
+
+  const cells = [];
+  for (let n = 1; n <= TOTAL_TABLES; n++) {
+    const bill = byTable[n];
+    if (bill) {
+      const total = bill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      cells.push(`
+        <div class="board-cell occupied" onclick="scrollToTable(${n})">
+          <div class="board-num">${n}</div>
+          <div class="board-sub">${total.toLocaleString()} ກີບ</div>
+        </div>
+      `);
+    } else {
+      cells.push(`
+        <div class="board-cell empty">
+          <div class="board-num">${n}</div>
+          <div class="board-sub">ວ່າງ</div>
+        </div>
+      `);
+    }
+  }
+  board.innerHTML = cells.join('');
+}
+
+function scrollToTable(n) {
+  const el = document.getElementById(`table-section-${n}`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function loadTables() {
   const res = await fetch('/api/orders/bills');
   const bills = await res.json();
@@ -78,6 +154,8 @@ async function loadTables() {
 
   const container = document.getElementById('tables-dashboard');
 
+  renderTableBoard(bills);
+
   if (bills.length === 0) {
     container.innerHTML = '<p>ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່</p>';
     return;
@@ -91,7 +169,7 @@ async function loadTables() {
       .map(i => i.id);
 
     return `
-      <div class="table-card">
+      <div class="table-card" id="table-section-${bill.table_number}">
         <h2>ໂຕະ ${bill.table_number}</h2>
         <table>
           <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ສະຖານະ</th><th></th></tr>

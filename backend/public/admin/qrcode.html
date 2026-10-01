@@ -73,6 +73,66 @@
       cursor: pointer;
     }
     .pay-upload-btn:hover { background: #256428; }
+
+    /* ===== ກະດານ QR ຕາມໂຕະ 1-20 ===== */
+    .table-qr-section {
+      width: 100%;
+      max-width: 1100px;
+      margin-top: 36px;
+    }
+    .table-qr-section h2 {
+      color: #fff3e0;
+      text-align: center;
+      font-size: 20px;
+      margin-bottom: 18px;
+    }
+    .table-qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+    }
+    .table-qr-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      text-align: center;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+    .table-qr-card img {
+      width: 100%;
+      max-width: 140px;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto 8px;
+    }
+    .table-qr-card .tq-label {
+      color: #7a1f0f;
+      font-weight: 800;
+      font-size: 15px;
+    }
+    .table-qr-print-btn {
+      display: block;
+      margin: 20px auto 0;
+      background: #2B1B0E;
+      color: #FFC93C;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .table-qr-print-btn:hover { background: #3D2A18; }
+
+    @media print {
+      body > *:not(.table-qr-section) { display: none !important; }
+      .qr-page { display: none !important; }
+      .table-qr-section { margin-top: 0; max-width: 100%; }
+      .table-qr-section h2 { color: #2B1B0E; }
+      .table-qr-print-btn { display: none !important; }
+      .table-qr-grid { grid-template-columns: repeat(4, 1fr); }
+      .table-qr-card { box-shadow: none; border: 1px solid #e5d9cc; break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
@@ -98,6 +158,14 @@
       <img id="qr-img" src="" alt="QR Code" width="280" height="280">
     </div>
     <p id="qr-url"></p>
+
+    <div class="table-qr-section">
+      <h2>📋 QR ແຍກຕາມໂຕະ (1-20)</h2>
+      <div class="table-qr-grid" id="table-qr-grid">
+        <p style="color:#ffe0cc; text-align:center;">ກຳລັງສ້າງ QR...</p>
+      </div>
+      <button class="table-qr-print-btn" onclick="window.print()">🖨️ ພິມ QR ທັງໝົດ</button>
+    </div>
   </div>
 
   <div class="pay-modal-overlay" id="pay-modal-overlay">
@@ -120,6 +188,25 @@
       document.getElementById('qr-url').textContent = data.menuUrl;
     }
     loadQR();
+
+    // ===== ກະດານ QR ຕາມໂຕະ 1-20 =====
+    async function loadTableQRs() {
+      const grid = document.getElementById('table-qr-grid');
+      try {
+        const res = await fetch('/api/qrcode/tables');
+        const data = await res.json();
+
+        grid.innerHTML = data.tables.map(t => `
+          <div class="table-qr-card">
+            <img src="${t.qrImage}" alt="QR ໂຕະ ${t.table}">
+            <div class="tq-label">ໂຕະ ${t.table}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        grid.innerHTML = '<p style="color:#ffe0cc; text-align:center;">ສ້າງ QR ບໍ່ສຳເລັດ ລອງໂຫລດໜ້ານີ້ໃໝ່</p>';
+      }
+    }
+    loadTableQRs();
 
     // ===== ປັອບອັບ QR ຈ່າຍເງິນ =====
     function openPayModal() {
