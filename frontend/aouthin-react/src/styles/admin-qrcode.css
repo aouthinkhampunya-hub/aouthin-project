@@ -1,0 +1,36 @@
+/* ===== ໜ້າ QR Code (ຄັດມາຈາກ qrcode.html ຂອງ backend) ===== */
+body.is-admin div.qr-page {display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; min-height: calc(100vh - 70px); background: linear-gradient(135deg, #7a1f0f, #b8380e);}
+body.is-admin div.qr-page h2 {margin-bottom: 24px; color: #fff3e0; font-size: 22px; letter-spacing: 0.5px; text-align: center;}
+body.is-admin div.qr-page .qr-box {background: white; padding: 24px; border-radius: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.3);}
+body.is-admin div.qr-page .qr-box img {border-radius: 10px; display: block;}
+body.is-admin div.qr-page p {margin-top: 18px; color: #ffe0cc; font-size: 13px; text-align: center;}
+body.is-admin div.qr-page .table-qr-section {width: 100%; max-width: 1100px; margin-top: 36px;}
+body.is-admin div.qr-page .table-qr-section h2 {color: #fff3e0; text-align: center; font-size: 20px; margin-bottom: 18px;}
+body.is-admin div.qr-page .table-qr-section p {margin-top: 0;}
+body.is-admin .table-qr-grid {display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px;}
+body.is-admin .table-qr-card {background: #fff; border-radius: 14px; padding: 14px; text-align: center; box-shadow: 0 6px 16px rgba(0,0,0,0.2);}
+body.is-admin .table-qr-card img {width: 100%; max-width: 140px; border-radius: 8px; display: block; margin: 0 auto 8px;}
+body.is-admin .table-qr-card .tq-label {color: #7a1f0f; font-weight: 800; font-size: 15px;}
+body.is-admin .table-qr-print-btn {display: block; margin: 20px auto 0; background: #2B1B0E; color: #FFC93C; border: none; border-radius: 10px; padding: 12px 22px; font-size: 15px; font-weight: 700; cursor: pointer;}
+body.is-admin .table-qr-print-btn:hover {background: #3D2A18;}
+body.is-admin .pay-modal-overlay {position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(43,27,14,0.65); display: flex; align-items: center; justify-content: center; z-index: 9000; padding: 16px; overflow-y: auto;}
+body.is-admin .pay-modal-box {background: white; border-radius: 16px; width: 100%; max-width: 380px; padding: 26px 24px; position: relative; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35);}
+body.is-admin .pay-modal-close {position: absolute; top: 8px; right: 14px; background: none; border: none; font-size: 28px; line-height: 1; cursor: pointer; color: #8a7c6a;}
+body.is-admin .pay-modal-box h3 {color: #7a1f0f; margin-bottom: 20px;}
+body.is-admin .pay-qr-preview {width: 220px; height: 220px; border-radius: 12px; border: 2px dashed #e8d5c4; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; overflow: hidden; background: #fff8f0;}
+body.is-admin .pay-qr-preview img {width: 100%; height: 100%; object-fit: contain;}
+body.is-admin .pay-qr-preview span {color: #8a7060; font-size: 13px;}
+body.is-admin .pay-modal-box input[type="file"] {margin-bottom: 16px; width: 100%;}
+body.is-admin .pay-upload-btn {width: 100%; padding: 13px; background: #2e7d32; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;}
+body.is-admin .pay-upload-btn:hover {background: #256428;}
+
+/* ພິມ: ສະແດງສະເພາະ QR ແຍກຕາມໂຕະ */
+@media print {
+  body.is-admin * { visibility: hidden !important; }
+  body.is-admin .table-qr-section, body.is-admin .table-qr-section * { visibility: visible !important; }
+  body.is-admin .table-qr-section { position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; margin: 0; }
+  body.is-admin div.qr-page .table-qr-section h2 { color: #2B1B0E; }
+  body.is-admin .table-qr-print-btn { display: none !important; }
+  body.is-admin .table-qr-grid { grid-template-columns: repeat(4, 1fr); }
+  body.is-admin .table-qr-card { box-shadow: none; border: 1px solid #e5d9cc; break-inside: avoid; }
+}

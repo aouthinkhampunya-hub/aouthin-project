@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getProducts, createOrder, callStaff, API_BASE } from '../../api.js';
+
 function getTableNumber() {
   const params = new URLSearchParams(window.location.search);
   let table = params.get('table');
@@ -10,22 +10,72 @@ function getTableNumber() {
   return table;
 }
 
+function loadSavedCart(table) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(`cart_table_${table}`));
+    return Array.isArray(saved) ? saved : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function billStatusLabel(status) {
+  if (status === 'pending') return '⏳ ລໍຖ້າ';
+  if (status === 'cooking') return '🔥 ກຳລັງເຮັດ';
+  if (status === 'ready') return '⏳ ລໍຖ້າ';
+  if (status === 'completed') return '✅ ພ້ອມແລ້ວ';
+  return status;
+}
+
 export default function Menu() {
-  const navigate = useNavigate();
   const [tableNumber] = useState(getTableNumber);
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState('');
-  const [cart, setCart] = useState([]);
+  const [search, setSearch] = useState('');
+  const [cart, setCart] = useState(() => loadSavedCart(tableNumber));
   const [cartOpen, setCartOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [callState, setCallState] = useState('idle'); // idle | calling | called
+
+  // ສະຖານະຂອງບິນ (popup)
+  const [billOpen, setBillOpen] = useState(false);
+  const [billLoading, setBillLoading] = useState(false);
+  const [billError, setBillError] = useState('');
+  const [billItems, setBillItems] = useState([]);
+  const [qrImage, setQrImage] = useState('');
+  const [cancelId, setCancelId] = useState(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [billToast, setBillToast] = useState('');
+
+  // ບັນທຶກກະຕ່າທຸກຄັ້ງທີ່ປ່ຽນ
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(`cart_table_${tableNumber}`, JSON.stringify(cart));
+    } catch (e) {}
+  }, [cart, tableNumber]);
 
   useEffect(() => { loadProducts(); }, []);
 
   async function loadProducts() {
     const data = await getProducts();
     setProducts(data);
+
+    // ປັບກະຕ່າທີ່ບັນທຶກໄວ້ໃຫ້ກົງກັບສະຕັອກປັດຈຸບັນ
+    setCart(prev =>
+      prev
+        .map(item => {
+          const p = data.find(x => x.id === item.product_id);
+          if (!p || p.stock <= 0) return null;
+          return {
+            ...item,
+            price: p.price,
+            stock: p.stock,
+            quantity: Math.min(item.quantity, p.stock)
+          };
+        })
+        .filter(Boolean)
+    );
   }
 
   const categories = useMemo(
@@ -33,7 +83,11 @@ export default function Menu() {
     [products]
   );
 
-  const filtered = category ? products.filter(p => p.size === category) : products;
+  const filtered = products.filter(p => {
+    const matchCategory = !category || p.size === category;
+    const matchName = String(p.name ?? '').toLowerCase().includes(search.trim().toLowerCase());
+    return matchCategory && matchName;
+  });
 
   function showToast(msg) {
     setToast(msg);
@@ -90,8 +144,75 @@ export default function Menu() {
     setTimeout(() => setCallState('idle'), 15000);
   }
 
+  // ===== ບິນ (popup) =====
+  function showBillToast(msg) {
+    setBillToast(msg);
+    setTimeout(() => setBillToast(''), 2200);
+  }
+
+  async function loadBill() {
+    setBillLoading(true);
+    setBillError('');
+    setBillItems([]);
+    setQrImage('');
+
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/bills`);
+      if (!res.ok) throw new Error('bill api failed');
+      const bills = await res.json();
+      const myBill = bills.find(b => String(b.table_number) === String(tableNumber));
+      setBillItems(myBill ? myBill.items : []);
+    } catch (e) {
+      setBillError('ໂຫລດບິນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່');
+      setBillLoading(false);
+      return;
+    }
+    setBillLoading(false);
+
+    // QR ຈ່າຍເງິນ (ຖ້າໂຫລດບໍ່ໄດ້ກໍຂ້າມໄປ)
+    try {
+      const qres = await fetch(`${API_BASE}/api/settings/qr`);
+      const qdata = await qres.json();
+      if (qdata.qrImage) setQrImage(qdata.qrImage);
+    } catch (e) {}
+  }
+
+  function openBill() {
+    setBillOpen(true);
+    loadBill();
+  }
+
+  async function doCancelOrder() {
+    if (cancelId === null) return;
+    setCancelBusy(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/${cancelId}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCancelId(null);
+        setCancelBusy(false);
+        showBillToast('❌ ' + (data.error || 'ຍົກເລີກບໍ່ໄດ້'));
+        return;
+      }
+    } catch (e) {
+      setCancelId(null);
+      setCancelBusy(false);
+      showBillToast('❌ ຍົກເລີກບໍ່ໄດ້');
+      return;
+    }
+
+    setCancelId(null);
+    setCancelBusy(false);
+    await loadBill();
+    loadProducts();
+    showBillToast('✅ ຍົກເລີກລາຍການແລ້ວ');
+  }
+
+  const billTotal = billItems.reduce((s, i) => s + i.price * i.quantity, 0);
+
   return (
-    <div>
+    <div className="customer-app">
       <header>
         <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
         <p id="table-label">ໂຕະ {tableNumber}</p>
@@ -102,10 +223,18 @@ export default function Menu() {
           <option value="">ທຸກປະເພດ</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
+
+        <input
+          type="text"
+          id="search-input"
+          placeholder="🔍 ຄົ້ນຫາເມນູ..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
       <main id="product-list">
-        {filtered.length === 0 ? <p>ບໍ່ພົບອາຫານໃນປະເພດນີ້</p> : filtered.map(p => (
+        {filtered.length === 0 ? <p>ບໍ່ພົບເມນູທີ່ຄົ້ນຫາ</p> : filtered.map(p => (
           <div className="product-card" key={p.id}>
             {p.image && <img src={p.image.startsWith('http') ? p.image : API_BASE + p.image} className="product-img" alt={p.name} />}
             <h3>{p.name}</h3>
@@ -120,7 +249,7 @@ export default function Menu() {
       </main>
 
       <div className="left-buttons">
-        <button id="bill-button" onClick={() => navigate(`/menu/bill?table=${tableNumber}`)}>🧾 ເບິ່ງບິນ</button>
+        <button id="bill-button" onClick={openBill}>🧾 ເບິ່ງບິນ</button>
         <button id="call-staff-button" onClick={handleCallStaff} disabled={callState !== 'idle'}>
           {callState === 'idle' && '🔔 ເອີ້ນພະນັກງານ'}
           {callState === 'calling' && '📞 ກຳລັງແຈ້ງ...'}
@@ -166,6 +295,81 @@ export default function Menu() {
           </div>
         </div>
       )}
+
+      {billOpen && (
+        <div className="bill-overlay">
+          <div className="bill-box">
+            <button className="bill-close" onClick={() => setBillOpen(false)}>✕</button>
+            <div className="bill-box-scroll">
+              <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
+              <div className="bill-meta">
+                ໂຕະ {tableNumber} • {new Date().toLocaleString('en-GB')}
+              </div>
+
+              <table className="bill-table">
+                <thead>
+                  <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາ</th></tr>
+                </thead>
+                <tbody>
+                  {billLoading && <tr><td colSpan="3">ກຳລັງໂຫລດ...</td></tr>}
+                  {!billLoading && billError && <tr><td colSpan="3">{billError}</td></tr>}
+                  {!billLoading && !billError && billItems.length === 0 && (
+                    <tr><td colSpan="3">ຍັງບໍ່ມີການສັ່ງອາຫານ</td></tr>
+                  )}
+                  {!billLoading && !billError && billItems.map(i => (
+                    <tr key={i.id}>
+                      <td>
+                        {i.product_name}
+                        <div className="bill-item-status">
+                          <span>{billStatusLabel(i.status)}</span>
+                          {i.status === 'pending' && (
+                            <button type="button" className="bill-cancel-link" onClick={() => setCancelId(i.id)}>
+                              ຍົກເລີກ
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td>{i.quantity}</td>
+                      <td>{i.price * i.quantity} ກີບ</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="bill-total">
+                <span>ຍອດລວມທັງໝົດ</span>
+                <strong>{billTotal} ກີບ</strong>
+              </div>
+
+              {qrImage && (
+                <div className="bill-qr">
+                  <p>ສະແກນ QR ນີ້ເພື່ອຈ່າຍເງິນ</p>
+                  <img
+                    src={qrImage.startsWith('http') || qrImage.startsWith('data:') ? qrImage : API_BASE + qrImage}
+                    alt="QR ຊຳລະເງິນ"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelId !== null && (
+        <div className="bc-overlay" onClick={() => setCancelId(null)}>
+          <div className="bc-box" onClick={e => e.stopPropagation()}>
+            <div className="bc-icon">🗑️</div>
+            <h3>ຍົກເລີກອໍເດີ້</h3>
+            <p>ຢືນຢັນວ່າຈະຍົກເລີກລາຍການອາຫານນີ້?</p>
+            <div className="bc-actions">
+              <button className="bc-no" onClick={() => setCancelId(null)}>ຍົກເລີກ</button>
+              <button className="bc-yes" disabled={cancelBusy} onClick={doCancelOrder}>ຢືນຢັນ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {billToast && <div className="bc-toast">{billToast}</div>}
 
       {toast && <div id="toast" className="show">{toast}</div>}
     </div>

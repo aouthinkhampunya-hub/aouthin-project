@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import Menu from './pages/menu/Menu.jsx';
 import CustomerBill from './pages/menu/Bill.jsx';
@@ -20,9 +20,19 @@ import Staff from './pages/admin/Staff.jsx';
 import './styles/menu.css';
 import './styles/admin.css';
 
+// ໃສ່ຄລາດ is-admin ໃຫ້ body ເມື່ອຢູ່ໜ້າ /admin ເພື່ອໃຫ້ admin.css ເຮັດວຽກສະເພາະໜ້າແອັດມິນ
+function BodyClassByRoute() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.body.classList.toggle('is-admin', pathname.startsWith('/admin'));
+  }, [pathname]);
+  return null;
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
+      <BodyClassByRoute />
       <Routes>
         {/* ===== ຝັ່ງລູກຄ້າ ===== */}
         <Route path="/menu" element={<Menu />} />

@@ -1,84 +1,208 @@
 import React, { useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { getAdmins, addAdmin, deleteAdmin, resetAdminPassword } from '../../api.js';
+import { authMe, getAdmins, addAdmin, deleteAdmin, resetAdminPassword } from '../../api.js';
+import '../../styles/admin-staff.css';
 
 export default function Staff() {
-  const { admin } = useOutletContext();
+  const [role, setRole] = useState(null);
   const [admins, setAdmins] = useState([]);
+
+  // popup ເພີ່ມພະນັກງານ
+  const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState({ username: '', password: '', name: '' });
+  const [addError, setAddError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => { load(); }, []);
+  // popup ລົບ / ຣີເຊັດລະຫັດ / ແຈ້ງເຕືອນ
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
+  const [resetTarget, setResetTarget] = useState(null);   // { id, name }
+  const [resetPw, setResetPw] = useState('');
+  const [notice, setNotice] = useState('');
 
-  async function load() {
-    setAdmins(await getAdmins());
-  }
+  const loadStaff = async () => {
+    try {
+      const data = await getAdmins();
+      setAdmins(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-  async function handleAdd() {
-    if (!form.username || !form.password || !form.name) {
-      alert('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ');
+  useEffect(() => {
+    authMe().then((d) => setRole(d.role)).catch(() => setRole(null));
+    loadStaff();
+  }, []);
+
+  // ກົດ Esc ປິດ popup ເພີ່ມພະນັກງານ
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setAddOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  const openAdd = () => {
+    setForm({ username: '', password: '', name: '' });
+    setAddError('');
+    setSaving(false);
+    setAddOpen(true);
+  };
+
+  const submitAdd = async () => {
+    const username = form.username.trim();
+    const password = form.password.trim();
+    const name = form.name.trim();
+    setAddError('');
+    if (!username || !password || !name) {
+      setAddError('ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບ');
       return;
     }
+    setSaving(true);
     try {
-      await addAdmin(form.username, form.password, form.name);
-      setForm({ username: '', password: '', name: '' });
-      load();
-    } catch (err) {
-      alert('ຜິດພາດ: ' + (err.error || ''));
+      await addAdmin(username, password, name);
+    } catch (e) {
+      setAddError(e?.error || 'ບັນທຶກບໍ່ສຳເລັດ');
+      setSaving(false);
+      return;
     }
-  }
+    setAddOpen(false);
+    setSaving(false);
+    await loadStaff();
+    setNotice('✅ ເພີ່ມພະນັກງານແລ້ວ');
+  };
 
-  async function handleDelete(id, name) {
-    if (!confirm(`ຢືນຢັນລົບພະນັກງານ "${name}"?`)) return;
+  const confirmDelete = async () => {
+    const target = deleteTarget;
+    setDeleteTarget(null);
     try {
-      await deleteAdmin(id);
-      load();
-    } catch (err) {
-      alert('ຜິດພາດ: ' + (err.error || ''));
+      await deleteAdmin(target.id);
+      loadStaff();
+    } catch (e) {
+      setNotice('ຜິດພາດ: ' + (e?.error || ''));
     }
-  }
+  };
 
-  async function handleReset(id, name) {
-    const newPassword = prompt(`ໃສ່ລະຫັດຜ່ານໃໝ່ສຳລັບ "${name}" (ຢ່າງໜ້ອຍ 4 ໂຕ):`);
-    if (!newPassword) return;
-    try {
-      await resetAdminPassword(id, newPassword);
-      alert(`ຣີເຊັດລະຫັດຜ່ານຂອງ "${name}" ສຳເລັດ! ລະຫັດຜ່ານໃໝ່: ${newPassword}`);
-    } catch (err) {
-      alert('ຜິດພາດ: ' + (err.error || ''));
+  const confirmReset = async () => {
+    if (!resetPw || resetPw.length < 4) {
+      setNotice('ລະຫັດຜ່ານຕ້ອງມີຢ່າງໜ້ອຍ 4 ໂຕ');
+      return;
     }
-  }
+    const target = resetTarget;
+    const pw = resetPw;
+    setResetTarget(null);
+    try {
+      await resetAdminPassword(target.id, pw);
+      setNotice(`ຣີເຊັດລະຫັດຜ່ານສຳເລັດ! ລະຫັດຜ່ານໃໝ່: ${pw}`);
+    } catch (e) {
+      setNotice('ຜິດພາດ: ' + (e?.error || ''));
+    }
+  };
+
+  const setField = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
   return (
-    <main>
-      <div className="add-form">
-        <h2>ເພີ່ມພະນັກງານໃໝ່</h2>
-        <input placeholder="Username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} />
-        <input placeholder="Password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-        <input placeholder="ຊື່ພະນັກງານ" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        <button onClick={handleAdd}>ເພີ່ມ</button>
-      </div>
+    <div className="staff-page">
+      <button type="button" className="staff-add-btn" onClick={openAdd}>➕ ເພີ່ມພະນັກງານ</button>
 
-      <table>
-        <tbody>
+      <table className="staff-table">
+        <thead>
           <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th>ບົດບາດ</th><th></th></tr>
-          {admins.map(a => (
+        </thead>
+        <tbody>
+          {admins.map((a, index) => (
             <tr key={a.id}>
-              <td>{a.id}</td>
+              <td>{index + 1}</td>
               <td>{a.username}</td>
               <td>{a.name}</td>
               <td>{a.role === 'owner' ? '👑 ເຈົ້າຂອງຮ້ານ' : '👤 ພະນັກງານ'}</td>
               <td>
-                {admin?.role === 'owner' && a.role !== 'owner' && (
-                  <>
-                    <button className="delete-btn" onClick={() => handleDelete(a.id, a.name)}>ລົບ</button>
-                    <button className="reset-btn" onClick={() => handleReset(a.id, a.name)}>ຣີເຊັດລະຫັດ</button>
-                  </>
+                {role === 'owner' && a.role !== 'owner' && (
+                  <div className="staff-actions">
+                    <button className="staff-del-btn" onClick={() => setDeleteTarget({ id: a.id, name: a.name })}>ລົບ</button>
+                    <button
+                      className="staff-reset-btn"
+                      onClick={() => { setResetTarget({ id: a.id, name: a.name }); setResetPw(''); }}
+                    >
+                      ຣີເຊັດລະຫັດ
+                    </button>
+                  </div>
                 )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
-    </main>
+
+      {/* ເພີ່ມພະນັກງານ (ບໍ່ປິດເມື່ອກົດພື້ນມືດ ເພື່ອກັນຂໍ້ມູນຫາຍ) */}
+      {addOpen && (
+        <div className="sp-overlay">
+          <div className="sp-box">
+            <h3>➕ ເພີ່ມພະນັກງານໃໝ່</h3>
+            <div className="sp-field">
+              <label>Username</label>
+              <input type="text" placeholder="Username" value={form.username} onChange={setField('username')} autoFocus />
+            </div>
+            <div className="sp-field">
+              <label>Password</label>
+              <input type="password" placeholder="Password" value={form.password} onChange={setField('password')} />
+            </div>
+            <div className="sp-field">
+              <label>ຊື່ພະນັກງານ</label>
+              <input type="text" placeholder="ຊື່ພະນັກງານ" value={form.name} onChange={setField('name')} />
+            </div>
+            {addError && <div className="sp-error">{addError}</div>}
+            <div className="sp-actions">
+              <button className="sp-cancel" onClick={() => setAddOpen(false)}>ຍົກເລີກ</button>
+              <button className="sp-save" onClick={submitAdd} disabled={saving}>
+                {saving ? 'ກຳລັງບັນທຶກ...' : 'ບັນທຶກ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ຢືນຢັນລົບ */}
+      {deleteTarget && (
+        <div className="sm-overlay">
+          <div className="sm-box">
+            <p>ຢືນຢັນລົບພະນັກງານ "{deleteTarget.name}"?</p>
+            <div className="sm-buttons">
+              <button className="sm-cancel" onClick={() => setDeleteTarget(null)}>ຍົກເລີກ</button>
+              <button className="sm-danger" onClick={confirmDelete}>ລົບ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ຣີເຊັດລະຫັດ */}
+      {resetTarget && (
+        <div className="sm-overlay">
+          <div className="sm-box">
+            <p>ໃສ່ລະຫັດຜ່ານໃໝ່ສຳລັບ "{resetTarget.name}" (ຢ່າງໜ້ອຍ 4 ໂຕ):</p>
+            <input
+              type="text"
+              placeholder="ລະຫັດຜ່ານໃໝ່"
+              value={resetPw}
+              onChange={(e) => setResetPw(e.target.value)}
+              autoFocus
+            />
+            <div className="sm-buttons">
+              <button className="sm-cancel" onClick={() => setResetTarget(null)}>ຍົກເລີກ</button>
+              <button className="sm-ok" onClick={confirmReset}>ບັນທຶກ</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ແຈ້ງເຕືອນ */}
+      {notice && (
+        <div className="sm-overlay">
+          <div className="sm-box">
+            <p>{notice}</p>
+            <div className="sm-buttons">
+              <button className="sm-ok" onClick={() => setNotice('')}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,4 +1,23 @@
 let cart = [];
+
+function cartStorageKey() {
+  return `cart_table_${tableNumber}`;
+}
+
+function saveCart() {
+  try {
+    sessionStorage.setItem(cartStorageKey(), JSON.stringify(cart));
+  } catch (e) {}
+}
+
+function loadSavedCart() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(cartStorageKey()));
+    cart = Array.isArray(saved) ? saved : [];
+  } catch (e) {
+    cart = [];
+  }
+}
 let allProducts = [];
 let tableNumber = null;
 
@@ -18,6 +37,8 @@ function setTableNumber(table) {
   sessionStorage.setItem('tableNumber', table);
   document.getElementById('table-label').textContent = `ໂຕະ ${table}`;
   document.getElementById('table-modal').classList.add('hidden');
+   loadSavedCart();
+  renderCart();
   loadProducts();
   restoreStaffCooldown();
 }
@@ -179,6 +200,8 @@ function setCartQty(id, value) {
 }
 
 function renderCart() {
+  saveCart();
+  document.getElementById('cart-error').classList.add('hidden');
   document.getElementById('cart-error').classList.add('hidden');
   document.getElementById('cart-count').textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
 

@@ -1,0 +1,161 @@
+/* ===== ໜ້າຄົວ — ປັບຕາມຂະໜາດຈໍ: ໃຫຍ່ / ກາງ / ນ້ອຍ =====
+   ທຸກ rule ຂຶ້ນຕົ້ນດ້ວຍ body.is-admin .kitchen-page ເພື່ອທັບ admin.css */
+
+/* ---------- ໂຄງຫຼັກ ---------- */
+body.is-admin .kitchen-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 20px clamp(12px, 5vw, 100px);
+  box-sizing: border-box;
+}
+
+body.is-admin .kitchen-page .kitchen-empty {
+  text-align: center; padding: 60px 16px;
+  font-size: 20px; font-weight: 700; color: #7a1f10;
+}
+
+/* auto-fit: ການ໌ດດຽວຍືດເຕັມຈໍ, ຫຼາຍການ໌ດແບ່ງຄໍລຳເອງ */
+body.is-admin .kitchen-page .kitchen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 16px;
+  align-items: start;
+  justify-content: stretch;
+  justify-items: stretch;
+  width: 100%;
+}
+
+body.is-admin .kitchen-page .kitchen-card {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  background: #fff;
+  border-radius: 16px;
+  border-left: 6px solid #d9a521;
+  padding: 18px 18px 8px;
+  box-shadow: 0 4px 14px rgba(120, 50, 10, 0.12);
+  min-width: 0;
+  box-sizing: border-box;
+}
+body.is-admin .kitchen-page .kitchen-card.cooking { border-left-color: #e67e22; }
+body.is-admin .kitchen-page .kitchen-card h2 {
+  margin: 0 0 14px; font-size: 24px; color: #7a1f10;
+}
+
+body.is-admin .kitchen-page .kitchen-bulk-actions {
+  display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;
+}
+body.is-admin .kitchen-page .kitchen-bulk-actions button {
+  width: 100%; padding: 11px 14px; border: none; border-radius: 8px;
+  font-size: 15px; font-weight: 700; font-family: inherit; color: #fff; cursor: pointer;
+}
+body.is-admin .kitchen-page .btn-start-all { background: #e67e22; }
+body.is-admin .kitchen-page .btn-start-all:hover { background: #cf6f1a; }
+body.is-admin .kitchen-page .btn-done-all { background: #2e7d32; }
+body.is-admin .kitchen-page .btn-done-all:hover { background: #256428; }
+
+/* ແຖວອາຫານ: ຊື່ຢູ່ຊ້າຍ ປຸ່ມຢູ່ຂວາ, ບໍ່ພໍບ່ອນກໍຂຶ້ນແຖວໃໝ່ເອງ */
+body.is-admin .kitchen-page .kitchen-item {
+  display: flex; flex-wrap: wrap;
+  justify-content: space-between; align-items: center;
+  gap: 10px; padding: 14px 0; border-bottom: 1px solid #f7ece0;
+}
+body.is-admin .kitchen-page .kitchen-item:last-child { border-bottom: none; }
+
+body.is-admin .kitchen-page .kitchen-item-info {
+  flex: 1 1 140px; min-width: 120px;
+  overflow-wrap: break-word; word-break: normal;
+}
+body.is-admin .kitchen-page .kitchen-item-name { font-size: 18px; font-weight: 700; }
+body.is-admin .kitchen-page .kitchen-item-qty {
+  font-size: 16px; font-weight: 800; color: #b8380e; margin-left: 4px; white-space: nowrap;
+}
+
+body.is-admin .kitchen-page .kitchen-item-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+body.is-admin .kitchen-page .kitchen-item .kitchen-item-actions button {
+  width: 110px; flex: 0 0 110px; padding: 10px 0;
+  border: none; border-radius: 8px; color: #fff;
+  font-size: 14px; font-weight: 700; font-family: inherit;
+  white-space: nowrap; cursor: pointer;
+}
+body.is-admin .kitchen-page .kitchen-item .btn-start { background: #e67e22; }
+body.is-admin .kitchen-page .kitchen-item .btn-start:hover { background: #cf6f1a; }
+body.is-admin .kitchen-page .kitchen-item .btn-done { background: #2e7d32; }
+body.is-admin .kitchen-page .kitchen-item .btn-done:hover { background: #256428; }
+body.is-admin .kitchen-page .kitchen-item .btn-cancel { background: #c0392b; }
+body.is-admin .kitchen-page .kitchen-item .btn-cancel:hover { background: #a5301f; }
+
+/* ---------- ຈໍກາງ (ແທັບເລັດ ບໍ່ເກີນ 1024px) ---------- */
+@media (max-width: 1024px) {
+  body.is-admin .kitchen-page { padding: 16px clamp(12px, 4vw, 40px); }
+  body.is-admin .kitchen-page .kitchen-card h2 { font-size: 22px; }
+  body.is-admin .kitchen-page .kitchen-item .kitchen-item-actions button {
+    width: 100px; flex: 0 0 100px;
+  }
+}
+
+/* ---------- ຈໍນ້ອຍ (ມືຖື ບໍ່ເກີນ 600px) ---------- */
+@media (max-width: 600px) {
+  body.is-admin .kitchen-page { padding: 10px; }
+  body.is-admin .kitchen-page .kitchen-grid { gap: 10px; }
+  body.is-admin .kitchen-page .kitchen-card { padding: 14px 14px 6px; border-radius: 14px; }
+  body.is-admin .kitchen-page .kitchen-card h2 { font-size: 20px; margin-bottom: 10px; }
+  body.is-admin .kitchen-page .kitchen-item-name { font-size: 17px; }
+
+  /* ຊື່ຢູ່ເທິງ ປຸ່ມແບ່ງເຄິ່ງເທົ່າກັນຢູ່ລຸ່ມ */
+  body.is-admin .kitchen-page .kitchen-item { flex-direction: column; align-items: stretch; }
+  body.is-admin .kitchen-page .kitchen-item-info { flex: 0 0 auto; min-width: 0; }
+  body.is-admin .kitchen-page .kitchen-item .kitchen-item-actions { width: 100%; }
+  body.is-admin .kitchen-page .kitchen-item .kitchen-item-actions button {
+    flex: 1 1 0; width: auto; padding: 13px 0; font-size: 15px;
+  }
+  body.is-admin .kitchen-page .kitchen-bulk-actions button { padding: 13px 14px; }
+  body.is-admin .kitchen-toast { font-size: 17px; padding: 16px 22px; }
+}
+
+/* ---------- popup ຢືນຢັນຍົກເລີກ ---------- */
+body.is-admin .kc-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(20,12,6,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 20px;
+}
+body.is-admin .kc-box {
+  background: #fff; border-radius: 22px; width: 100%; max-width: 340px;
+  padding: 36px 28px 28px; text-align: center;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+}
+body.is-admin .kc-box .kc-icon {
+  width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 50%; font-size: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(150deg, #FFC93C, #F2760C);
+  box-shadow: 0 8px 20px rgba(242,118,12,0.35);
+}
+body.is-admin .kc-box h3 { margin: 0 0 8px; color: #2B1B0E; font-size: 19px; font-weight: 800; }
+body.is-admin .kc-box p { margin: 0 0 24px; color: #6b5a4a; font-size: 14px; line-height: 1.5; }
+body.is-admin .kc-box .kc-actions { display: flex; gap: 10px; }
+body.is-admin .kc-box .kc-actions button {
+  flex: 1; padding: 13px; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+}
+body.is-admin .kc-box .kc-no { background: #f3ece4; color: #7a1f10; }
+body.is-admin .kc-box .kc-no:hover { background: #e8dccf; }
+body.is-admin .kc-box .kc-yes { background: #c0392b; color: #fff; }
+body.is-admin .kc-box .kc-yes:hover { background: #a5301f; }
+
+/* ---------- ແຈ້ງເຕືອນກາງຈໍ ---------- */
+body.is-admin .kitchen-toast {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: #2B1B0E; color: #FFC93C; padding: 20px 32px;
+  border-radius: 18px; font-weight: 800; font-size: 20px;
+  z-index: 10002; box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  max-width: 90vw; text-align: center; pointer-events: none;
+  animation: kitchenToastPop 2.6s ease forwards;
+}
+@keyframes kitchenToastPop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  90% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+}

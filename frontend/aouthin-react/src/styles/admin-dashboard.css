@@ -1,0 +1,84 @@
+/* ===== ໜ້າລາຍງານ (ຄັດມາຈາກ dashboard.html ຂອງ backend) =====
+   ໃຊ້ prefix "dash-" ເພື່ອບໍ່ໃຫ້ຊ້ຳກັບ class ໃນ admin.css */
+
+body.is-admin .dash-page { padding: 24px 40px 40px; }
+
+body.is-admin .dash-page .dash-box {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 4px 14px rgba(122,31,15,0.08);
+  margin-bottom: 24px;
+}
+body.is-admin .dash-page .dash-box h2 { color: #7a1f0f; margin: 0 0 20px; font-size: 17px; }
+
+/* ແຖບເລືອກຊ່ວງເວລາ */
+body.is-admin .dash-page .dash-period-tabs { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+body.is-admin .dash-page .dash-period-tab {
+  flex: 1;
+  min-width: 120px;
+  background: #fbf3ea;
+  border: 2px solid #f0e0cf;
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+body.is-admin .dash-page .dash-period-tab:active { transform: scale(0.98); }
+body.is-admin .dash-page .dash-period-tab:focus-visible { outline: 3px solid #f2760c; outline-offset: 2px; }
+body.is-admin .dash-page .dash-period-tab .pt-label { color: #8a7c6a; font-size: 12px; margin-bottom: 4px; }
+body.is-admin .dash-page .dash-period-tab .pt-value { color: #7a1f0f; font-size: 16px; font-weight: 800; }
+body.is-admin .dash-page .dash-period-tab.active {
+  background: linear-gradient(135deg, #f2760c, #b8380e);
+  border-color: #b8380e;
+}
+body.is-admin .dash-page .dash-period-tab.active .pt-label { color: #ffe3c9; }
+body.is-admin .dash-page .dash-period-tab.active .pt-value { color: #fff; }
+
+/* ສະຫຼຸບຂອງຊ່ວງທີ່ເລືອກ */
+body.is-admin .dash-page .dash-period-summary {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 22px; flex-wrap: wrap;
+}
+body.is-admin .dash-page .ps-title { color: #7a1f0f; font-size: 15px; font-weight: 700; }
+body.is-admin .dash-page .ps-value { color: #b8380e; font-size: 30px; font-weight: 800; }
+body.is-admin .dash-page .ps-sub { color: #8a7c6a; font-size: 13px; }
+
+/* ວົງມົນ (donut) */
+body.is-admin .dash-page .dash-donut-wrap { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+body.is-admin .dash-page .dash-donut {
+  width: 200px; height: 200px; border-radius: 50%; flex: 0 0 auto; position: relative;
+}
+body.is-admin .dash-page .dash-donut-hole {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 68%; height: 68%;
+  background: #fff; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(122,31,15,0.05);
+}
+body.is-admin .dash-page .donut-total { color: #7a1f0f; font-size: 17px; font-weight: 800; }
+body.is-admin .dash-page .donut-sub { color: #8a7c6a; font-size: 11px; margin-top: 2px; }
+
+body.is-admin .dash-page .dash-donut-legend {
+  flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 10px;
+}
+body.is-admin .dash-page .dash-legend-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+body.is-admin .dash-page .dash-dot { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+body.is-admin .dash-page .dash-legend-name { flex: 1; color: #4a3b2e; }
+body.is-admin .dash-page .dash-legend-qty { color: #7a1f0f; font-weight: 700; }
+body.is-admin .dash-page .dash-legend-pct { color: #8a7c6a; font-size: 12px; width: 42px; text-align: right; }
+
+/* ລາຍການ (ເມນູຂາຍດີ / ບໍ່ໄດ້ຂາຍ) */
+body.is-admin .dash-page .dash-row {
+  display: flex; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid #f7ece0; font-size: 14px;
+}
+body.is-admin .dash-page .dash-hint { color: #8a7c6a; font-size: 12px; margin: -14px 0 14px; }
+body.is-admin .dash-page .dash-muted { color: #8a7c6a; margin: 0; }
+body.is-admin .dash-page .dash-ok { color: #3C8031; font-size: 14px; font-weight: 700; margin: 0; }
+
+@media (max-width: 600px) {
+  body.is-admin .dash-page { padding: 16px 12px 32px; }
+}

@@ -200,6 +200,11 @@ async function updateStatus(orderId, status) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status })
   });
+
+  if (status === 'ready') {
+    showKitchenToast('🍽️ ອໍເດີ້ພ້ອມເສີບແລ້ວ');
+  }
+
   loadKitchen();
 }
 
@@ -213,6 +218,11 @@ async function bulkUpdate(orderIds, status) {
       })
     )
   );
+
+  if (status === 'ready') {
+    showKitchenToast('🍽️ ອໍເດີ້ພ້ອມເສີບແລ້ວ');
+  }
+
   loadKitchen();
 }
 
@@ -227,11 +237,25 @@ async function cancelItem(orderId) {
   const data = await res.json();
 
   if (res.ok) {
+    showKitchenToast('✅ ຍົກເລີກອໍເດີ້ສຳເລັດ');
     loadKitchen();
   } else {
     showKitchenToast('❌ ' + (data.error || 'ຍົກເລີກບໍ່ໄດ້'));
   }
 }
+
+(function addKitchenToastCenterStyle() {
+  const s = document.createElement('style');
+  s.textContent = `
+    @keyframes kitchenToastPop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+      10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      90% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+    }
+  `;
+  document.head.appendChild(s);
+})();
 
 function showKitchenToast(message) {
   const old = document.getElementById('kitchen-toast');
@@ -240,11 +264,13 @@ function showKitchenToast(message) {
   t.id = 'kitchen-toast';
   t.textContent = message;
   t.style.cssText = `
-    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
-    background: #2B1B0E; color: #FFC93C; padding: 12px 22px;
-    border-radius: 999px; font-weight: 700; font-size: 15px;
-    z-index: 10002; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: #2B1B0E; color: #FFC93C; padding: 20px 32px;
+    border-radius: 18px; font-weight: 800; font-size: 20px;
+    z-index: 10002; box-shadow: 0 16px 40px rgba(0,0,0,0.4);
     max-width: 90vw; text-align: center;
+    animation: kitchenToastPop 2.6s ease forwards;
+    pointer-events: none;
   `;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2600);

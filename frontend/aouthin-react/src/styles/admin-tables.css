@@ -1,0 +1,84 @@
+/* ===== ໜ້າ ອໍເດີ້ອາຫານ (ຄັດມາຈາກ tables.js ຂອງ backend) ===== */
+body.is-admin .table-board {display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; margin-bottom: 20px;}
+body.is-admin .board-cell {border-radius: 12px; padding: 10px 6px; text-align: center; cursor: default; user-select: none; border: 2px solid transparent;}
+body.is-admin .board-cell .board-num {font-size: 16px; font-weight: 800;}
+body.is-admin .board-cell .board-sub {font-size: 11px; margin-top: 2px;}
+body.is-admin .board-cell.empty {background: #f3ece4; color: #9a8a7a;}
+body.is-admin .board-cell.occupied {background: #fff3cd; border-color: #d9a520; color: #7a1f10; cursor: pointer;}
+body.is-admin .board-cell.occupied:hover {background: #ffe9a8;}
+body.is-admin .board-cell.occupied .board-num {color: #7a1f10;}
+body.is-admin .bp-overlay {position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; background: rgba(20,12,6,0.75); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 20px; animation: bpFadeIn 0.2s ease;}
+body.is-admin .bp-overlay.top {z-index: 10001;}
+body.is-admin .bp-box {position: relative; background: #fff; border-radius: 22px; width: 100%; max-width: 460px; max-height: 92vh; overflow-y: auto; padding: 26px 24px 22px; box-shadow: 0 24px 60px rgba(0,0,0,0.45); animation: bpPopIn 0.25s ease;}
+body.is-admin .bp-close {position: absolute; top: 12px; right: 14px; width: 32px; height: 32px; border: none; border-radius: 50%; background: #f3ece4; color: #7a1f10; font-size: 16px; font-weight: 700; cursor: pointer; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center;}
+body.is-admin .bp-close:hover {background: #e8dccf;}
+body.is-admin .bp-head {text-align: center; border-bottom: 2px dashed #eadfd3; padding-bottom: 14px; margin-bottom: 14px;}
+body.is-admin .bp-head h2 {margin: 0 0 4px; color: #2B1B0E; font-size: 19px;}
+body.is-admin .bp-head p {margin: 0; color: #8a7a6a; font-size: 13px;}
+body.is-admin .bp-table {width: 100%; border-collapse: collapse; margin-bottom: 14px; box-shadow: none; border-radius: 0;}
+body.is-admin .bp-table th {text-align: left; font-size: 12px; color: #fff; background: #7a1f10; padding: 8px 8px;}
+body.is-admin .bp-table th:first-child {border-radius: 10px 0 0 10px;}
+body.is-admin .bp-table th:last-child {border-radius: 0 10px 10px 0;}
+body.is-admin .bp-table td {padding: 8px; font-size: 14px; border-bottom: 1px solid #eadfd3;}
+body.is-admin .bp-total {display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 2px dashed #eadfd3; margin-bottom: 16px;}
+body.is-admin .bp-total span:first-child {font-size: 15px; color: #8a7a6a;}
+body.is-admin .bp-total span:last-child {font-size: 24px; font-weight: 800; color: #2B1B0E;}
+body.is-admin .bp-qr {text-align: center; padding-top: 14px; border-top: 2px dashed #eadfd3; margin-bottom: 18px;}
+body.is-admin .bp-qr p {margin: 0 0 10px; font-size: 13px; color: #8a7a6a;}
+body.is-admin .bp-qr img {width: 180px; height: 180px; border-radius: 10px; border: 1px solid #eadfd3;}
+body.is-admin .bp-actions {display: flex; gap: 12px;}
+body.is-admin .bp-actions button {flex: 1; padding: 14px; border: none; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin: 0; width: auto;}
+body.is-admin .bp-print {background: #2B1B0E; color: #FFC93C; box-shadow: 0 4px 12px rgba(43,27,14,0.25);}
+body.is-admin .bp-print:hover {background: #3D2A18;}
+body.is-admin .bp-confirm {background: #3C8031; color: #fff; box-shadow: 0 6px 16px rgba(60,128,49,0.35);}
+body.is-admin .bp-confirm:hover {background: #2C601E;}
+body.is-admin .bp-sub-box {background: #fff; border-radius: 22px; width: 100%; max-width: 340px; padding: 36px 28px 28px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.45); animation: bpPopIn 0.25s ease;}
+body.is-admin .bp-sub-icon {width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 50%; font-size: 34px; display: flex; align-items: center; justify-content: center; background: linear-gradient(150deg, #FFC93C, #F2760C); box-shadow: 0 8px 20px rgba(242,118,12,0.35);}
+body.is-admin .bp-sub-box h3 {margin: 0 0 8px; color: #2B1B0E; font-size: 19px; font-weight: 800;}
+body.is-admin .bp-sub-box p {margin: 0 0 26px; color: #6b5a4a; font-size: 14px; line-height: 1.5;}
+body.is-admin .bp-sub-actions {display: flex; gap: 10px;}
+body.is-admin .bp-sub-actions button {flex: 1; padding: 13px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin: 0; width: auto;}
+body.is-admin .bp-no {background: #c0392b; color: #fff;}
+body.is-admin .bp-no:hover {background: #a5301f;}
+body.is-admin .bp-yes {background: #3C8031; color: #fff; box-shadow: 0 6px 16px rgba(60,128,49,0.35);}
+body.is-admin .bp-yes:hover {background: #2C601E;}
+body.is-admin .bp-yes:disabled {opacity: 0.6; cursor: default;}
+body.is-admin .bp-toast {position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); background: #2B1B0E; color: #FFC93C; padding: 12px 22px; border-radius: 999px; font-weight: 700; font-size: 15px; z-index: 10002; box-shadow: 0 8px 24px rgba(0,0,0,0.3);}
+body.is-admin .cart-total {margin-top: 16px; text-align: right; font-size: 22px; font-weight: 800; color: #7a1f0f; padding: 14px 18px; background: white; border-radius: 12px; box-shadow: 0 4px 14px rgba(122,31,15,0.08);}
+body.is-admin #tables-dashboard {display: block; max-width: none; margin: 0; grid-template-columns: none; gap: 0;}
+body.is-admin #tables-dashboard .table-card {background: transparent; border-radius: 0; padding: 0; box-shadow: none; margin-bottom: 4px;}
+body.is-admin #tables-dashboard .table-card h2 {color: #7a1f0f; font-size: 22px; margin: 12px 0 6px;}
+body.is-admin #tables-dashboard .table-card .confirm-btn {display: inline-block; width: auto; padding: 11px 22px; margin: 12px 8px 0 0; border-radius: 10px; font-size: 14px;}
+body.is-admin #tables-dashboard .table-card .confirm-btn:disabled {background: #2e7d32; cursor: not-allowed; opacity: 1;}
+body.is-admin #tables-dashboard .table-card table {min-width: 0;}
+@keyframes bpFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes bpPopIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ພິມ: ສະແດງສະເພາະໃບບິນໃນປັອບອັບ */
+@media print {
+  @page { margin: 12mm; }
+  body:has(#bill-popup-modal) > *:not(#bill-popup-modal) { display: none !important; }
+  #bill-popup-modal { position: static !important; width: auto !important; height: auto !important; background: #fff !important; padding: 0 !important; display: block !important; animation: none !important; }
+  #bill-popup-modal .bp-box { max-width: 100%; max-height: none; overflow: visible; box-shadow: none; border-radius: 0; padding: 0; animation: none; }
+  #bill-popup-modal .bp-close, #bill-popup-modal .bp-actions, #bill-confirm-modal { display: none !important; }
+  #bill-popup-modal .bp-receipt { border: 1px solid #e5d9cc; border-radius: 16px; padding: 32px; }
+  #bill-popup-modal .bp-head h2 { font-size: 30px; margin-bottom: 8px; }
+  #bill-popup-modal .bp-head p { font-size: 17px; }
+  #bill-popup-modal .bp-table th { font-size: 16px; padding: 10px 8px; }
+  #bill-popup-modal .bp-table td { font-size: 20px; padding: 14px 8px; }
+  #bill-popup-modal .bp-total span:first-child { font-size: 22px; }
+  #bill-popup-modal .bp-total span:last-child { font-size: 38px; }
+  #bill-popup-modal .bp-qr p { font-size: 18px; }
+  #bill-popup-modal .bp-qr img { width: 340px; height: 340px; }
+  #bill-popup-modal .bp-total, #bill-popup-modal .bp-qr { break-inside: avoid; }
+  #bill-popup-modal, #bill-popup-modal * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+/* ໂຕະທັງໝົດເປັນແຖວດຽວເຕັມຄວາມກວ້າງ ຄືກັບ backend */
+body.is-admin main #tables-dashboard {
+  grid-template-columns: 1fr;
+}
+
+/* ຫົວຄໍລຳບໍ່ຕັດແຖວ */
+body.is-admin main #tables-dashboard .table-card th {
+  white-space: nowrap;
+}

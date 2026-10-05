@@ -23,6 +23,19 @@ export const logout = () => request('/auth/logout', { method: 'POST' });
 export const getProducts = () => request('/products');
 export const addProduct = (formData) => request('/products', { method: 'POST', body: formData });
 export const deleteProduct = (id) => request(`/products/${id}`, { method: 'DELETE' });
+// (ໃໝ່) ແກ້ໄຂເມນູ: ສົ່ງເທື່ອລະ field ແລະອັບໂຫລດຮູບແຍກ ຕາມ backend
+export const updateProductField = (id, field, value) =>
+  request(`/products/${id}`, { method: 'PUT', body: JSON.stringify({ [field]: value }) });
+export const updateProductImage = (id, formData) =>
+  request(`/products/${id}/image`, { method: 'PUT', body: formData });
+
+// ---- Options: ປະເພດອາຫານ / ລະດັບຄວາມເຜັດ (ໃໝ່) ----
+// type = 'category' | 'spice'
+export const getOptions = () => request('/settings/options');
+export const addOption = (type, value) =>
+  request(`/settings/options/${type}`, { method: 'POST', body: JSON.stringify({ value }) });
+export const removeOption = (type, value) =>
+  request(`/settings/options/${type}`, { method: 'DELETE', body: JSON.stringify({ value }) });
 
 // ---- Orders / Bills ----
 export const getOrders = () => request('/orders');
@@ -36,6 +49,7 @@ export const closeBill = (billId) => request(`/orders/bills/${billId}/close`, { 
 
 // ---- QR Code (ໜາ scan ເມນ) ----
 export const getMenuQR = () => request('/qrcode');
+export const getTableQRs = () => request('/qrcode/tables');
 
 // ---- Settings (QR ຮັບເງິນ) ----
 export const getPaymentQR = () => request('/settings/qr');
