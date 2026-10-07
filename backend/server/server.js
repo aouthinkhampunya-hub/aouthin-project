@@ -13,6 +13,7 @@ const authRouter = require('./routes/auth');
 const requireAuth = require('./middleware/requireAuth');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const allowedOrigins = [
   'http://localhost:3000',
@@ -42,6 +43,10 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/auth', authRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/orders', ordersRouter);
+
+// ===== ເສັ້ນທາງໂຕະ (ຕ້ອງຢູ່ກ່ອນ /api/qrcode) =====
+require('./table-routes')(app);
+
 app.use('/api/qrcode', qrcodeRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/admins', adminsRouter);

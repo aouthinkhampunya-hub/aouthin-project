@@ -50,8 +50,17 @@ function statusLabel(status) {
   return status;
 }
 
-// ===== ກະດານໂຕະ 1-20 (ເຫັນທຸກໂຕະພ້ອມກັນ ວ່າງ/ມີຄົນ) =====
-const TOTAL_TABLES = 20;
+let TOTAL_TABLES = 20;
+
+async function loadTableCount() {
+  try {
+    const res = await fetch('/api/tables/count');
+    const data = await res.json();
+    if (data.count) TOTAL_TABLES = data.count;
+  } catch (e) {
+    // ຖ້າດຶງບໍ່ໄດ້ ໃຊ້ຄ່າເກົ່າ
+  }
+}
 
 (function addTableBoardStyle() {
   const s = document.createElement('style');
@@ -154,6 +163,7 @@ async function loadTables() {
 
   const container = document.getElementById('tables-dashboard');
 
+    await loadTableCount();
   renderTableBoard(bills);
 
   if (bills.length === 0) {
@@ -422,7 +432,7 @@ async function goToBill(billId) {
       </div>
       <div class="bp-actions">
         <button class="bp-print" onclick="window.print()">🖨️ ພິມບິນ</button>
-        <button class="bp-confirm" onclick="askConfirmPaid()">🧾 ກວດສອບບິນ</button>
+        <button class="bp-confirm" onclick="askConfirmPaid()">ຈ່າຍແລ້ວ</button>
       </div>
     </div>
   `;

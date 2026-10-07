@@ -934,3 +934,10 @@ footer {
   text-align: center;
   margin: 10px 0;
 }
+.filter-bar #search-input {
+  flex: 1;
+  min-width: 0;
+}
+.filter-bar #category-filter {
+  flex-shrink: 0;
+}

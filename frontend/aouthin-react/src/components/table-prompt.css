@@ -1,0 +1,86 @@
+.tp-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(20, 12, 6, 0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000; padding: 20px;
+  animation: tpFadeIn 0.2s ease;
+}
+
+.tp-overlay .tp-box {
+  background: #fff;
+  border-radius: 22px;
+  width: 100%;
+  max-width: 320px;
+  padding: 32px 28px 28px;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: tpPopIn 0.25s ease;
+  box-sizing: border-box;
+}
+
+.tp-overlay .tp-box h3 {
+  margin: 0 0 8px;
+  color: #7a1f10;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.tp-overlay .tp-box .tp-sub {
+  margin: 0 0 18px;
+  color: #6b5a4a;
+  font-size: 13px;
+}
+
+.tp-overlay .tp-box .tp-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 14px;
+  height: 52px;
+  border: 2px solid #1a1a1a;
+  border-radius: 14px;
+  outline: none;
+  background: #fff;
+  color: #2B1B0E;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  font-family: inherit;
+}
+.tp-overlay .tp-box .tp-input:focus {
+  border-color: #2e8b3f;
+  box-shadow: 0 0 0 3px rgba(46, 139, 63, 0.18);
+}
+.tp-overlay .tp-box .tp-input::-webkit-outer-spin-button,
+.tp-overlay .tp-box .tp-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.tp-overlay .tp-box .tp-input[type=number] { -moz-appearance: textfield; }
+
+.tp-overlay .tp-box .tp-error {
+  margin-top: 12px;
+  color: #d93025;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tp-overlay .tp-box .tp-ok {
+  display: block;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #2e8b3f;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.tp-overlay .tp-box .tp-ok:hover { background: #267535; }
+
+@keyframes tpFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tpPopIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }

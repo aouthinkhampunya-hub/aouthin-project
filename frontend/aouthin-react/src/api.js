@@ -23,14 +23,12 @@ export const logout = () => request('/auth/logout', { method: 'POST' });
 export const getProducts = () => request('/products');
 export const addProduct = (formData) => request('/products', { method: 'POST', body: formData });
 export const deleteProduct = (id) => request(`/products/${id}`, { method: 'DELETE' });
-// (ໃໝ່) ແກ້ໄຂເມນູ: ສົ່ງເທື່ອລະ field ແລະອັບໂຫລດຮູບແຍກ ຕາມ backend
 export const updateProductField = (id, field, value) =>
   request(`/products/${id}`, { method: 'PUT', body: JSON.stringify({ [field]: value }) });
 export const updateProductImage = (id, formData) =>
   request(`/products/${id}/image`, { method: 'PUT', body: formData });
 
-// ---- Options: ປະເພດອາຫານ / ລະດັບຄວາມເຜັດ (ໃໝ່) ----
-// type = 'category' | 'spice'
+// ---- Options: ປະເພດອາຫານ / ລະດັບຄວາມເຜັດ ----
 export const getOptions = () => request('/settings/options');
 export const addOption = (type, value) =>
   request(`/settings/options/${type}`, { method: 'POST', body: JSON.stringify({ value }) });
@@ -47,7 +45,7 @@ export const updateOrderStatus = (id, status) =>
 export const cancelOrder = (id) => request(`/orders/${id}`, { method: 'DELETE' });
 export const closeBill = (billId) => request(`/orders/bills/${billId}/close`, { method: 'PUT' });
 
-// ---- QR Code (ໜາ scan ເມນ) ----
+// ---- QR Code ----
 export const getMenuQR = () => request('/qrcode');
 export const getTableQRs = () => request('/qrcode/tables');
 
@@ -56,16 +54,22 @@ export const getPaymentQR = () => request('/settings/qr');
 export const uploadPaymentQR = (formData) =>
   request('/settings/qr', { method: 'POST', body: formData });
 
-// ---- Staff calls (ເອນພະນກງານ) ----
+// ---- Staff calls ----
 export const getStaffCalls = () => request('/staffcall');
 export const callStaff = (table_number) =>
   request('/staffcall', { method: 'POST', body: JSON.stringify({ table_number }) });
 export const ackStaffCall = (id) => request(`/staffcall/${id}/ack`, { method: 'PUT' });
 
-// ---- Admins (ພະນັກງານ) ----
+// ---- Admins ----
 export const getAdmins = () => request('/admins');
 export const addAdmin = (username, password, name) =>
   request('/admins', { method: 'POST', body: JSON.stringify({ username, password, name }) });
 export const deleteAdmin = (id) => request(`/admins/${id}`, { method: 'DELETE' });
 export const resetAdminPassword = (id, password) =>
   request(`/admins/${id}/reset-password`, { method: 'PUT', body: JSON.stringify({ password }) });
+
+// ---- ໂຕະ (ເພີ່ມ / ລຶບ / ນັບ) ----
+export const addTable = () => request('/tables', { method: 'POST' });
+export const deleteLastTable = () => request('/tables', { method: 'DELETE' });
+export const getTableCount = () => request('/tables/count');
+export const getOpenBills = () => request('/orders/bills');

@@ -37,7 +37,7 @@ function setTableNumber(table) {
   sessionStorage.setItem('tableNumber', table);
   document.getElementById('table-label').textContent = `ໂຕະ ${table}`;
   document.getElementById('table-modal').classList.add('hidden');
-   loadSavedCart();
+  loadSavedCart();
   renderCart();
   loadProducts();
   restoreStaffCooldown();
@@ -55,9 +55,17 @@ async function submitTableNumber() {
     return;
   }
 
+  // ດຶງຈຳນວນໂຕະຈິງຈາກ server
+  let maxTable = 20;
+  try {
+    const cres = await fetch('/api/tables/count');
+    const cdata = await cres.json();
+    if (cdata.count) maxTable = cdata.count;
+  } catch (e) {}
+
   const tableNum = Number(value);
-  if (tableNum < 1 || tableNum > 20) {
-    errorEl.textContent = '⚠️ ເລກໂຕະຕ້ອງຢູ່ລະຫວ່າງ 1-20';
+  if (tableNum < 1 || tableNum > maxTable) {
+    errorEl.textContent = `⚠️ ເລກໂຕະຕ້ອງຢູ່ລະຫວ່າງ 1-${maxTable}`;
     errorEl.classList.remove('hidden');
     input.focus();
     return;
@@ -65,7 +73,7 @@ async function submitTableNumber() {
 
   errorEl.classList.add('hidden');
 
-  // ກວດວ່າໂຕະນີ້ມີຄົນນັ່ງ/ມີອໍເດີ້ຄ້າງຢູ່ແລ້ວບໍ່ (ກັນສອງໂຕະໃສ່ເລກດຽວກັນ ແລ້ວບິນປົນກັນ)
+  // ກວດວ່າໂຕະນີ້ມີຄົນນັ່ງ/ມີອໍເດີ້ຄ້າງຢູ່ແລ້ວບໍ່
   try {
     const res = await fetch('/api/orders/bills');
     const bills = await res.json();
@@ -76,9 +84,7 @@ async function submitTableNumber() {
       input.focus();
       return;
     }
-  } catch (e) {
-    // ຖ້າເຊັກບໍ່ໄດ້ (ເນັດຫຼຸດ) ບໍ່ບລັອກລູກຄ້າ ປ່ອຍໃຫ້ຜ່ານໄປກ່ອນ
-  }
+  } catch (e) {}
 
   setTableNumber(value);
 }
@@ -87,7 +93,7 @@ async function loadProducts() {
   const res = await fetch('/api/products');
   allProducts = await res.json();
 
-    populateCategoryFilter();
+  populateCategoryFilter();
   filterProducts();
 }
 
@@ -202,7 +208,6 @@ function setCartQty(id, value) {
 function renderCart() {
   saveCart();
   document.getElementById('cart-error').classList.add('hidden');
-  document.getElementById('cart-error').classList.add('hidden');
   document.getElementById('cart-count').textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   const container = document.getElementById('cart-items');
@@ -247,7 +252,7 @@ function closeSuccess() {
 }
 
 async function confirmCartOrder() {
-   if (cart.length === 0) {
+  if (cart.length === 0) {
     document.getElementById('cart-error').classList.remove('hidden');
     return;
   }
@@ -262,7 +267,7 @@ async function confirmCartOrder() {
 
   const data = await res.json();
 
-    if (res.ok) {
+  if (res.ok) {
     cart = [];
     renderCart();
     closeCart();
@@ -274,7 +279,7 @@ async function confirmCartOrder() {
 }
 initApp();
 
-// ===== ເບິ່ງບິນ: ເດັ້ງເປັນ popup (ແທນການໄປໜ້າ bill.html) =====
+// ===== ເບິ່ງບິນ: ເດັ້ງເປັນ popup =====
 
 function escapeHtml(text) {
   return String(text ?? '')
@@ -286,12 +291,11 @@ function escapeHtml(text) {
 function billStatusLabel(status) {
   if (status === 'pending') return '⏳ ລໍຖ້າ';
   if (status === 'cooking') return '🔥 ກຳລັງເຮັດ';
-  if (status === 'ready') return '⏳ ລໍຖ້າ'; // ຄົວເຮັດແລ້ວ ແຕ່ແອັດມິນຍັງບໍ່ເສີບ
+  if (status === 'ready') return '⏳ ລໍຖ້າ';
   if (status === 'completed') return '✅ ພ້ອມແລ້ວ';
   return status;
 }
 
-// ປຸ່ມ "ເບິ່ງບິນ" ເອີ້ນຟັງຊັນນີ້ຢູ່ແລ້ວ (ບໍ່ຕ້ອງແກ້ HTML ຂອງປຸ່ມ)
 function goToBill() {
   openBillModal();
 }
@@ -344,7 +348,6 @@ async function openBillModal() {
     return;
   }
 
-  // QR ຈ່າຍເງິນ (ຖ້າໂຫລດບໍ່ໄດ້ກໍຂ້າມໄປ ບໍ່ໃຫ້ກະທົບຕາຕະລາງບິນ)
   try {
     const qres = await fetch('/api/settings/qr');
     const qdata = await qres.json();
@@ -358,7 +361,7 @@ function closeBillModal() {
   document.getElementById('billModal').style.display = 'none';
 }
 
-// ----- ປັອບອັບຢືນຢັນຍົກເລີກລາຍການ (ພາຍໃນປັອບອັບບິນ) -----
+// ----- ປັອບອັບຢືນຢັນຍົກເລີກລາຍການ -----
 (function addBillCancelStyle() {
   const s = document.createElement('style');
   s.textContent = `
@@ -489,7 +492,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.getElementById('bill-cancel-modal')) closeCancelOrder();
 });
 
-// ===== ເອີ້ນພະນັກງານ: ລັອກປຸ່ມ 60 ວິນາທີ (ຈື່ໄວ້ ຖ້າຣີເຟຣຊໜ້າກໍຍັງລັອກ) =====
+// ===== ເອີ້ນພະນັກງານ: ລັອກປຸ່ມ 60 ວິນາທີ =====
 const STAFF_CALL_COOLDOWN_MS = 60000;
 const STAFF_CALL_LABEL = '🔔 ເອີ້ນພະນັກງານ';
 let staffCooldownTimer = null;
@@ -551,7 +554,6 @@ function restoreStaffCooldown() {
 async function callStaff() {
   const btn = document.getElementById('call-staff-button');
 
-  // ຍັງຢູ່ໃນເວລາລັອກ ບໍ່ໃຫ້ເອີ້ນຊ້ຳ
   const existing = getStaffCooldownUntil();
   if (existing > Date.now()) {
     startStaffCooldown(existing);
@@ -571,7 +573,6 @@ async function callStaff() {
     });
 
     if (res.status === 429) {
-      // ເຊີເວີບອກວ່າເອີ້ນຖີ່ເກີນໄປ: ໃຊ້ເວລາທີ່ເຊີເວີບອກ (ຖ້າມີ)
       const data = await res.json().catch(() => ({}));
       const waitSec = Number(data.retryAfter) || 60;
       until = Date.now() + waitSec * 1000;

@@ -70,7 +70,7 @@ export default function AdminBill() {
 
         <div className="bill-actions">
           <button className="btn-print" onClick={() => window.print()}>🖨️ ພິມບິນ</button>
-          <button className="btn-confirm" onClick={() => setConfirmOpen(true)}>🧾 ກວດສອບບິນ</button>
+          <button className="btn-confirm" onClick={() => setConfirmOpen(true)}>ຈ່າຍແລ້ວ</button>
         </div>
       </div>
 

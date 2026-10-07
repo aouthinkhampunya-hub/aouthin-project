@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getProducts, createOrder, callStaff, API_BASE } from '../../api.js';
+import TablePrompt from '../../components/TablePrompt.jsx';
 
 function getTableNumber() {
   const params = new URLSearchParams(window.location.search);
-  let table = params.get('table');
-  if (!table) table = sessionStorage.getItem('tableNumber');
-  if (!table) table = prompt('ປ້ອນເລກໂຕະ (ສຳລັບທົດສອບ):');
-  sessionStorage.setItem('tableNumber', table);
-  return table;
+  const fromUrl = params.get('table');
+  if (fromUrl) {
+    sessionStorage.setItem('tableNumber', fromUrl);
+    return fromUrl;
+  }
+  return sessionStorage.getItem('tableNumber') || '';
 }
 
 function loadSavedCart(table) {
@@ -28,12 +30,13 @@ function billStatusLabel(status) {
 }
 
 export default function Menu() {
-  const [tableNumber] = useState(getTableNumber);
+  const [tableNumber, setTableNumber] = useState(getTableNumber);
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
-  const [cart, setCart] = useState(() => loadSavedCart(tableNumber));
+  const [cart, setCart] = useState(() => loadSavedCart(getTableNumber()));
   const [cartOpen, setCartOpen] = useState(false);
+  const [cartError, setCartError] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [callState, setCallState] = useState('idle'); // idle | calling | called
@@ -50,12 +53,19 @@ export default function Menu() {
 
   // ບັນທຶກກະຕ່າທຸກຄັ້ງທີ່ປ່ຽນ
   useEffect(() => {
+    if (!tableNumber) return;
     try {
       sessionStorage.setItem(`cart_table_${tableNumber}`, JSON.stringify(cart));
     } catch (e) {}
   }, [cart, tableNumber]);
 
+  // ເມື່ອເລືອກໂຕະໃໝ່ ໂຫລດກະຕ່າຂອງໂຕະນັ້ນ
+  useEffect(() => {
+    if (tableNumber) setCart(loadSavedCart(tableNumber));
+  }, [tableNumber]);
+
   useEffect(() => { loadProducts(); }, []);
+  useEffect(() => { setCartError(false); }, [cart, cartOpen]);
 
   async function loadProducts() {
     const data = await getProducts();
@@ -98,7 +108,7 @@ export default function Menu() {
     const existing = cart.find(i => i.product_id === product.id);
     const currentQty = existing ? existing.quantity : 0;
     if (currentQty + 1 > product.stock) {
-      alert('ອາຫານໃນສະຕອກບໍ່ພໍ');
+      showToast('⚠️ ອາຫານໃນສະຕັອກບໍ່ພໍ');
       return;
     }
     if (existing) {
@@ -110,12 +120,15 @@ export default function Menu() {
   }
 
   function changeQty(id, delta) {
+    const item = cart.find(i => i.product_id === id);
+    if (!item) return;
+    const newQty = item.quantity + delta;
+    if (newQty > item.stock) {
+      showToast('⚠️ ອາຫານໃນສະຕັອກບໍ່ພໍ');
+      return;
+    }
     setCart(prev => {
-      const item = prev.find(i => i.product_id === id);
-      if (!item) return prev;
-      const newQty = item.quantity + delta;
       if (newQty < 1) return prev.filter(i => i.product_id !== id);
-      if (newQty > item.stock) { alert('ອາຫານໃນສະຕັອກບໍ່ພໍ'); return prev; }
       return prev.map(i => i.product_id === id ? { ...i, quantity: newQty } : i);
     });
   }
@@ -124,7 +137,7 @@ export default function Menu() {
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
   async function confirmOrder() {
-    if (cart.length === 0) { alert('ຍັງບໍ່ໄດ້ເລືອກອາຫານ'); return; }
+    if (cart.length === 0) { setCartError(true); return; }
     const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
     try {
       await createOrder(tableNumber, items);
@@ -133,15 +146,20 @@ export default function Menu() {
       setSuccessOpen(true);
       loadProducts();
     } catch (err) {
-      alert('ເກີດຂໍ້ຜິດພາດ: ' + (err.error || 'ບໍ່ຮູ້ສາເຫດ'));
+      showToast('❌ ' + (err.error || 'ສັ່ງອາຫານບໍ່ສຳເລັດ'));
     }
   }
 
   async function handleCallStaff() {
     setCallState('calling');
-    await callStaff(tableNumber);
-    setCallState('called');
-    setTimeout(() => setCallState('idle'), 15000);
+    try {
+      await callStaff(tableNumber);
+      setCallState('called');
+      setTimeout(() => setCallState('idle'), 15000);
+    } catch (e) {
+      setCallState('idle');
+      showToast('❌ ແຈ້ງພະນັກງານບໍ່ສຳເລັດ ລອງໃໝ່ອີກຄັ້ງ');
+    }
   }
 
   // ===== ບິນ (popup) =====
@@ -213,17 +231,21 @@ export default function Menu() {
 
   return (
     <div className="customer-app">
+      {!tableNumber && (
+        <TablePrompt
+          onSubmit={(n) => {
+            sessionStorage.setItem('tableNumber', n);
+            setTableNumber(n);
+          }}
+        />
+      )}
+
       <header>
         <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
         <p id="table-label">ໂຕະ {tableNumber}</p>
       </header>
 
       <div className="filter-bar">
-        <select id="category-filter" value={category} onChange={e => setCategory(e.target.value)}>
-          <option value="">ທຸກປະເພດ</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-
         <input
           type="text"
           id="search-input"
@@ -231,6 +253,11 @@ export default function Menu() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+
+        <select id="category-filter" value={category} onChange={e => setCategory(e.target.value)}>
+          <option value="">ທຸກປະເພດ</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
       </div>
 
       <main id="product-list">
@@ -279,6 +306,7 @@ export default function Menu() {
               ))}
             </div>
             <p className="cart-total">ລວມ: <span id="cart-total">{cartTotal}</span> ກີບ</p>
+            {cartError && <p className="cart-error">⚠️ ກະລຸນາເພີ່ມອາຫານໃສ່ກະຕ່າກ່ອນ</p>}
             <button className="confirm-btn" onClick={confirmOrder}>ຢືນຢັນສັ່ງອາຫານ</button>
             <button className="cancel-btn" onClick={() => setCartOpen(false)}>ປິດ</button>
           </div>

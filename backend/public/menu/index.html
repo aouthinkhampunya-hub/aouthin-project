@@ -14,11 +14,11 @@
   </header>
 
     <div class="filter-bar">
+    <input type="text" id="search-input" placeholder="🔍 ຄົ້ນຫາເມນູ..." oninput="filterProducts()">
+
     <select id="category-filter" onchange="filterProducts()">
       <option value="">ທຸກປະເພດ</option>
     </select>
-
-    <input type="text" id="search-input" placeholder="🔍 ຄົ້ນຫາເມນູ..." oninput="filterProducts()">
   </div>
 
   <main id="product-list">
@@ -56,8 +56,8 @@
     <button id="bill-button" onclick="goToBill()">🧾 ເບິ່ງບິນ</button>
     <button id="call-staff-button" onclick="callStaff()">🔔 ເອີ້ນພະນັກງານ</button>
   </div>
-  
-   <div id="cart-overlay" class="hidden">
+
+  <div id="cart-overlay" class="hidden">
     <div class="cart-box">
       <h2>ກະຕ່າອາຫານ</h2>
       <div id="cart-items"></div>
@@ -68,7 +68,6 @@
     </div>
   </div>
 
-  <!-- 👇 ໃສ່ຕົງນີ້ (ຫຼັງ cart-overlay, ກ່ອນ script.js) -->
   <div id="success-overlay" class="hidden">
     <div class="success-box">
       <div class="success-icon">🍽️</div>
@@ -78,17 +77,17 @@
     </div>
   </div>
 
-    <div id="table-modal">
+  <div id="table-modal">
     <div class="table-modal-box">
       <h2>ກະລຸນາປ້ອນເລກໂຕະ</h2>
       <p class="table-modal-sub">ຕ້ອງໃສ່ເລກໂຕະກ່ອນຈຶ່ງເບິ່ງເມນູໄດ້</p>
-           <input type="text" id="table-input" inputmode="numeric" pattern="[0-9]*" maxlength="2" autofocus oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+      <input type="text" id="table-input" inputmode="numeric" pattern="[0-9]*" maxlength="3" autofocus oninput="this.value = this.value.replace(/[^0-9]/g, '')">
       <p id="table-error" class="table-error hidden">⚠️ ກະລຸນາໃສ່ເລກໂຕະ</p>
       <button class="confirm-btn" onclick="submitTableNumber()">ຢືນຢັນ</button>
     </div>
   </div>
 
   <div id="toast"></div>
-  <script src="script.js"></script>
+    <script src="script.js?v=2"></script>
 </body>
 </html>

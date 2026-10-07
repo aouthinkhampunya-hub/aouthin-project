@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getBills, updateOrderStatus, closeBill, getPaymentQR, getStaffCalls, ackStaffCall } from '../../api.js';
+import { getBills, updateOrderStatus, closeBill, getPaymentQR, getStaffCalls, ackStaffCall, getTableCount } from '../../api.js';
 import '../../styles/admin-tables.css';
-
-const TOTAL_TABLES = 20;
 
 function statusLabel(status) {
   if (status === 'pending') return 'ລໍຖ້າ';
@@ -42,6 +40,7 @@ export default function Tables() {
   const [bills, setBills] = useState([]);
   const [calls, setCalls] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [totalTables, setTotalTables] = useState(20);
   const [popup, setPopup] = useState(null);       // { bill, qrImage, now }
   const [askPaid, setAskPaid] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -59,6 +58,13 @@ export default function Tables() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), 2200);
   };
+
+  async function loadTableCount() {
+    try {
+      const c = await getTableCount();
+      if (c?.count) setTotalTables(c.count);
+    } catch (e) {}
+  }
 
   async function load() {
     const data = await getBills();
@@ -98,10 +104,14 @@ export default function Tables() {
     };
     document.addEventListener('click', unlock, { once: true });
     (async () => {
-      try { await load(); await loadCalls(); } catch (e) { console.error(e); }
+      try { await loadTableCount(); await load(); await loadCalls(); } catch (e) { console.error(e); }
       firstLoad.current = false;
     })();
-    const t = setInterval(() => { load().catch(() => {}); loadCalls().catch(() => {}); }, 5000);
+    const t = setInterval(() => {
+      loadTableCount();
+      load().catch(() => {});
+      loadCalls().catch(() => {});
+    }, 5000);
     return () => { clearInterval(t); document.removeEventListener('click', unlock); };
   }, []);
 
@@ -158,6 +168,10 @@ export default function Tables() {
   const byTable = {};
   bills.forEach((b) => { byTable[b.table_number] = b; });
 
+  // ກະດານສະແດງເຖິງຈຳນວນໂຕະຈິງ ຫຼື ເລກໂຕະສູງສຸດທີ່ມີບິນເປີດຢູ່ (ບໍ່ໃຫ້ບິນຫາຍ)
+  const maxBillTable = bills.reduce((m, b) => Math.max(m, Number(b.table_number) || 0), 0);
+  const boardSize = Math.max(totalTables, maxBillTable);
+
   return (
     <main>
       <div id="staff-calls-bar">
@@ -169,9 +183,9 @@ export default function Tables() {
         ))}
       </div>
 
-      {/* ກະດານໂຕະ 1-20 */}
+      {/* ກະດານໂຕະທັງໝົດ */}
       <div id="table-board" className="table-board">
-        {Array.from({ length: TOTAL_TABLES }, (_, i) => i + 1).map((n) => {
+        {Array.from({ length: boardSize }, (_, i) => i + 1).map((n) => {
           const bill = byTable[n];
           return bill ? (
             <div key={n} className="board-cell occupied" onClick={() => scrollToTable(n)}>
@@ -259,7 +273,7 @@ export default function Tables() {
               </div>
               <div className="bp-actions">
                 <button className="bp-print" onClick={() => window.print()}>🖨️ ພິມບິນ</button>
-                <button className="bp-confirm" onClick={() => setAskPaid(true)}>🧾 ກວດສອບບິນ</button>
+                <button className="bp-confirm" onClick={() => setAskPaid(true)}>ຈ່າຍແລ້ວ</button>
               </div>
             </div>
           </div>
@@ -269,7 +283,7 @@ export default function Tables() {
               <div className="bp-sub-box">
                 <div className="bp-sub-icon">💰</div>
                 <h3>ຢືນຢັນຮັບເງິນ</h3>
-                <p>ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ່?<br />ການດຳເນີນການນີ້ຈະປິດບິນ</p>
+                <p>ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ?<br />ການດຳເນີນການນີ້ຈະປິດບິນ</p>
                 <div className="bp-sub-actions">
                   <button className="bp-no" onClick={() => setAskPaid(false)}>ຍົກເລີກ</button>
                   <button className="bp-yes" disabled={paying} onClick={doConfirmPaid}>✓ ຢືນຢັນ</button>

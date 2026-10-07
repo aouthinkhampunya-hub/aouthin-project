@@ -559,3 +559,13 @@
 }
 
 .customer-app { min-height: 100vh; }
+.cart-error {
+  background: #fdecea;
+  color: #c0392b;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 10px 0;
+}

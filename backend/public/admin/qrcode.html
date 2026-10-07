@@ -74,7 +74,7 @@
     }
     .pay-upload-btn:hover { background: #256428; }
 
-    /* ===== ກະດານ QR ຕາມໂຕະ 1-20 ===== */
+    /* ===== ກະດານ QR ຕາມໂຕະ ===== */
     .table-qr-section {
       width: 100%;
       max-width: 1100px;
@@ -110,9 +110,16 @@
       font-weight: 800;
       font-size: 15px;
     }
+
+    /* ===== ປຸ່ມເພີ່ມ / ລຶບ / ພິມ ===== */
+    .table-qr-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
     .table-qr-print-btn {
-      display: block;
-      margin: 20px auto 0;
       background: #2B1B0E;
       color: #FFC93C;
       border: none;
@@ -123,15 +130,92 @@
       cursor: pointer;
     }
     .table-qr-print-btn:hover { background: #3D2A18; }
+    .table-qr-add-btn {
+      background: #2e7d32;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .table-qr-add-btn:hover { background: #256428; }
+    .table-qr-add-btn:disabled { opacity: .6; cursor: wait; }
+    .table-qr-del-btn {
+      background: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 22px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .table-qr-del-btn:hover { background: #a5301f; }
+    .table-qr-del-btn:disabled { opacity: .6; cursor: wait; }
+
+    /* ===== ປັອບອັບຢືນຢັນ (ແທນ confirm) ===== */
+    .cf-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(20,12,6,0.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 10000; padding: 20px;
+      animation: cfFadeIn 0.2s ease;
+    }
+    .cf-box {
+      background: #fff; border-radius: 22px; width: 100%; max-width: 340px;
+      padding: 36px 28px 28px; text-align: center;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+      animation: cfPopIn 0.25s ease;
+    }
+    .cf-icon {
+      width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 50%;
+      font-size: 34px; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(150deg, #ff8a65, #c0392b);
+      box-shadow: 0 8px 20px rgba(192,57,43,0.35);
+    }
+    .cf-icon.warn {
+      background: linear-gradient(150deg, #FFC93C, #F2760C);
+      box-shadow: 0 8px 20px rgba(242,118,12,0.35);
+    }
+    .cf-box h3 { margin: 0 0 8px; color: #2B1B0E; font-size: 19px; font-weight: 800; }
+    .cf-box p {
+      margin: 0 0 26px; color: #6b5a4a; font-size: 14px; line-height: 1.5;
+      text-align: center;
+    }
+    .cf-actions { display: flex; gap: 10px; }
+    .cf-actions button {
+      flex: 1; padding: 13px; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .cf-cancel { background: #f3ece4; color: #7a1f10; }
+    .cf-cancel:hover { background: #e8dccf; }
+    .cf-ok { background: #c0392b; color: #fff; box-shadow: 0 6px 16px rgba(192,57,43,0.35); }
+    .cf-ok:hover { background: #a5301f; }
+    .cf-ok.green { background: #3C8031; box-shadow: 0 6px 16px rgba(60,128,49,0.35); }
+    .cf-ok.green:hover { background: #2C601E; }
+
+    /* ===== Toast ແທນ alert ===== */
+    .qr-toast {
+      position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
+      background: #2B1B0E; color: #FFC93C; padding: 12px 22px;
+      border-radius: 999px; font-weight: 700; font-size: 15px;
+      z-index: 10002; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      max-width: 90vw; text-align: center;
+    }
+    @keyframes cfFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes cfPopIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
     @media print {
       body > *:not(.table-qr-section) { display: none !important; }
       .qr-page { display: none !important; }
       .table-qr-section { margin-top: 0; max-width: 100%; }
       .table-qr-section h2 { color: #2B1B0E; }
-      .table-qr-print-btn { display: none !important; }
+      .table-qr-actions { display: none !important; }
       .table-qr-grid { grid-template-columns: repeat(4, 1fr); }
       .table-qr-card { box-shadow: none; border: 1px solid #e5d9cc; break-inside: avoid; }
+      .cf-overlay, .qr-toast { display: none !important; }
     }
   </style>
 </head>
@@ -160,11 +244,15 @@
     <p id="qr-url"></p>
 
     <div class="table-qr-section">
-      <h2>📋 QR ແຍກຕາມໂຕະ (1-20)</h2>
+      <h2>📋 QR ແຍກຕາມໂຕະ (<span id="table-count">...</span>)</h2>
       <div class="table-qr-grid" id="table-qr-grid">
         <p style="color:#ffe0cc; text-align:center;">ກຳລັງສ້າງ QR...</p>
       </div>
-      <button class="table-qr-print-btn" onclick="window.print()">🖨️ ພິມ QR ທັງໝົດ</button>
+      <div class="table-qr-actions">
+        <button class="table-qr-add-btn" id="add-table-btn" onclick="addTable()">➕ ເພີ່ມໂຕະ</button>
+        <button class="table-qr-del-btn" id="del-table-btn" onclick="deleteTable()">🗑️ ລຶບໂຕະສຸດທ້າຍ</button>
+        <button class="table-qr-print-btn" onclick="window.print()">🖨️ ພິມ QR ທັງໝົດ</button>
+      </div>
     </div>
   </div>
 
@@ -181,6 +269,58 @@
   </div>
 
   <script>
+    // ===== Toast (ແທນ alert) =====
+    function showToast(message) {
+      const old = document.getElementById('qr-toast');
+      if (old) old.remove();
+      const t = document.createElement('div');
+      t.id = 'qr-toast';
+      t.className = 'qr-toast';
+      t.textContent = message;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2500);
+    }
+
+    // ===== ປັອບອັບຢືນຢັນ (ແທນ confirm) =====
+    // ໃຊ້: if (await askConfirm({...})) { ... }
+    function askConfirm({ icon = '🗑️', title, text, okText = 'ຢືນຢັນ', cancelText = 'ຍົກເລີກ', danger = true }) {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'cf-overlay';
+        overlay.innerHTML = `
+          <div class="cf-box">
+            <div class="cf-icon ${danger ? '' : 'warn'}">${icon}</div>
+            <h3>${title}</h3>
+            <p>${text}</p>
+            <div class="cf-actions">
+              <button class="cf-cancel">${cancelText}</button>
+              <button class="cf-ok ${danger ? '' : 'green'}">${okText}</button>
+            </div>
+          </div>
+        `;
+
+        function close(result) {
+          document.removeEventListener('keydown', onKey);
+          overlay.remove();
+          resolve(result);
+        }
+        function onKey(e) {
+          if (e.key === 'Escape') close(false);
+          if (e.key === 'Enter') close(true);
+        }
+
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) close(false);
+        });
+        overlay.querySelector('.cf-cancel').onclick = () => close(false);
+        overlay.querySelector('.cf-ok').onclick = () => close(true);
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(overlay);
+        overlay.querySelector('.cf-ok').focus();
+      });
+    }
+
+    // ===== QR ຫຼັກ =====
     async function loadQR() {
       const res = await fetch('/api/qrcode');
       const data = await res.json();
@@ -189,13 +329,14 @@
     }
     loadQR();
 
-    // ===== ກະດານ QR ຕາມໂຕະ 1-20 =====
+    // ===== ກະດານ QR ຕາມໂຕະ =====
     async function loadTableQRs() {
       const grid = document.getElementById('table-qr-grid');
       try {
         const res = await fetch('/api/qrcode/tables');
         const data = await res.json();
 
+        document.getElementById('table-count').textContent = '1-' + data.tables.length;
         grid.innerHTML = data.tables.map(t => `
           <div class="table-qr-card">
             <img src="${t.qrImage}" alt="QR ໂຕະ ${t.table}">
@@ -207,6 +348,67 @@
       }
     }
     loadTableQRs();
+
+    // ===== ເພີ່ມໂຕະ =====
+    async function addTable() {
+      const btn = document.getElementById('add-table-btn');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/tables', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'ເພີ່ມໂຕະບໍ່ສຳເລັດ');
+        await loadTableQRs();
+        showToast('✅ ເພີ່ມໂຕະ ' + data.count + ' ແລ້ວ');
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      } catch (err) {
+        showToast('❌ ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ===== ລຶບໂຕະສຸດທ້າຍ =====
+    async function deleteTable() {
+      const btn = document.getElementById('del-table-btn');
+      btn.disabled = true;
+      try {
+        const countRes = await fetch('/api/tables/count');
+        const { count } = await countRes.json();
+
+        const billsRes = await fetch('/api/orders/bills');
+        const bills = await billsRes.json();
+        if (bills.some(b => Number(b.table_number) === count)) {
+          await askConfirm({
+            icon: '⚠️',
+            title: 'ລຶບບໍ່ໄດ້',
+            text: `ໂຕະ ${count} ຍັງມີບິນເປີດຢູ່<br>ກະລຸນາປິດບິນກ່ອນ`,
+            okText: 'ຮັບຮູ້',
+            cancelText: 'ປິດ',
+            danger: false
+          });
+          return;
+        }
+
+        const ok = await askConfirm({
+          icon: '🗑️',
+          title: 'ຢືນຢັນລຶບໂຕະ',
+          text: `ລຶບໂຕະ ${count} ແທ້ບໍ່?<br>QR ຂອງໂຕະນີ້ຈະໃຊ້ບໍ່ໄດ້ອີກ`,
+          okText: '🗑️ ລຶບ',
+          cancelText: 'ຍົກເລີກ'
+        });
+        if (!ok) return;
+
+        const res = await fetch('/api/tables', { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'ລຶບໂຕະບໍ່ສຳເລັດ');
+        await loadTableQRs();
+        showToast('✅ ລຶບໂຕະ ' + count + ' ແລ້ວ');
+      } catch (err) {
+        showToast('❌ ' + err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
     // ===== ປັອບອັບ QR ຈ່າຍເງິນ =====
     function openPayModal() {
@@ -243,7 +445,7 @@
       const file = input.files[0];
 
       if (!file) {
-        alert('ກະລຸນາເລືອກຮູບ QR ກ່ອນ');
+        showToast('ກະລຸນາເລືອກຮູບ QR ກ່ອນ');
         return;
       }
 
@@ -258,11 +460,11 @@
       const data = await res.json();
 
       if (res.ok) {
-        alert('ບັນທຶກ QR ສຳເລັດ!');
+        showToast('✅ ບັນທຶກ QR ສຳເລັດ');
         input.value = '';
         loadPayQR();
       } else {
-        alert('ເກີດຂໍ້ຜິດພາດ: ' + data.error);
+        showToast('❌ ' + (data.error || 'ເກີດຂໍ້ຜິດພາດ'));
       }
     }
   </script>

@@ -69,7 +69,7 @@ async function loadBill() {
 
       <div class="bill-actions">
         <button class="btn-print" onclick="window.print()">🖨️ ພິມບິນ</button>
-        <button class="btn-confirm" onclick="confirmPaid(${bill.id})">🧾 ກວດສອບບິນ</button>
+        <button class="btn-confirm" onclick="confirmPaid(${bill.id})">ຈ່າຍແລ້ວ</button>
       </div>
     </div>
   `;
