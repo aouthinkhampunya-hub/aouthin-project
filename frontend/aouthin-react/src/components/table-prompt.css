@@ -84,3 +84,18 @@
 
 @keyframes tpFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tpPopIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.tp-overlay .tp-box .tp-online {
+  display: block;
+  width: 100%;
+  margin: 10px 0 0;
+  padding: 12px;
+  border: 2px solid #F2760C;
+  border-radius: 12px;
+  background: #fff8f0;
+  color: #c45a00;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+.tp-overlay .tp-box .tp-online:hover { background: #ffeedd; }

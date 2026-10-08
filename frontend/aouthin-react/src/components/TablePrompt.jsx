@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getTableCount } from '../api.js';
 import './table-prompt.css';
 
-export default function TablePrompt({ onSubmit }) {
+export default function TablePrompt({ onSubmit, onOnline }) {
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
   const [maxTable, setMaxTable] = useState(20);
@@ -16,7 +16,6 @@ export default function TablePrompt({ onSubmit }) {
   }, []);
 
   const handleChange = (e) => {
-    // ເອົາສະເພາະຕົວເລກ
     const digits = e.target.value.replace(/\D/g, '');
 
     if (digits === '') {
@@ -25,7 +24,6 @@ export default function TablePrompt({ onSubmit }) {
       return;
     }
 
-    // ເກີນເລກໂຕະສູງສຸດ ບໍ່ຮັບ
     if (parseInt(digits, 10) > maxTable) {
       setError(`ເລກໂຕະຕ້ອງຢູ່ລະຫວ່າງ 1-${maxTable}`);
       return;
@@ -65,6 +63,12 @@ export default function TablePrompt({ onSubmit }) {
         {error && <div className="tp-error">⚠️ {error}</div>}
 
         <button className="tp-ok" onClick={submit}>ຢືນຢັນ</button>
+
+        {onOnline && (
+          <button className="tp-online" onClick={onOnline}>
+            🛵 ສັ່ງອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ)
+          </button>
+        )}
       </div>
     </div>
   );

@@ -35,7 +35,9 @@ function initApp() {
 function setTableNumber(table) {
   tableNumber = table;
   sessionStorage.setItem('tableNumber', table);
-  document.getElementById('table-label').textContent = `ໂຕະ ${table}`;
+  document.getElementById('table-label').textContent =
+    table === 'online' ? '🛵 ສັ່ງອອນລາຍ' : `ໂຕະ ${table}`;
+  updateModeButton();
   document.getElementById('table-modal').classList.add('hidden');
   loadSavedCart();
   renderCart();
@@ -257,6 +259,12 @@ async function confirmCartOrder() {
     return;
   }
 
+  // ສັ່ງອອນລາຍ: ເປີດຟອມຂໍ້ມູນກ່ອນ
+  if (tableNumber === 'online') {
+    openOnlineForm();
+    return;
+  }
+
   const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
 
   const res = await fetch('/api/orders', {
@@ -278,6 +286,183 @@ async function confirmCartOrder() {
   }
 }
 initApp();
+
+// ===== ສັ່ງອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ, ຈ່າຍເງິນສົດ) =====
+function startOnlineMode() {
+  setTableNumber('online');
+}
+
+function updateModeButton() {
+  const b = document.getElementById('mode-switch');
+  if (!b) return;
+  b.textContent = tableNumber === 'online'
+    ? '🍽️ ສັ່ງຢູ່ໂຕະ (ປ່ຽນເລກໂຕະ)'
+    : '🛵 ສັ່ງອອນລາຍ';
+}
+
+function toggleOnlineMode() {
+  if (tableNumber === 'online') {
+    sessionStorage.removeItem('tableNumber');
+    window.location.href = 'index.html';
+  } else {
+    startOnlineMode();
+  }
+}
+
+// ===== ແຜນທີ່ເລືອກຈຸດສົ່ງ (OpenStreetMap) =====
+// ປ່ຽນເປັນພິກັດຮ້ານຂອງເຈົ້າ (ເປີດ Google Maps ກົດຂວາທີ່ຮ້ານ ຈະເຫັນເລກ lat, lng)
+const OL_DEFAULT_CENTER = [17.9757, 102.6331];
+
+let olMap = null;
+let olMarker = null;
+let olLat = null;
+let olLng = null;
+
+function setMapHint(text) {
+  const el = document.getElementById('ol-map-hint');
+  if (el) el.textContent = text;
+}
+
+function setOnlinePin(lat, lng, pan = true) {
+  olLat = lat;
+  olLng = lng;
+  if (!olMarker) {
+    olMarker = L.marker([lat, lng], { draggable: true }).addTo(olMap);
+    olMarker.on('dragend', () => {
+      const p = olMarker.getLatLng();
+      setOnlinePin(p.lat, p.lng, false);
+    });
+  } else {
+    olMarker.setLatLng([lat, lng]);
+  }
+  if (pan) olMap.setView([lat, lng], 17);
+  setMapHint(`📍 ປັກໝຸດແລ້ວ (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+}
+
+function initOnlineMap() {
+  if (olMap) {
+    setTimeout(() => olMap.invalidateSize(), 80);
+    return true;
+  }
+  if (typeof L === 'undefined') {
+    setMapHint('⚠️ ໂຫລດແຜນທີ່ບໍ່ໄດ້ (ກວດອິນເຕີເນັດ)');
+    return false;
+  }
+  olMap = L.map('ol-map').setView(OL_DEFAULT_CENTER, 13);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(olMap);
+  olMap.on('click', (e) => setOnlinePin(e.latlng.lat, e.latlng.lng, false));
+  setTimeout(() => olMap.invalidateSize(), 80);
+  return true;
+}
+
+function useMyLocation() {
+  if (!navigator.geolocation) {
+    setMapHint('⚠️ ເບຣາວເຊີນີ້ບໍ່ຮອງຮັບຕຳແໜ່ງ ກະລຸນາກົດເລືອກເທິງແຜນທີ່');
+    return;
+  }
+  if (!initOnlineMap()) return;
+  setMapHint('⏳ ກຳລັງຫາຕຳແໜ່ງຂອງທ່ານ...');
+  navigator.geolocation.getCurrentPosition(
+    (pos) => setOnlinePin(pos.coords.latitude, pos.coords.longitude),
+    () => setMapHint('⚠️ ຫາຕຳແໜ່ງບໍ່ໄດ້ ກະລຸນາກົດເລືອກເທິງແຜນທີ່'),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function openOnlineForm() {
+  document.getElementById('ol-error').classList.add('hidden');
+  document.getElementById('ol-total').textContent =
+    cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  const saved = JSON.parse(sessionStorage.getItem('onlineBill') || 'null');
+  if (saved) {
+    document.getElementById('ol-phone').value = saved.phone || '';
+    document.getElementById('ol-name').value = saved.name || '';
+  }
+  document.getElementById('online-modal').classList.remove('hidden');
+  onOnlineTypeChange();
+}
+
+function closeOnlineForm() {
+  document.getElementById('online-modal').classList.add('hidden');
+}
+
+function onOnlineTypeChange() {
+  const type = document.querySelector('input[name="ol-type"]:checked').value;
+  document.getElementById('ol-type-pickup').classList.toggle('active', type === 'pickup');
+  document.getElementById('ol-type-delivery').classList.toggle('active', type === 'delivery');
+
+  const extra = document.getElementById('ol-delivery-extra');
+  if (extra) extra.classList.toggle('hidden', type !== 'delivery');
+
+  document.getElementById('ol-pay-note').textContent =
+    type === 'delivery' ? 'ຈ່າຍຕອນຮັບອາຫານທີ່ບ້ານ' : 'ຈ່າຍຕອນມາຮັບອາຫານ';
+
+  if (type === 'delivery') initOnlineMap();
+}
+
+async function submitOnlineOrder() {
+  const errEl = document.getElementById('ol-error');
+  const btn = document.getElementById('ol-submit');
+  const type = document.querySelector('input[name="ol-type"]:checked').value;
+  const name = document.getElementById('ol-name').value.trim();
+  const phone = document.getElementById('ol-phone').value.trim();
+  const address = document.getElementById('ol-address').value.trim();
+
+  const fail = (msg) => {
+    errEl.textContent = '⚠️ ' + msg;
+    errEl.classList.remove('hidden');
+  };
+
+  if (!name) return fail('ກະລຸນາໃສ່ຊື່');
+  if (!/^[0-9+\s-]{8,15}$/.test(phone)) return fail('ເບີໂທບໍ່ຖືກຕ້ອງ');
+  if (type === 'delivery' && !address) return fail('ກະລຸນາໃສ່ທີ່ຢູ່ສົ່ງ');
+  if (type === 'delivery' && (olLat === null || olLng === null)) {
+    return fail('ກະລຸນາປັກໝຸດຈຸດສົ່ງເທິງແຜນທີ່');
+  }
+  errEl.classList.add('hidden');
+
+  const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/orders/online', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_type: type,
+        customer_name: name,
+        customer_phone: phone,
+        address,
+        payment_method: 'cash',
+        latitude: type === 'delivery' ? olLat : null,
+        longitude: type === 'delivery' ? olLng : null,
+        items
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      fail(data.error || 'ສັ່ງອາຫານບໍ່ສຳເລັດ');
+      return;
+    }
+
+    sessionStorage.setItem('onlineBill', JSON.stringify({ id: data.bill_id, phone, name }));
+    cart = [];
+    renderCart();
+    closeCart();
+    closeOnlineForm();
+    loadProducts();
+    document.getElementById('success-overlay').classList.remove('hidden');
+  } catch (e) {
+    fail('ເຊື່ອມຕໍ່ບໍ່ໄດ້ ກະລຸນາລອງໃໝ່');
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 // ===== ເບິ່ງບິນ: ເດັ້ງເປັນ popup =====
 
@@ -311,14 +496,23 @@ async function openBillModal() {
   itemsEl.innerHTML = '<tr><td colspan="3">ກຳລັງໂຫລດ...</td></tr>';
   totalEl.textContent = '0 ກີບ';
   qrEl.innerHTML = '';
-  metaEl.textContent = `ໂຕະ ${tableNumber} • ${new Date().toLocaleString('en-GB')}`;
+  metaEl.textContent = `${tableNumber === 'online' ? 'ອອນລາຍ' : 'ໂຕະ ' + tableNumber} • ${new Date().toLocaleString('en-GB')}`;
 
   try {
-    const res = await fetch('/api/orders/bills');
-    if (!res.ok) throw new Error('bill api failed');
-    const bills = await res.json();
+    let myBill = null;
 
-    const myBill = bills.find(b => String(b.table_number) === String(tableNumber));
+    if (tableNumber === 'online') {
+      const saved = JSON.parse(sessionStorage.getItem('onlineBill') || 'null');
+      if (saved) {
+        const r = await fetch(`/api/orders/online/${saved.id}?phone=${encodeURIComponent(saved.phone)}`);
+        if (r.ok) myBill = await r.json();
+      }
+    } else {
+      const res = await fetch('/api/orders/bills');
+      if (!res.ok) throw new Error('bill api failed');
+      const bills = await res.json();
+      myBill = bills.find(b => String(b.table_number) === String(tableNumber));
+    }
 
     if (!myBill || myBill.items.length === 0) {
       itemsEl.innerHTML = '<tr><td colspan="3">ຍັງບໍ່ມີການສັ່ງອາຫານ</td></tr>';
@@ -343,6 +537,12 @@ async function openBillModal() {
       </tr>
     `).join('');
     totalEl.textContent = `${total} ກີບ`;
+
+    // ອອນລາຍ = ຈ່າຍເງິນສົດ ບໍ່ຕ້ອງສະແດງ QR
+    if (tableNumber === 'online') {
+      qrEl.innerHTML = '<p>💵 ຈ່າຍເງິນສົດຕອນຮັບອາຫານ</p>';
+      return;
+    }
   } catch (err) {
     itemsEl.innerHTML = '<tr><td colspan="3">ໂຫລດບິນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່</td></tr>';
     return;

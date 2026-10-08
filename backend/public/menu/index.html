@@ -4,16 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ຄຳສັ່ງອາຫານ</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 
 <body>
   <header>
     <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
     <p id="table-label"></p>
+    <button id="mode-switch" class="mode-switch" onclick="toggleOnlineMode()">🛵 ສັ່ງອອນລາຍ</button>
   </header>
 
-    <div class="filter-bar">
+  <div class="filter-bar">
     <input type="text" id="search-input" placeholder="🔍 ຄົ້ນຫາເມນູ..." oninput="filterProducts()">
 
     <select id="category-filter" onchange="filterProducts()">
@@ -84,10 +86,58 @@
       <input type="text" id="table-input" inputmode="numeric" pattern="[0-9]*" maxlength="3" autofocus oninput="this.value = this.value.replace(/[^0-9]/g, '')">
       <p id="table-error" class="table-error hidden">⚠️ ກະລຸນາໃສ່ເລກໂຕະ</p>
       <button class="confirm-btn" onclick="submitTableNumber()">ຢືນຢັນ</button>
+      <button class="cancel-btn" style="margin-top:8px" onclick="startOnlineMode()">🛵 ສັ່ງອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ)</button>
+    </div>
+  </div>
+
+  <!-- ຟອມສັ່ງອອນລາຍ -->
+  <div id="online-modal" class="hidden">
+    <div class="ol-box">
+      <h2>🛵 ຂໍ້ມູນການສັ່ງອອນລາຍ</h2>
+
+      <div class="ol-types">
+        <label class="ol-type active" id="ol-type-pickup">
+          <input type="radio" name="ol-type" value="pickup" checked onchange="onOnlineTypeChange()"> 🥡 ແກັບ (ມາຮັບເອງ)
+        </label>
+        <label class="ol-type" id="ol-type-delivery">
+          <input type="radio" name="ol-type" value="delivery" onchange="onOnlineTypeChange()"> 🛵 ສົ່ງເຖິງບ້ານ
+        </label>
+      </div>
+
+      <input type="text" id="ol-name" placeholder="ຊື່ຂອງທ່ານ" maxlength="100">
+      <input type="tel" id="ol-phone" placeholder="ເບີໂທ ເຊັ່ນ 02012345678" maxlength="15">
+
+      <div id="ol-delivery-extra" class="hidden">
+        <textarea id="ol-address" placeholder="ທີ່ຢູ່ສົ່ງ (ບ້ານ, ເມືອງ, ຈຸດສັງເກດ)" rows="2"></textarea>
+        <button type="button" class="ol-loc-btn" onclick="useMyLocation()">📍 ໃຊ້ຕຳແໜ່ງປັດຈຸບັນຂອງຂ້ອຍ</button>
+        <div id="ol-map"></div>
+        <p id="ol-map-hint" class="ol-map-hint">👆 ກົດເທິງແຜນທີ່ ຫຼື ລາກໝຸດ ເພື່ອເລືອກຈຸດສົ່ງ</p>
+      </div>
+
+      <div class="ol-pay">
+        <div class="ol-pay-label">ວິທີຊຳລະເງິນ</div>
+        <label class="ol-pay-opt">
+          <input type="radio" name="ol-pay" value="cash" checked> 💵 ຈ່າຍເງິນສົດ
+          <small id="ol-pay-note">ຈ່າຍຕອນມາຮັບອາຫານ</small>
+        </label>
+      </div>
+
+      <div class="ol-sum">
+        <span>ຍອດລວມ</span>
+        <strong><span id="ol-total">0</span> ກີບ</strong>
+      </div>
+
+      <p id="ol-error" class="ol-error hidden"></p>
+
+      <div class="ol-actions">
+        <button class="ol-cancel" onclick="closeOnlineForm()">ຍົກເລີກ</button>
+        <button class="ol-ok" id="ol-submit" onclick="submitOnlineOrder()">ຢືນຢັນສັ່ງອາຫານ</button>
+      </div>
     </div>
   </div>
 
   <div id="toast"></div>
-    <script src="script.js?v=2"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js?v=5"></script>
 </body>
 </html>

@@ -6,6 +6,14 @@ import '../../styles/admin-kitchen.css';
 const nextStatus = (s) => (s === 'pending' ? 'cooking' : s === 'cooking' ? 'ready' : null);
 const nextLabel = (s) => (s === 'pending' ? '🔥 ເລີ່ມເຮັດ' : s === 'cooking' ? '✅ ເຮັດແລ້ວ' : '');
 
+// ອໍເດີ້ອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ) ບໍ່ແມ່ນໂຕະ
+const isOnline = (bill) => !!bill.order_type && bill.order_type !== 'dine_in';
+const billTitle = (bill) => {
+  if (!isOnline(bill)) return `ໂຕະ ${bill.table_number}`;
+  const type = bill.order_type === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ແກັບ';
+  return `${type} #${bill.id}`;
+};
+
 export default function Kitchen() {
   const [bills, setBills] = useState(null); // null = ກຳລັງໂຫລດ
   const [toast, setToast] = useState(null); // { msg, key }
@@ -132,12 +140,22 @@ export default function Kitchen() {
       {bills !== null && bills.length > 0 && (
         <div className="kitchen-grid">
           {bills.map((bill) => {
+            const online = isOnline(bill);
             const hasCooking = bill.items.some((i) => i.status === 'cooking');
             const pendingIds = bill.items.filter((i) => i.status === 'pending').map((i) => i.id);
             const cookingIds = bill.items.filter((i) => i.status === 'cooking').map((i) => i.id);
             return (
-              <div className={`kitchen-card${hasCooking ? ' cooking' : ''}`} key={bill.id ?? bill.table_number}>
-                <h2>ໂຕະ {bill.table_number}</h2>
+              <div
+                className={`kitchen-card${hasCooking ? ' cooking' : ''}`}
+                key={bill.id ?? bill.table_number}
+                style={online ? { borderLeft: '6px solid #1a73e8' } : undefined}
+              >
+                <h2>{billTitle(bill)}</h2>
+                {online && bill.customer_name && (
+                  <p style={{ margin: '-4px 0 10px', fontWeight: 700, color: '#1a73e8' }}>
+                    👤 {bill.customer_name}
+                  </p>
+                )}
 
                 <div className="kitchen-bulk-actions">
                   {pendingIds.length > 0 && (

@@ -73,3 +73,14 @@ export const addTable = () => request('/tables', { method: 'POST' });
 export const deleteLastTable = () => request('/tables', { method: 'DELETE' });
 export const getTableCount = () => request('/tables/count');
 export const getOpenBills = () => request('/orders/bills');
+// ---- ສັ່ງອອນລາຍ ----
+export const createOnlineOrder = (payload) =>
+  request('/orders/online', { method: 'POST', body: JSON.stringify(payload) });
+export const getOnlineBill = (id, phone) =>
+  request(`/orders/online/${id}?phone=${encodeURIComponent(phone)}`);
+export const uploadOnlineSlip = (id, phone, file) => {
+  const fd = new FormData();
+  fd.append('customer_phone', phone);
+  fd.append('slip', file);
+  return request(`/orders/online/${id}/slip`, { method: 'POST', body: fd });
+};

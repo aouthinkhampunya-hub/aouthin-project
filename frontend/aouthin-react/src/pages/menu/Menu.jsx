@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { getProducts, createOrder, callStaff, API_BASE } from '../../api.js';
+import { getProducts, createOrder, callStaff, createOnlineOrder, getOnlineBill, API_BASE } from '../../api.js';
 import TablePrompt from '../../components/TablePrompt.jsx';
-
+import OnlineOrderModal from '../../components/OnlineOrderModal.jsx';
+import SlipModal from '../../components/SlipModal.jsx';
 function getTableNumber() {
   const params = new URLSearchParams(window.location.search);
   const fromUrl = params.get('table');
@@ -37,6 +38,8 @@ export default function Menu() {
   const [cart, setCart] = useState(() => loadSavedCart(getTableNumber()));
   const [cartOpen, setCartOpen] = useState(false);
   const [cartError, setCartError] = useState(false);
+  const [onlineOpen, setOnlineOpen] = useState(false);
+  const [slipData, setSlipData] = useState(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [callState, setCallState] = useState('idle'); // idle | calling | called
@@ -50,6 +53,8 @@ export default function Menu() {
   const [cancelId, setCancelId] = useState(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [billToast, setBillToast] = useState('');
+
+  const isOnlineMode = tableNumber === 'online';
 
   // ບັນທຶກກະຕ່າທຸກຄັ້ງທີ່ປ່ຽນ
   useEffect(() => {
@@ -136,8 +141,30 @@ export default function Menu() {
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
   const cartTotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
+  // ===== ໂໝດ: ສັ່ງຢູ່ໂຕະ / ສັ່ງອອນລາຍ =====
+  function startOnlineMode() {
+    sessionStorage.setItem('tableNumber', 'online');
+    setTableNumber('online');
+  }
+
+  function toggleOnlineMode() {
+    if (isOnlineMode) {
+      sessionStorage.removeItem('tableNumber');
+      setTableNumber('');
+    } else {
+      startOnlineMode();
+    }
+  }
+
   async function confirmOrder() {
     if (cart.length === 0) { setCartError(true); return; }
+
+    // ສັ່ງອອນລາຍ: ເປີດຟອມຂໍ້ມູນກ່ອນ
+    if (isOnlineMode) {
+      setOnlineOpen(true);
+      return;
+    }
+
     const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
     try {
       await createOrder(tableNumber, items);
@@ -147,6 +174,30 @@ export default function Menu() {
       loadProducts();
     } catch (err) {
       showToast('❌ ' + (err.error || 'ສັ່ງອາຫານບໍ່ສຳເລັດ'));
+    }
+  }
+
+  // ສົ່ງອໍເດີ້ອອນລາຍ (ຄືນຂໍ້ຄວາມ error ຖ້າບໍ່ສຳເລັດ)
+  async function submitOnlineOrder(info) {
+    const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
+    try {
+      const data = await createOnlineOrder({ ...info, items });
+      sessionStorage.setItem(
+        'onlineBill',
+        JSON.stringify({ id: data.bill_id, phone: info.customer_phone, name: info.customer_name })
+      );
+            setCart([]);
+      setCartOpen(false);
+      setOnlineOpen(false);
+      if (info.payment_method === 'transfer') {
+        setSlipData({ id: data.bill_id, phone: info.customer_phone, total: cartTotal });
+      } else {
+        setSuccessOpen(true);
+      }
+      loadProducts();
+      return '';
+    } catch (err) {
+      return err?.error || 'ສັ່ງອາຫານບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່';
     }
   }
 
@@ -175,12 +226,27 @@ export default function Menu() {
     setQrImage('');
 
     try {
+      if (isOnlineMode) {
+        const saved = JSON.parse(sessionStorage.getItem('onlineBill') || 'null');
+        if (saved) {
+          const bill = await getOnlineBill(saved.id, saved.phone);
+          setBillItems(bill.items || []);
+        }
+        setBillLoading(false);
+        return; // ອອນລາຍຈ່າຍເງິນສົດ ບໍ່ຕ້ອງໂຫລດ QR
+      }
+
       const res = await fetch(`${API_BASE}/api/orders/bills`);
       if (!res.ok) throw new Error('bill api failed');
       const bills = await res.json();
       const myBill = bills.find(b => String(b.table_number) === String(tableNumber));
       setBillItems(myBill ? myBill.items : []);
     } catch (e) {
+      // ອອນລາຍທີ່ບໍ່ພົບບິນ (404) ຖືວ່າຍັງບໍ່ມີການສັ່ງ
+      if (isOnlineMode && e?.status === 404) {
+        setBillLoading(false);
+        return;
+      }
       setBillError('ໂຫລດບິນບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່');
       setBillLoading(false);
       return;
@@ -237,12 +303,20 @@ export default function Menu() {
             sessionStorage.setItem('tableNumber', n);
             setTableNumber(n);
           }}
+          onOnline={startOnlineMode}
         />
       )}
 
       <header>
         <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
-        <p id="table-label">ໂຕະ {tableNumber}</p>
+        <p id="table-label">
+          {isOnlineMode ? '🛵 ສັ່ງອອນລາຍ' : tableNumber ? `ໂຕະ ${tableNumber}` : ''}
+        </p>
+        {tableNumber && (
+          <button type="button" className="mode-switch" onClick={toggleOnlineMode}>
+            {isOnlineMode ? '🍽️ ສັ່ງຢູ່ໂຕະ (ປ່ຽນເລກໂຕະ)' : '🛵 ສັ່ງອອນລາຍ'}
+          </button>
+        )}
       </header>
 
       <div className="filter-bar">
@@ -277,11 +351,13 @@ export default function Menu() {
 
       <div className="left-buttons">
         <button id="bill-button" onClick={openBill}>🧾 ເບິ່ງບິນ</button>
-        <button id="call-staff-button" onClick={handleCallStaff} disabled={callState !== 'idle'}>
-          {callState === 'idle' && '🔔 ເອີ້ນພະນັກງານ'}
-          {callState === 'calling' && '📞 ກຳລັງແຈ້ງ...'}
-          {callState === 'called' && '✅ ແຈ້ງແລ້ວ ລໍຖ້າພະນັກງານ'}
-        </button>
+        {!isOnlineMode && (
+          <button id="call-staff-button" onClick={handleCallStaff} disabled={callState !== 'idle'}>
+            {callState === 'idle' && '🔔 ເອີ້ນພະນັກງານ'}
+            {callState === 'calling' && '📞 ກຳລັງແຈ້ງ...'}
+            {callState === 'called' && '✅ ແຈ້ງແລ້ວ ລໍຖ້າພະນັກງານ'}
+          </button>
+        )}
       </div>
 
       <button id="cart-button" onClick={() => setCartOpen(true)}>
@@ -313,6 +389,25 @@ export default function Menu() {
         </div>
       )}
 
+      {onlineOpen && (
+        <OnlineOrderModal
+          total={cartTotal}
+          onClose={() => setOnlineOpen(false)}
+          onSubmit={submitOnlineOrder}
+        />
+      )}
+            {slipData && (
+        <SlipModal
+          billId={slipData.id}
+          phone={slipData.phone}
+          total={slipData.total}
+          onDone={() => {
+            setSlipData(null);
+            setSuccessOpen(true);
+          }}
+        />
+      )}
+
       {successOpen && (
         <div id="success-overlay">
           <div className="success-box">
@@ -331,7 +426,7 @@ export default function Menu() {
             <div className="bill-box-scroll">
               <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
               <div className="bill-meta">
-                ໂຕະ {tableNumber} • {new Date().toLocaleString('en-GB')}
+                {isOnlineMode ? 'ອອນລາຍ' : `ໂຕະ ${tableNumber}`} • {new Date().toLocaleString('en-GB')}
               </div>
 
               <table className="bill-table">
@@ -369,7 +464,13 @@ export default function Menu() {
                 <strong>{billTotal} ກີບ</strong>
               </div>
 
-              {qrImage && (
+              {isOnlineMode && (
+                <div className="bill-qr">
+                  <p>💵 ຈ່າຍເງິນສົດຕອນຮັບອາຫານ</p>
+                </div>
+              )}
+
+              {!isOnlineMode && qrImage && (
                 <div className="bill-qr">
                   <p>ສະແກນ QR ນີ້ເພື່ອຈ່າຍເງິນ</p>
                   <img

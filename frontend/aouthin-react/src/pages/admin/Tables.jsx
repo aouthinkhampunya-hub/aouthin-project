@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { getBills, updateOrderStatus, closeBill, getPaymentQR, getStaffCalls, ackStaffCall, getTableCount } from '../../api.js';
+import { API_BASE, getBills, updateOrderStatus, closeBill, getPaymentQR, getStaffCalls, ackStaffCall, getTableCount } from '../../api.js';
 import '../../styles/admin-tables.css';
 
 function statusLabel(status) {
@@ -36,6 +36,18 @@ function playBeep(audioCtxRef) {
 
 const billTotal = (bill) => bill.items.reduce((s, i) => s + i.price * i.quantity, 0);
 
+// ອໍເດີ້ອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ) ບໍ່ແມ່ນໂຕະ
+const isOnline = (bill) => !!bill.order_type && bill.order_type !== 'dine_in';
+const onlineLabel = (bill) =>
+  bill.order_type === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ແກັບ (ມາຮັບເອງ)';
+const sectionId = (bill) =>
+  isOnline(bill) ? `table-section-online-${bill.id}` : `table-section-${bill.table_number}`;
+
+const isTransfer = (bill) => bill.payment_method === 'transfer';
+const slipUrl = (bill) =>
+  !bill.slip_image
+    ? ''
+    : bill.slip_image.startsWith('http') ? bill.slip_image : API_BASE + bill.slip_image;
 export default function Tables() {
   const [bills, setBills] = useState([]);
   const [calls, setCalls] = useState([]);
@@ -50,13 +62,14 @@ export default function Tables() {
   const knownOrderIds = useRef(new Set());
   const knownReadyIds = useRef(new Set());
   const knownCallIds = useRef(new Set());
+  const knownOnlineIds = useRef(new Set());
   const firstLoad = useRef(true);
   const toastTimer = useRef();
 
-  const showToast = (msg) => {
+  const showToast = (msg, ms = 2200) => {
     setToast(msg);
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(''), 2200);
+    toastTimer.current = setTimeout(() => setToast(''), ms);
   };
 
   async function loadTableCount() {
@@ -74,6 +87,17 @@ export default function Tables() {
       orderIds.add(i.id);
       if (i.status === 'ready') readyIds.add(i.id);
     }));
+
+    // ອໍເດີ້ອອນລາຍໃໝ່
+    const onlineIds = new Set(data.filter(isOnline).map((b) => b.id));
+    if (!firstLoad.current) {
+      const fresh = [...onlineIds].filter((id) => !knownOnlineIds.current.has(id));
+      if (fresh.length > 0) {
+        showToast(`🛵 ມີອໍເດີ້ອອນລາຍໃໝ່ ${fresh.length} ລາຍການ`, 6000);
+      }
+    }
+    knownOnlineIds.current = onlineIds;
+
     if (!firstLoad.current) {
       let hasNew = false;
       orderIds.forEach((id) => { if (!knownOrderIds.current.has(id)) hasNew = true; });
@@ -136,17 +160,20 @@ export default function Tables() {
   };
   const handleAck = async (id) => { await ackStaffCall(id); loadCalls(); };
 
-  const scrollToTable = (n) => {
-    const el = document.getElementById(`table-section-${n}`);
+  const scrollToId = (id) => {
+    const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+  const scrollToTable = (n) => scrollToId(`table-section-${n}`);
 
   /* ===== popup ໃບບິນ ===== */
   const goToBill = async (billId) => {
     const bill = bills.find((b) => String(b.id) === String(billId));
     if (!bill) return showToast('❌ ບໍ່ພົບໃບບິນນີ້ (ອາດຈະຈ່າຍໄປແລ້ວ)');
     let qrImage = null;
-    try { qrImage = (await getPaymentQR()).qrImage; } catch (e) {}
+    if (!isOnline(bill)) {
+      try { qrImage = (await getPaymentQR()).qrImage; } catch (e) {}
+    }
     const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Vientiane' });
     setPopup({ bill, qrImage, now });
   };
@@ -165,11 +192,14 @@ export default function Tables() {
     showToast('✅ ປິດບິນແລ້ວ');
   };
 
-  const byTable = {};
-  bills.forEach((b) => { byTable[b.table_number] = b; });
+  // ແຍກບິນໂຕະ ກັບ ບິນອອນລາຍ
+  const dineInBills = bills.filter((b) => !isOnline(b));
+  const onlineBills = bills.filter(isOnline);
 
-  // ກະດານສະແດງເຖິງຈຳນວນໂຕະຈິງ ຫຼື ເລກໂຕະສູງສຸດທີ່ມີບິນເປີດຢູ່ (ບໍ່ໃຫ້ບິນຫາຍ)
-  const maxBillTable = bills.reduce((m, b) => Math.max(m, Number(b.table_number) || 0), 0);
+  const byTable = {};
+  dineInBills.forEach((b) => { byTable[b.table_number] = b; });
+
+  const maxBillTable = dineInBills.reduce((m, b) => Math.max(m, Number(b.table_number) || 0), 0);
   const boardSize = Math.max(totalTables, maxBillTable);
 
   return (
@@ -182,6 +212,20 @@ export default function Tables() {
           </div>
         ))}
       </div>
+
+      {/* ແຖບສະຫຼຸບອໍເດີ້ອອນລາຍ */}
+      {onlineBills.length > 0 && (
+        <div
+          onClick={() => scrollToId(sectionId(onlineBills[0]))}
+          style={{
+            background: '#fff3cd', border: '2px solid #d9a520', color: '#7a1f10',
+            borderRadius: 12, padding: '12px 16px', margin: '0 0 14px',
+            fontWeight: 800, cursor: 'pointer', textAlign: 'center',
+          }}
+        >
+          🛵 ມີອໍເດີ້ອອນລາຍ {onlineBills.length} ລາຍການ (ກົດເພື່ອເບິ່ງ)
+        </div>
+      )}
 
       {/* ກະດານໂຕະທັງໝົດ */}
       <div id="table-board" className="table-board">
@@ -204,11 +248,50 @@ export default function Tables() {
       <section id="tables-dashboard">
         {!loaded ? <p>ກຳລັງໂຫລດ...</p> : bills.length === 0 ? <p>ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່</p> : bills.map((bill) => {
           const total = billTotal(bill);
+          const online = isOnline(bill);
           const allServed = bill.items.every((i) => i.status === 'completed');
           const readyIds = bill.items.filter((i) => i.status === 'ready').map((i) => i.id);
           return (
-            <div className="table-card" id={`table-section-${bill.table_number}`} key={bill.id}>
-              <h2>ໂຕະ {bill.table_number}</h2>
+            <div className="table-card" id={sectionId(bill)} key={bill.id}>
+              {online ? (
+                <>
+                  <h2>{onlineLabel(bill)} #{bill.id}</h2>
+                                    <p style={{ margin: '0 0 12px', fontWeight: 700, lineHeight: 1.7 }}>
+                    👤 {bill.customer_name} &nbsp;📞 {bill.customer_phone}
+                    {bill.address && <><br />📍 {bill.address}</>}
+                    {bill.latitude && bill.longitude && (
+                      <>
+                        <br />
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${bill.latitude},${bill.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          🗺️ ເປີດນຳທາງໃນ Google Maps
+                        </a>
+                      </>
+                    )}
+                                        <br />
+                    {isTransfer(bill)
+                      ? (bill.slip_image ? '🏦 ຈ່າຍເງິນໂອນ ✅ ສົ່ງສະລິບແລ້ວ' : '🏦 ຈ່າຍເງິນໂອນ ⏳ ລໍຖ້າສະລິບ')
+                      : '💵 ຈ່າຍເງິນສົດ'}
+                  </p>
+                  {isTransfer(bill) && bill.slip_image && (
+                    <div style={{ margin: '0 0 12px' }}>
+                      <a href={slipUrl(bill)} target="_blank" rel="noreferrer">
+                        <img
+                          src={slipUrl(bill)}
+                          alt="ສະລິບ"
+                          style={{ maxWidth: 200, maxHeight: 260, borderRadius: 10, border: '1px solid #eadfd3' }}
+                        />
+                      </a>
+                      <div style={{ fontSize: 12 }}>ກົດຮູບເພື່ອເບິ່ງໃຫຍ່</div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <h2>ໂຕະ {bill.table_number}</h2>
+              )}
               <table>
                 <tbody>
                   <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ສະຖານະ</th><th></th></tr>
@@ -231,7 +314,9 @@ export default function Tables() {
                 <button className="confirm-btn" onClick={() => markAllServed(readyIds)}>🍽️ ເສີບທັງໝົດ</button>
               )}
               <button className="confirm-btn" disabled={!allServed} onClick={() => goToBill(bill.id)}>
-                {allServed ? 'ອອກບິນ / ຈ່າຍແລ້ວ' : 'ລໍຖ້າເສີບອາຫານກ່ອນ'}
+                {allServed
+                  ? (online ? 'ອອກບິນ / ຮັບເງິນສົດແລ້ວ' : 'ອອກບິນ / ຈ່າຍແລ້ວ')
+                  : 'ລໍຖ້າເສີບອາຫານກ່ອນ'}
               </button>
             </div>
           );
@@ -247,7 +332,18 @@ export default function Tables() {
               <div className="bp-receipt">
                 <div className="bp-head">
                   <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
-                  <p>ໂຕະ {popup.bill.table_number} &nbsp;•&nbsp; {popup.now}</p>
+                  <p>
+                    {isOnline(popup.bill)
+                      ? `${onlineLabel(popup.bill)} #${popup.bill.id}`
+                      : `ໂຕະ ${popup.bill.table_number}`}
+                    &nbsp;•&nbsp; {popup.now}
+                  </p>
+                  {isOnline(popup.bill) && (
+                    <p>
+                      👤 {popup.bill.customer_name} &nbsp;📞 {popup.bill.customer_phone}
+                      {popup.bill.address && <><br />📍 {popup.bill.address}</>}
+                    </p>
+                  )}
                 </div>
                 <table className="bp-table">
                   <tbody>
@@ -265,15 +361,29 @@ export default function Tables() {
                   <span>ຍອດລວມທັງໝົດ</span>
                   <span>{billTotal(popup.bill)} ກີບ</span>
                 </div>
-                <div className="bp-qr">
-                  {popup.qrImage
-                    ? <><p>ສະແກນ QR ນີ້ເພື່ອຊຳລະເງິນ</p><img src={popup.qrImage} alt="QR ຮັບເງິນ" /></>
-                    : <p>ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ QR ຮັບເງິນ (ໄປທີ່ໜ້າ QR Code)</p>}
+                                <div className="bp-qr">
+                  {isOnline(popup.bill)
+                    ? (isTransfer(popup.bill)
+                        ? (popup.bill.slip_image
+                            ? <><p>🏦 ສະລິບໂອນເງິນຈາກລູກຄ້າ</p><img src={slipUrl(popup.bill)} alt="ສະລິບ" style={{ width: 'auto', maxWidth: '100%', height: 'auto', maxHeight: 320 }} /></>
+                            : <p>🏦 ຈ່າຍເງິນໂອນ (ຍັງບໍ່ໄດ້ຮັບສະລິບ)</p>)
+                        : <p>💵 ຊຳລະດ້ວຍເງິນສົດ</p>)
+                    : popup.qrImage
+                      ? <><p>ສະແກນ QR ນີ້ເພື່ອຊຳລະເງິນ</p><img src={popup.qrImage} alt="QR ຮັບເງິນ" /></>
+                      : <p>ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ QR ຮັບເງິນ (ໄປທີ່ໜ້າ QR Code)</p>}
                 </div>
               </div>
               <div className="bp-actions">
                 <button className="bp-print" onClick={() => window.print()}>🖨️ ພິມບິນ</button>
-                <button className="bp-confirm" onClick={() => setAskPaid(true)}>ຈ່າຍແລ້ວ</button>
+                                <button
+                  className="bp-confirm"
+                  disabled={isTransfer(popup.bill) && !popup.bill.slip_image}
+                  onClick={() => setAskPaid(true)}
+                >
+                  {isOnline(popup.bill)
+                    ? (isTransfer(popup.bill) ? 'ກວດສະລິບແລ້ວ ຮັບເງິນໂອນແລ້ວ' : 'ຮັບເງິນສົດແລ້ວ')
+                    : 'ຈ່າຍແລ້ວ'}
+                </button>
               </div>
             </div>
           </div>
@@ -283,7 +393,12 @@ export default function Tables() {
               <div className="bp-sub-box">
                 <div className="bp-sub-icon">💰</div>
                 <h3>ຢືນຢັນຮັບເງິນ</h3>
-                <p>ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ?<br />ການດຳເນີນການນີ້ຈະປິດບິນ</p>
+                <p>
+                                   {isOnline(popup.bill)
+                    ? (isTransfer(popup.bill) ? 'ກວດສະລິບ ແລະ ເງິນເຂົ້າບັນຊີຄົບຖ້ວນແລ້ວແທ້ບໍ?' : 'ຮັບເງິນສົດຄົບຖ້ວນແລ້ວແທ້ບໍ?')
+                    : 'ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ?'}
+                  <br />ການດຳເນີນການນີ້ຈະປິດບິນ
+                </p>
                 <div className="bp-sub-actions">
                   <button className="bp-no" onClick={() => setAskPaid(false)}>ຍົກເລີກ</button>
                   <button className="bp-yes" disabled={paying} onClick={doConfirmPaid}>✓ ຢືນຢັນ</button>

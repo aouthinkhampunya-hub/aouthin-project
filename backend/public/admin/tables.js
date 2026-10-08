@@ -40,6 +40,7 @@ function playBeep() {
 
 let knownOrderIds = new Set();
 let knownReadyIds = new Set();
+let knownOnlineIds = new Set();
 let firstLoad = true;
 
 function statusLabel(status) {
@@ -50,6 +51,29 @@ function statusLabel(status) {
   return status;
 }
 
+// ===== ອໍເດີ້ອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ) ບໍ່ແມ່ນໂຕະ =====
+function isOnline(bill) {
+  return !!bill.order_type && bill.order_type !== 'dine_in';
+}
+
+function onlineLabel(bill) {
+  return bill.order_type === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ແກັບ (ມາຮັບເອງ)';
+}
+
+function sectionId(bill) {
+  return isOnline(bill) ? `table-section-online-${bill.id}` : `table-section-${bill.table_number}`;
+}
+
+function mapLinkHtml(bill) {
+  if (bill.latitude === null || bill.latitude === undefined || bill.latitude === '') return '';
+  if (bill.longitude === null || bill.longitude === undefined || bill.longitude === '') return '';
+  const lat = Number(bill.latitude);
+  const lng = Number(bill.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+  return `<br><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" rel="noreferrer">🗺️ ເປີດນຳທາງໃນ Google Maps</a>`;
+}
+
+// ===== ກະດານໂຕະ (ເຫັນທຸກໂຕະພ້ອມກັນ ວ່າງ/ມີຄົນ) =====
 let TOTAL_TABLES = 20;
 
 async function loadTableCount() {
@@ -57,9 +81,7 @@ async function loadTableCount() {
     const res = await fetch('/api/tables/count');
     const data = await res.json();
     if (data.count) TOTAL_TABLES = data.count;
-  } catch (e) {
-    // ຖ້າດຶງບໍ່ໄດ້ ໃຊ້ຄ່າເກົ່າ
-  }
+  } catch (e) {}
 }
 
 (function addTableBoardStyle() {
@@ -84,6 +106,12 @@ async function loadTableCount() {
     }
     .board-cell.occupied:hover { background: #ffe9a8; }
     .board-cell.occupied .board-num { color: #7a1f10; }
+    .online-banner {
+      background: #fff3cd; border: 2px solid #d9a520; color: #7a1f10;
+      border-radius: 12px; padding: 12px 16px; margin: 0 0 14px;
+      font-weight: 800; cursor: pointer; text-align: center;
+    }
+    .online-info { margin: 0 0 12px; font-weight: 700; line-height: 1.7; }
   `;
   document.head.appendChild(s);
 })();
@@ -100,15 +128,36 @@ function ensureTableBoard() {
   return board;
 }
 
-function renderTableBoard(bills) {
+function renderOnlineBanner(onlineBills) {
+  let banner = document.getElementById('online-banner');
+  if (onlineBills.length === 0) {
+    if (banner) banner.remove();
+    return;
+  }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'online-banner';
+    banner.className = 'online-banner';
+    const board = ensureTableBoard();
+    if (board) board.parentNode.insertBefore(banner, board);
+  }
+  banner.textContent = `🛵 ມີອໍເດີ້ອອນລາຍ ${onlineBills.length} ລາຍການ (ກົດເພື່ອເບິ່ງ)`;
+  banner.onclick = () => scrollToId(sectionId(onlineBills[0]));
+}
+
+function renderTableBoard(dineInBills) {
   const board = ensureTableBoard();
   if (!board) return;
 
   const byTable = {};
-  bills.forEach(b => { byTable[b.table_number] = b; });
+  dineInBills.forEach(b => { byTable[b.table_number] = b; });
+
+  // ສະແດງເຖິງຈຳນວນໂຕະຈິງ ຫຼື ເລກໂຕະສູງສຸດທີ່ມີບິນເປີດຢູ່ (ບໍ່ໃຫ້ບິນຫາຍ)
+  const maxBillTable = dineInBills.reduce((m, b) => Math.max(m, Number(b.table_number) || 0), 0);
+  const boardSize = Math.max(TOTAL_TABLES, maxBillTable);
 
   const cells = [];
-  for (let n = 1; n <= TOTAL_TABLES; n++) {
+  for (let n = 1; n <= boardSize; n++) {
     const bill = byTable[n];
     if (bill) {
       const total = bill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -130,12 +179,18 @@ function renderTableBoard(bills) {
   board.innerHTML = cells.join('');
 }
 
-function scrollToTable(n) {
-  const el = document.getElementById(`table-section-${n}`);
+function scrollToId(id) {
+  const el = document.getElementById(id);
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function scrollToTable(n) {
+  scrollToId(`table-section-${n}`);
+}
+
 async function loadTables() {
+  await loadTableCount();
+
   const res = await fetch('/api/orders/bills');
   const bills = await res.json();
   billsCache = bills;
@@ -147,6 +202,10 @@ async function loadTables() {
     if (item.status === 'ready') currentReadyIds.add(item.id);
   }));
 
+  const onlineBills = bills.filter(isOnline);
+  const dineInBills = bills.filter(b => !isOnline(b));
+  const currentOnlineIds = new Set(onlineBills.map(b => b.id));
+
   if (!firstLoad) {
     let hasNew = false;
     currentOrderIds.forEach(id => {
@@ -157,14 +216,21 @@ async function loadTables() {
       if (!knownReadyIds.has(id)) hasNew = true;
     });
     if (hasNew) playBeep();
+
+    // ອໍເດີ້ອອນລາຍໃໝ່
+    const fresh = [...currentOnlineIds].filter(id => !knownOnlineIds.has(id));
+    if (fresh.length > 0) {
+      showBillToast(`🛵 ມີອໍເດີ້ອອນລາຍໃໝ່ ${fresh.length} ລາຍການ`, 6000);
+    }
   }
   knownOrderIds = currentOrderIds;
   knownReadyIds = currentReadyIds;
+  knownOnlineIds = currentOnlineIds;
 
   const container = document.getElementById('tables-dashboard');
 
-    await loadTableCount();
-  renderTableBoard(bills);
+  renderTableBoard(dineInBills);
+  renderOnlineBanner(onlineBills);
 
   if (bills.length === 0) {
     container.innerHTML = '<p>ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່</p>';
@@ -177,15 +243,31 @@ async function loadTables() {
     const readyIds = bill.items
       .filter(i => i.status === 'ready')
       .map(i => i.id);
+    const online = isOnline(bill);
+
+    const head = online
+      ? `
+        <h2>${onlineLabel(bill)} #${bill.id}</h2>
+        <p class="online-info">
+          👤 ${billEsc(bill.customer_name)} &nbsp;📞 ${billEsc(bill.customer_phone)}
+          ${bill.address ? `<br>📍 ${billEsc(bill.address)}` : ''}
+          ${mapLinkHtml(bill)}
+          <br>💵 ຈ່າຍເງິນສົດ
+        </p>`
+      : `<h2>ໂຕະ ${bill.table_number}</h2>`;
+
+    const billBtnText = allServed
+      ? (online ? 'ອອກບິນ / ຮັບເງິນສົດແລ້ວ' : 'ອອກບິນ / ຈ່າຍແລ້ວ')
+      : 'ລໍຖ້າເສີບອາຫານກ່ອນ';
 
     return `
-      <div class="table-card" id="table-section-${bill.table_number}">
-        <h2>ໂຕະ ${bill.table_number}</h2>
+      <div class="table-card" id="${sectionId(bill)}">
+        ${head}
         <table>
           <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ສະຖານະ</th><th></th></tr>
           ${bill.items.map(item => `
             <tr>
-              <td>${item.product_name}</td>
+              <td>${billEsc(item.product_name)}</td>
               <td>${item.quantity}</td>
               <td>${statusLabel(item.status)}</td>
               <td>
@@ -203,7 +285,7 @@ async function loadTables() {
           </button>
         ` : ''}
         <button class="confirm-btn" onclick="goToBill(${bill.id})" ${!allServed ? 'disabled' : ''}>
-          ${allServed ? 'ອອກບິນ / ຈ່າຍແລ້ວ' : 'ລໍຖ້າເສີບອາຫານກ່ອນ'}
+          ${billBtnText}
         </button>
       </div>
     `;
@@ -362,7 +444,7 @@ function billEsc(value) {
   document.head.appendChild(s);
 })();
 
-function showBillToast(message) {
+function showBillToast(message, ms = 2200) {
   const old = document.getElementById('bill-toast');
   if (old) old.remove();
   const t = document.createElement('div');
@@ -370,7 +452,7 @@ function showBillToast(message) {
   t.className = 'bp-toast';
   t.textContent = message;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2200);
+  setTimeout(() => t.remove(), ms);
 }
 
 async function goToBill(billId) {
@@ -380,13 +462,17 @@ async function goToBill(billId) {
     return;
   }
   billPopupBillId = bill.id;
+  const online = isOnline(bill);
 
+  // ອໍເດີ້ອອນລາຍຈ່າຍເງິນສົດ ບໍ່ຕ້ອງໃຊ້ QR
   let qrImage = null;
-  try {
-    const qrRes = await fetch('/api/settings/qr');
-    const qrData = await qrRes.json();
-    qrImage = qrData.qrImage;
-  } catch (err) {}
+  if (!online) {
+    try {
+      const qrRes = await fetch('/api/settings/qr');
+      const qrData = await qrRes.json();
+      qrImage = qrData.qrImage;
+    } catch (err) {}
+  }
 
   const total = bill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Vientiane' });
@@ -402,13 +488,28 @@ async function goToBill(billId) {
     document.body.appendChild(overlay);
   }
 
+  const titleLine = online
+    ? `${onlineLabel(bill)} #${bill.id}`
+    : `ໂຕະ ${billEsc(bill.table_number)}`;
+
+  const customerLine = online
+    ? `<p>👤 ${billEsc(bill.customer_name)} &nbsp;📞 ${billEsc(bill.customer_phone)}${bill.address ? `<br>📍 ${billEsc(bill.address)}` : ''}</p>`
+    : '';
+
+  const payArea = online
+    ? `<p>💵 ຊຳລະດ້ວຍເງິນສົດ</p>`
+    : (qrImage
+        ? `<p>ສະແກນ QR ນີ້ເພື່ອຊຳລະເງິນ</p><img src="${qrImage}" alt="QR ຮັບເງິນ">`
+        : `<p>ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ QR ຮັບເງິນ (ໄປທີ່ໜ້າ QR Code)</p>`);
+
   overlay.innerHTML = `
     <div class="bp-box">
       <button class="bp-close" onclick="closeBillPopup()">✕</button>
       <div class="bp-receipt">
         <div class="bp-head">
           <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
-          <p>ໂຕະ ${billEsc(bill.table_number)} &nbsp;•&nbsp; ${now}</p>
+          <p>${titleLine} &nbsp;•&nbsp; ${now}</p>
+          ${customerLine}
         </div>
         <table class="bp-table">
           <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາ</th></tr>
@@ -425,14 +526,12 @@ async function goToBill(billId) {
           <span>${total} ກີບ</span>
         </div>
         <div class="bp-qr">
-          ${qrImage
-            ? `<p>ສະແກນ QR ນີ້ເພື່ອຊຳລະເງິນ</p><img src="${qrImage}" alt="QR ຮັບເງິນ">`
-            : `<p>ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ QR ຮັບເງິນ (ໄປທີ່ໜ້າ QR Code)</p>`}
+          ${payArea}
         </div>
       </div>
       <div class="bp-actions">
         <button class="bp-print" onclick="window.print()">🖨️ ພິມບິນ</button>
-        <button class="bp-confirm" onclick="askConfirmPaid()">ຈ່າຍແລ້ວ</button>
+        <button class="bp-confirm" onclick="askConfirmPaid()">${online ? '💵 ຮັບເງິນສົດແລ້ວ' : '🧾 ກວດສອບບິນ'}</button>
       </div>
     </div>
   `;
@@ -446,6 +545,9 @@ function closeBillPopup() {
 }
 
 function askConfirmPaid() {
+  const bill = billsCache.find(b => String(b.id) === String(billPopupBillId));
+  const online = bill ? isOnline(bill) : false;
+
   let overlay = document.getElementById('bill-confirm-modal');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -460,7 +562,7 @@ function askConfirmPaid() {
     <div class="bp-sub-box">
       <div class="bp-sub-icon">💰</div>
       <h3>ຢືນຢັນຮັບເງິນ</h3>
-      <p>ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ່?<br>ການດຳເນີນການນີ້ຈະປິດບິນ</p>
+      <p>${online ? 'ຮັບເງິນສົດຄົບຖ້ວນແລ້ວແທ້ບໍ?' : 'ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ?'}<br>ການດຳເນີນການນີ້ຈະປິດບິນ</p>
       <div class="bp-sub-actions">
         <button class="bp-no" onclick="closeConfirmPaid()">ຍົກເລີກ</button>
         <button class="bp-yes" id="bill-paid-yes" onclick="doConfirmPaid()">✓ ຢືນຢັນ</button>
