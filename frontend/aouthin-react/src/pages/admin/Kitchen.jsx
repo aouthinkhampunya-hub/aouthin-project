@@ -6,11 +6,18 @@ import '../../styles/admin-kitchen.css';
 const nextStatus = (s) => (s === 'pending' ? 'cooking' : s === 'cooking' ? 'ready' : null);
 const nextLabel = (s) => (s === 'pending' ? '🔥 ເລີ່ມເຮັດ' : s === 'cooking' ? '✅ ເຮັດແລ້ວ' : '');
 
-// ອໍເດີ້ອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ) ບໍ່ແມ່ນໂຕະ
-const isOnline = (bill) => !!bill.order_type && bill.order_type !== 'dine_in';
+// 3 ປະເພດອໍເດີ້
+const TABS = [
+  { key: 'dine_in', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ' },
+  { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ' },
+  { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ' },
+];
+
+const typeOf = (bill) => bill.order_type || 'dine_in';
+const isOnline = (bill) => typeOf(bill) !== 'dine_in';
 const billTitle = (bill) => {
   if (!isOnline(bill)) return `ໂຕະ ${bill.table_number}`;
-  const type = bill.order_type === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ແກັບ';
+  const type = typeOf(bill) === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ມາຮັບເອງ';
   return `${type} #${bill.id}`;
 };
 
@@ -18,6 +25,7 @@ export default function Kitchen() {
   const [bills, setBills] = useState(null); // null = ກຳລັງໂຫລດ
   const [toast, setToast] = useState(null); // { msg, key }
   const [cancelId, setCancelId] = useState(null);
+  const [tab, setTab] = useState('dine_in');
 
   const audioRef = useRef(null);
   const knownIds = useRef(new Set());
@@ -131,29 +139,46 @@ export default function Kitchen() {
     load();
   };
 
+  const countOf = (key) => (bills || []).filter((b) => typeOf(b) === key).length;
+  const list = (bills || []).filter((b) => typeOf(b) === tab);
+
   return (
     <div className="kitchen-page">
-      {bills !== null && bills.length === 0 && (
-        <div className="kitchen-empty">✅ ບໍ່ມີອາຫານທີ່ຕ້ອງເຮັດຕອນນີ້</div>
+      <div className="kitchen-tabs">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`kitchen-tab${tab === t.key ? ' active' : ''}${countOf(t.key) > 0 ? ' has' : ''}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.icon} {t.label}
+            <span className="kitchen-tab-count">{countOf(t.key)}</span>
+          </button>
+        ))}
+      </div>
+
+      {bills !== null && list.length === 0 && (
+        <div className="kitchen-empty">✅ ບໍ່ມີອາຫານທີ່ຕ້ອງເຮັດໃນປະເພດນີ້</div>
       )}
 
-      {bills !== null && bills.length > 0 && (
+      {bills !== null && list.length > 0 && (
         <div className="kitchen-grid">
-          {bills.map((bill) => {
+          {list.map((bill) => {
             const online = isOnline(bill);
             const hasCooking = bill.items.some((i) => i.status === 'cooking');
             const pendingIds = bill.items.filter((i) => i.status === 'pending').map((i) => i.id);
             const cookingIds = bill.items.filter((i) => i.status === 'cooking').map((i) => i.id);
             return (
               <div
-                className={`kitchen-card${hasCooking ? ' cooking' : ''}`}
+                className={`kitchen-card${hasCooking ? ' cooking' : ''}${online ? ' online-' + typeOf(bill) : ''}`}
                 key={bill.id ?? bill.table_number}
-                style={online ? { borderLeft: '6px solid #1a73e8' } : undefined}
               >
                 <h2>{billTitle(bill)}</h2>
                 {online && bill.customer_name && (
-                  <p style={{ margin: '-4px 0 10px', fontWeight: 700, color: '#1a73e8' }}>
+                  <p className="kitchen-cust">
                     👤 {bill.customer_name}
+                    {bill.customer_phone && <> &nbsp;📞 {bill.customer_phone}</>}
                   </p>
                 )}
 

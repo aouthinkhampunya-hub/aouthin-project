@@ -8,6 +8,7 @@ const columns = [
   "ADD COLUMN payment_method VARCHAR(20) NOT NULL DEFAULT 'cash'",
   'ADD COLUMN latitude DECIMAL(10,7) NULL',
   'ADD COLUMN longitude DECIMAL(10,7) NULL',
+  'ADD COLUMN slip_image VARCHAR(255) NULL',
 ];
 
 (async () => {

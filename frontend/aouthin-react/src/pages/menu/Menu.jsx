@@ -1,16 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getProducts, createOrder, callStaff, createOnlineOrder, getOnlineBill, API_BASE } from '../../api.js';
-import TablePrompt from '../../components/TablePrompt.jsx';
 import OnlineOrderModal from '../../components/OnlineOrderModal.jsx';
 import SlipModal from '../../components/SlipModal.jsx';
+
+// ເລກໂຕະ: ມາຈາກລິ້ງ ?table=N (QR ຂອງໂຕະ). ຖ້າບໍ່ມີ → ສັ່ງອອນລາຍ ('online')
 function getTableNumber() {
   const params = new URLSearchParams(window.location.search);
   const fromUrl = params.get('table');
-  if (fromUrl) {
+  if (fromUrl && /^\d{1,3}$/.test(fromUrl)) {
     sessionStorage.setItem('tableNumber', fromUrl);
+    sessionStorage.setItem('dineTable', fromUrl); // ຈື່ໂຕະໄວ້ ເພື່ອກັບມາສັ່ງຢູ່ໂຕະໄດ້
     return fromUrl;
   }
-  return sessionStorage.getItem('tableNumber') || '';
+  return sessionStorage.getItem('tableNumber') || 'online';
+}
+
+// ໂຕະທີ່ລູກຄ້າສະແກນ QR ມາ (ຖ້າມີ)
+function getDineTable() {
+  return sessionStorage.getItem('dineTable') || '';
 }
 
 function loadSavedCart(table) {
@@ -53,8 +60,11 @@ export default function Menu() {
   const [cancelId, setCancelId] = useState(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [billToast, setBillToast] = useState('');
+  const [onlinePay, setOnlinePay] = useState('cash');
+  const [onlineFee, setOnlineFee] = useState({ fee: 0, km: null });
 
   const isOnlineMode = tableNumber === 'online';
+  const dineTable = getDineTable();
 
   // ບັນທຶກກະຕ່າທຸກຄັ້ງທີ່ປ່ຽນ
   useEffect(() => {
@@ -64,7 +74,7 @@ export default function Menu() {
     } catch (e) {}
   }, [cart, tableNumber]);
 
-  // ເມື່ອເລືອກໂຕະໃໝ່ ໂຫລດກະຕ່າຂອງໂຕະນັ້ນ
+  // ເມື່ອປ່ຽນໂໝດ/ໂຕະ ໂຫລດກະຕ່າຂອງໂໝດນັ້ນ
   useEffect(() => {
     if (tableNumber) setCart(loadSavedCart(tableNumber));
   }, [tableNumber]);
@@ -149,8 +159,10 @@ export default function Menu() {
 
   function toggleOnlineMode() {
     if (isOnlineMode) {
-      sessionStorage.removeItem('tableNumber');
-      setTableNumber('');
+      // ກັບໄປສັ່ງຢູ່ໂຕະ (ເມື່ອມີເລກໂຕະຈາກ QR ເທົ່ານັ້ນ)
+      if (!dineTable) return;
+      sessionStorage.setItem('tableNumber', dineTable);
+      setTableNumber(dineTable);
     } else {
       startOnlineMode();
     }
@@ -186,11 +198,21 @@ export default function Menu() {
         'onlineBill',
         JSON.stringify({ id: data.bill_id, phone: info.customer_phone, name: info.customer_name })
       );
-            setCart([]);
+
+      // ຍອດທີ່ຕ້ອງໂອນ = ອາຫານ + ຄ່າສົ່ງ (ໃຊ້ຕົວເລກຈາກ server)
+      let payTotal = cartTotal;
+      try {
+        const bill = await getOnlineBill(data.bill_id, info.customer_phone);
+        payTotal =
+          (bill.items || []).reduce((s, i) => s + i.price * i.quantity, 0) +
+          Number(bill.delivery_fee || 0);
+      } catch (e) {}
+
+      setCart([]);
       setCartOpen(false);
       setOnlineOpen(false);
       if (info.payment_method === 'transfer') {
-        setSlipData({ id: data.bill_id, phone: info.customer_phone, total: cartTotal });
+        setSlipData({ id: data.bill_id, phone: info.customer_phone, total: payTotal });
       } else {
         setSuccessOpen(true);
       }
@@ -224,6 +246,7 @@ export default function Menu() {
     setBillError('');
     setBillItems([]);
     setQrImage('');
+    setOnlineFee({ fee: 0, km: null });
 
     try {
       if (isOnlineMode) {
@@ -231,9 +254,14 @@ export default function Menu() {
         if (saved) {
           const bill = await getOnlineBill(saved.id, saved.phone);
           setBillItems(bill.items || []);
+          setOnlinePay(bill.payment_method || 'cash');
+          setOnlineFee({
+            fee: Number(bill.delivery_fee || 0),
+            km: bill.delivery_distance ?? null,
+          });
         }
         setBillLoading(false);
-        return; // ອອນລາຍຈ່າຍເງິນສົດ ບໍ່ຕ້ອງໂຫລດ QR
+        return; // ອອນລາຍ ບໍ່ຕ້ອງໂຫລດ QR ຈ່າຍເງິນຂອງໂຕະ
       }
 
       const res = await fetch(`${API_BASE}/api/orders/bills`);
@@ -293,28 +321,23 @@ export default function Menu() {
     showBillToast('✅ ຍົກເລີກລາຍການແລ້ວ');
   }
 
-  const billTotal = billItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const billTotal =
+    billItems.reduce((s, i) => s + i.price * i.quantity, 0) +
+    (isOnlineMode ? onlineFee.fee : 0);
+
+  // ປຸ່ມສະຫຼັບໂໝດ: ໂໝດໂຕະ → ສະແດງສະເໝີ, ໂໝດອອນລາຍ → ສະແດງສະເພາະເມື່ອມີໂຕະຈາກ QR
+  const showModeSwitch = !isOnlineMode || Boolean(dineTable);
 
   return (
     <div className="customer-app">
-      {!tableNumber && (
-        <TablePrompt
-          onSubmit={(n) => {
-            sessionStorage.setItem('tableNumber', n);
-            setTableNumber(n);
-          }}
-          onOnline={startOnlineMode}
-        />
-      )}
-
       <header>
         <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
         <p id="table-label">
-          {isOnlineMode ? '🛵 ສັ່ງອອນລາຍ' : tableNumber ? `ໂຕະ ${tableNumber}` : ''}
+          {isOnlineMode ? '🛵 ສັ່ງອອນລາຍ' : `ໂຕະ ${tableNumber}`}
         </p>
-        {tableNumber && (
+        {showModeSwitch && (
           <button type="button" className="mode-switch" onClick={toggleOnlineMode}>
-            {isOnlineMode ? '🍽️ ສັ່ງຢູ່ໂຕະ (ປ່ຽນເລກໂຕະ)' : '🛵 ສັ່ງອອນລາຍ'}
+            {isOnlineMode ? `🍽️ ສັ່ງຢູ່ໂຕະ (ໂຕະ ${dineTable})` : '🛵 ສັ່ງອອນລາຍ'}
           </button>
         )}
       </header>
@@ -396,7 +419,8 @@ export default function Menu() {
           onSubmit={submitOnlineOrder}
         />
       )}
-            {slipData && (
+
+      {slipData && (
         <SlipModal
           billId={slipData.id}
           phone={slipData.phone}
@@ -459,6 +483,20 @@ export default function Menu() {
                 </tbody>
               </table>
 
+              {isOnlineMode && onlineFee.fee > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '6px 2px',
+                    fontWeight: 700,
+                  }}
+                >
+                  <span>🛵 ຄ່າສົ່ງ{onlineFee.km ? ` (${onlineFee.km} ກມ)` : ''}</span>
+                  <span>{onlineFee.fee.toLocaleString()} ກີບ</span>
+                </div>
+              )}
+
               <div className="bill-total">
                 <span>ຍອດລວມທັງໝົດ</span>
                 <strong>{billTotal} ກີບ</strong>
@@ -466,7 +504,11 @@ export default function Menu() {
 
               {isOnlineMode && (
                 <div className="bill-qr">
-                  <p>💵 ຈ່າຍເງິນສົດຕອນຮັບອາຫານ</p>
+                  <p>
+                    {onlinePay === 'transfer'
+                      ? '🏦 ໂອນເງິນແລ້ວ ລໍຮ້ານກວດສອບສະລິບ'
+                      : '💵 ຈ່າຍເງິນສົດຕອນຮັບອາຫານ'}
+                  </p>
                 </div>
               )}
 

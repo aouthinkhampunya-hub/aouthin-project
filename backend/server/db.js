@@ -70,6 +70,25 @@ async function initDb() {
     await pool.query(`ALTER TABLE orders ADD COLUMN slip_image VARCHAR(500)`);
   }
 
+  // ===== ຄໍລຳຂອງ bills ສຳລັບອໍເດີ້ອອນລາຍ + ຄ່າສົ່ງ =====
+  const billCols = [
+    ['order_type', `VARCHAR(20) NOT NULL DEFAULT 'dine_in'`],
+    ['customer_name', `VARCHAR(255) NULL`],
+    ['customer_phone', `VARCHAR(50) NULL`],
+    ['address', `VARCHAR(500) NULL`],
+    ['payment_method', `VARCHAR(20) NULL`],
+    ['slip_image', `VARCHAR(500) NULL`],
+    ['latitude', `DECIMAL(10,7) NULL`],
+    ['longitude', `DECIMAL(10,7) NULL`],
+    ['delivery_fee', `INT NOT NULL DEFAULT 0`],
+    ['delivery_distance', `DECIMAL(6,1) NULL`],
+  ];
+  for (const [name, def] of billCols) {
+    if (!(await columnExists('bills', name))) {
+      await pool.query(`ALTER TABLE bills ADD COLUMN ${name} ${def}`);
+    }
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS settings (
       \`key\` VARCHAR(100) PRIMARY KEY,

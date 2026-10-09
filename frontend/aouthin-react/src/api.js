@@ -38,6 +38,16 @@ export const removeOption = (type, value) =>
 // ---- Orders / Bills ----
 export const getOrders = () => request('/orders');
 export const getBills = () => request('/orders/bills');
+
+// ປະຫວັດບິນທັງໝົດ (ເປີດຢູ່ + ປິດແລ້ວ) ກອງຕາມວັນທີໄດ້ (YYYY-MM-DD)
+export const getBillHistory = (from, to) => {
+  const q = new URLSearchParams();
+  if (from) q.set('from', from);
+  if (to) q.set('to', to);
+  const qs = q.toString();
+  return request('/orders/history' + (qs ? '?' + qs : ''));
+};
+
 export const createOrder = (table_number, items) =>
   request('/orders', { method: 'POST', body: JSON.stringify({ table_number, items }) });
 export const updateOrderStatus = (id, status) =>
@@ -73,14 +83,27 @@ export const addTable = () => request('/tables', { method: 'POST' });
 export const deleteLastTable = () => request('/tables', { method: 'DELETE' });
 export const getTableCount = () => request('/tables/count');
 export const getOpenBills = () => request('/orders/bills');
+
 // ---- ສັ່ງອອນລາຍ ----
 export const createOnlineOrder = (payload) =>
   request('/orders/online', { method: 'POST', body: JSON.stringify(payload) });
 export const getOnlineBill = (id, phone) =>
   request(`/orders/online/${id}?phone=${encodeURIComponent(phone)}`);
-export const uploadOnlineSlip = (id, phone, file) => {
-  const fd = new FormData();
-  fd.append('customer_phone', phone);
-  fd.append('slip', file);
-  return request(`/orders/online/${id}/slip`, { method: 'POST', body: fd });
+export const getDeliveryFee = (lat, lng) =>
+  request(`/orders/delivery-fee?lat=${lat}&lng=${lng}`);
+// ແປງໄຟລ໌ຮູບເປັນ data URL (base64) ເພື່ອສົ່ງເປັນ JSON
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('ອ່ານໄຟລ໌ບໍ່ໄດ້'));
+    reader.readAsDataURL(file);
+  });
+
+export const uploadOnlineSlip = async (id, phone, file) => {
+  const slip_image = await fileToDataUrl(file);
+  return request(`/orders/online/${id}/slip`, {
+    method: 'POST',
+    body: JSON.stringify({ customer_phone: phone, slip_image }),
+  });
 };

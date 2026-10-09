@@ -1,0 +1,112 @@
+/* ===== ຕາຕະລາງລາຍການບິນ ===== */
+body.is-admin .oh-section { width: 100%; margin: 0; padding: 0; height: auto; }
+body.is-admin .oh-empty { text-align: center; font-weight: 700; color: #7a1f10; padding: 30px 0; }
+
+body.is-admin .oh-table-wrap {
+  overflow-x: auto; border-radius: 14px; background: #fff;
+  box-shadow: 0 4px 14px rgba(120, 50, 10, 0.1);
+}
+body.is-admin .oh-table {
+  width: 100%; min-width: 860px; height: auto;
+  border-collapse: collapse; box-shadow: none; border-radius: 0;
+}
+body.is-admin .oh-table thead tr,
+body.is-admin .oh-table tbody tr { height: auto; }
+body.is-admin .oh-table th {
+  background: #7a1f10; color: #fff; text-align: left;
+  padding: 14px 16px; font-size: 14px; white-space: nowrap; height: auto;
+}
+body.is-admin .oh-table td {
+  padding: 12px 16px; font-size: 15px; height: auto;
+  border-bottom: 1px solid #f3ece4; vertical-align: middle;
+}
+body.is-admin .oh-table tbody tr { cursor: pointer; transition: background .15s; }
+body.is-admin .oh-table tbody tr:hover td { background: #fff3cd; }
+
+/* ປ້າຍສະຖານະ */
+body.is-admin .oh-chip {
+  display: inline-block; padding: 4px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 800; white-space: nowrap;
+}
+body.is-admin .oh-chip.paid { background: #e3f4e1; color: #2e7d32; }
+body.is-admin .oh-chip.open { background: #fff3cd; color: #a06b00; }
+
+/* ===== ປັອບອັບໃບບິນ ===== */
+body.is-admin .oh-overlay {
+  position: fixed; inset: 0; background: rgba(20, 12, 6, 0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 20px; box-sizing: border-box;
+}
+body.is-admin .oh-box {
+  position: relative; background: #fff; border-radius: 22px;
+  width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto;
+  padding: 28px 26px 24px; box-sizing: border-box;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  scrollbar-width: none;
+}
+body.is-admin .oh-box::-webkit-scrollbar { display: none; }
+
+body.is-admin .oh-close {
+  position: absolute; top: 14px; right: 14px; width: 34px; height: 34px;
+  border: none; border-radius: 50%; background: #f3ece4; color: #7a1f10;
+  font-size: 16px; font-weight: 700; cursor: pointer; padding: 0; margin: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+body.is-admin .oh-close:hover { background: #e8dccf; }
+
+body.is-admin .oh-head {
+  text-align: center; padding-bottom: 16px; margin-bottom: 16px;
+  border-bottom: 2px dashed #eadfd3;
+}
+body.is-admin .oh-head h2 { margin: 0 30px 6px; color: #2B1B0E; font-size: 18px; }
+body.is-admin .oh-billno { font-size: 30px; font-weight: 800; color: #7a1f10; line-height: 1.2; }
+body.is-admin .oh-badges {
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px;
+}
+body.is-admin .oh-badge {
+  display: inline-block; padding: 4px 12px; border-radius: 999px;
+  background: #f3ece4; color: #7a1f10; font-size: 13px; font-weight: 800;
+}
+
+body.is-admin .oh-info {
+  background: #fff8f0; border-radius: 14px; padding: 6px 16px; margin-bottom: 16px;
+}
+body.is-admin .oh-info > div {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+  padding: 9px 0; border-bottom: 1px dashed #eadfd3; font-size: 14px;
+}
+body.is-admin .oh-info > div:last-child { border-bottom: none; }
+body.is-admin .oh-info span { color: #8a7a6a; white-space: nowrap; }
+body.is-admin .oh-info b { color: #2B1B0E; text-align: right; overflow-wrap: anywhere; }
+
+body.is-admin .oh-detail-table {
+  width: 100%; border-collapse: collapse; box-shadow: none; border-radius: 0; margin-bottom: 4px;
+}
+body.is-admin .oh-detail-table th {
+  background: #7a1f10; color: #fff; text-align: left; font-size: 12px; padding: 9px 8px;
+}
+body.is-admin .oh-detail-table th:first-child { border-radius: 10px 0 0 10px; }
+body.is-admin .oh-detail-table th:last-child { border-radius: 0 10px 10px 0; }
+body.is-admin .oh-detail-table td {
+  padding: 10px 8px; font-size: 14px; border-bottom: 1px solid #eadfd3;
+}
+
+body.is-admin .oh-total {
+  display: flex; justify-content: space-between; align-items: center;
+  margin: 14px 0 4px; padding: 14px 16px; border-radius: 14px;
+  background: #2B1B0E; color: #FFC93C;
+}
+body.is-admin .oh-total span:first-child { font-size: 15px; font-weight: 700; }
+body.is-admin .oh-total span:last-child { font-size: 26px; font-weight: 800; }
+
+body.is-admin .oh-slip-wrap { text-align: center; margin-top: 16px; padding-top: 14px; border-top: 2px dashed #eadfd3; }
+body.is-admin .oh-slip-wrap p { margin: 0 0 10px; font-size: 13px; color: #8a7a6a; }
+body.is-admin .oh-slip {
+  max-width: 200px; max-height: 260px; object-fit: cover;
+  border-radius: 12px; border: 2px solid #2e8b3f; cursor: zoom-in;
+}
+
+@media (max-width: 520px) {
+  body.is-admin .oh-box { padding: 24px 16px 18px; }
+  body.is-admin .oh-billno { font-size: 26px; }
+}
