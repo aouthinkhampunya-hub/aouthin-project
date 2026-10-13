@@ -222,7 +222,7 @@ function renderCart() {
 
   const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
   document.getElementById('cart-total').textContent = total;
-    updateCartBadges();
+  updateCartBadges();
 }
 
 function openCart() {
@@ -271,7 +271,7 @@ async function confirmCartOrder() {
   }
 }
 
-// ===== ສັ່ງອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ, ຈ່າຍເງິນສົດ) =====
+// ===== ສັ່ງອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ, ເງິນສົດ ຫຼື ໂອນເງິນພ້ອມສະລິບ) =====
 function startOnlineMode() {
   setTableNumber('online');
 }
@@ -330,6 +330,11 @@ let olFee = { status: 'idle' };
 let olFeeReq = 0;
 let olSubmitting = false;
 
+// ໂອນເງິນ: ສະລິບ (data URL) ແລະ QR ຮັບເງິນຂອງຮ້ານ
+let olSlip = '';
+let olQrSrc = '';
+let olQrLoaded = false;
+
 function setMapHint(text) {
   const el = document.getElementById('ol-map-hint');
   if (el) el.textContent = text;
@@ -338,6 +343,11 @@ function setMapHint(text) {
 function currentOnlineType() {
   const checked = document.querySelector('input[name="ol-type"]:checked');
   return checked ? checked.value : 'pickup';
+}
+
+function currentPay() {
+  const checked = document.querySelector('input[name="ol-pay"]:checked');
+  return checked ? checked.value : 'cash';
 }
 
 // ຖາມ server ວ່າຄ່າສົ່ງເທົ່າໃດ
@@ -413,6 +423,114 @@ function renderOnlineTotals() {
   document.getElementById('ol-food').textContent = food.toLocaleString();
   document.getElementById('ol-total').textContent = (food + fee).toLocaleString();
   document.getElementById('ol-submit').disabled = blocked || olSubmitting;
+
+  updateTransferNote(food + fee);
+}
+
+// ===== ວິທີຊຳລະເງິນ: ເງິນສົດ / ໂອນເງິນ =====
+function onPayChange() {
+  const pay = currentPay();
+  document.getElementById('ol-pay-cash-label').classList.toggle('active', pay === 'cash');
+  document.getElementById('ol-pay-transfer-label').classList.toggle('active', pay === 'transfer');
+  document.getElementById('ol-transfer').classList.toggle('hidden', pay !== 'transfer');
+
+  if (pay === 'transfer') loadPayQr();
+  renderOnlineTotals();
+}
+
+// ຂໍ້ຄວາມ "ສະແກນ QR ເພື່ອໂອນເງິນ ... ກີບ"
+function updateTransferNote(grand) {
+  const el = document.getElementById('ol-transfer-note1');
+  if (!el) return;
+
+  if (olQrSrc) {
+    let text = `1) ສະແກນ QR ເພື່ອໂອນເງິນ ${grand.toLocaleString()} ກີບ`;
+    if (currentOnlineType() === 'delivery' && olFee.status !== 'ok') {
+      text += ' (ຍອດຈະລວມຄ່າສົ່ງຫຼັງປັກໝຸດ)';
+    }
+    el.textContent = text;
+  } else {
+    el.textContent = 'ຮ້ານຍັງບໍ່ໄດ້ຕັ້ງ QR ຮັບເງິນ ກະລຸນາໂອນຕາມທີ່ຮ້ານແຈ້ງ';
+  }
+}
+
+// ໂຫລດ QR ຮັບເງິນຂອງຮ້ານ (ໂຫລດຄັ້ງດຽວ)
+async function loadPayQr() {
+  if (olQrLoaded) return;
+  olQrLoaded = true;
+  try {
+    const res = await fetch('/api/settings/qr');
+    const data = await res.json();
+    if (data.qrImage) {
+      olQrSrc = data.qrImage;
+      const img = document.getElementById('ol-qr');
+      img.src = olQrSrc;
+      img.classList.remove('hidden');
+    }
+  } catch (e) {
+    olQrLoaded = false; // ລອງໃໝ່ໄດ້ຄັ້ງຕໍ່ໄປ
+  }
+  renderOnlineTotals();
+}
+
+// ຫຍໍ້ຮູບສະລິບໃຫ້ນ້ອຍລົງກ່ອນສົ່ງ (ປະຢັດເນັດ ແລະ ພື້ນທີ່)
+function compressImage(file, maxSide = 1280, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('image'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function pickSlip(input) {
+  const errEl = document.getElementById('ol-error');
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    errEl.textContent = '⚠️ ກະລຸນາເລືອກໄຟລ໌ຮູບພາບ';
+    errEl.classList.remove('hidden');
+    input.value = '';
+    return;
+  }
+
+  try {
+    olSlip = await compressImage(file);
+    document.getElementById('ol-slip-img').src = olSlip;
+        document.getElementById('ol-slip-preview').classList.remove('hidden');
+    document.getElementById('ol-slip-btn').textContent = '🔄 ປ່ຽນສະລິບ';
+    errEl.classList.add('hidden');
+  } catch (e) {
+    olSlip = '';
+    errEl.textContent = '⚠️ ອ່ານຮູບບໍ່ໄດ້ ກະລຸນາລອງຮູບອື່ນ';
+    errEl.classList.remove('hidden');
+  }
+}
+
+function removeSlip() {
+  olSlip = '';
+  const input = document.getElementById('ol-slip-input');
+  if (input) input.value = '';
+    document.getElementById('ol-slip-preview').classList.add('hidden');
+  document.getElementById('ol-slip-btn').textContent = '+ ສະລິບການໂອນ';
 }
 
 function setOnlinePin(lat, lng, pan = true) {
@@ -490,7 +608,7 @@ function onOnlineTypeChange() {
   if (extra) extra.classList.toggle('hidden', type !== 'delivery');
 
   document.getElementById('ol-pay-note').textContent =
-    type === 'delivery' ? 'ຈ່າຍຕອນຮັບອາຫານທີ່ບ້ານ' : 'ຈ່າຍຕອນມາຮັບອາຫານ';
+    type === 'delivery' ? 'ຈ່າຍຕອນຮັບທີ່ບ້ານ' : 'ຈ່າຍຕອນມາຮັບ';
 
   if (type === 'delivery') {
     initOnlineMap();
@@ -499,12 +617,13 @@ function onOnlineTypeChange() {
       fetchOnlineFee(olLat, olLng);
     }
   }
-  renderOnlineTotals();
+  onPayChange();
 }
 
 async function submitOnlineOrder() {
   const errEl = document.getElementById('ol-error');
   const type = currentOnlineType();
+  const pay = currentPay();
   const name = document.getElementById('ol-name').value.trim();
   const phone = document.getElementById('ol-phone').value.trim();
   const address = document.getElementById('ol-address').value.trim();
@@ -523,6 +642,7 @@ async function submitOnlineOrder() {
   if (type === 'delivery' && olFee.status !== 'ok') {
     return fail('ຍັງຄິດຄ່າສົ່ງບໍ່ໄດ້ ກະລຸນາລໍຖ້າ ຫຼື ປັກໝຸດໃໝ່');
   }
+  if (pay === 'transfer' && !olSlip) return fail('ກະລຸນາແນບສະລິບການໂອນເງິນ');
   errEl.classList.add('hidden');
 
   const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
@@ -538,7 +658,8 @@ async function submitOnlineOrder() {
         customer_name: name,
         customer_phone: phone,
         address,
-        payment_method: 'cash',
+        payment_method: pay,
+        slip_image: pay === 'transfer' ? olSlip : null,
         latitude: type === 'delivery' ? olLat : null,
         longitude: type === 'delivery' ? olLng : null,
         items
@@ -558,6 +679,7 @@ async function submitOnlineOrder() {
     closeOnlineForm();
     loadProducts();
     olFee = { status: 'idle' };
+    removeSlip();
     document.getElementById('success-overlay').classList.remove('hidden');
   } catch (e) {
     fail('ເຊື່ອມຕໍ່ບໍ່ໄດ້ ກະລຸນາລອງໃໝ່');
@@ -649,9 +771,11 @@ async function openBillModal() {
       : '');
     totalEl.textContent = `${total} ກີບ`;
 
-    // ອອນລາຍ = ຈ່າຍເງິນສົດ ບໍ່ຕ້ອງສະແດງ QR
+    // ອອນລາຍ: ບອກວິທີຊຳລະ ບໍ່ຕ້ອງສະແດງ QR ຂອງໂຕະ
     if (tableNumber === 'online') {
-      qrEl.innerHTML = '<p>💵 ຈ່າຍເງິນສົດຕອນຮັບອາຫານ</p>';
+      qrEl.innerHTML = myBill.payment_method === 'transfer'
+        ? '<p>🏦 ໂອນເງິນແລ້ວ ລໍຮ້ານກວດສອບສະລິບ</p>'
+        : '<p>💵 ຈ່າຍເງິນສົດຕອນຮັບອາຫານ</p>';
       return;
     }
   } catch (err) {

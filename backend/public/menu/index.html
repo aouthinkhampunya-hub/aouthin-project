@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ຄຳສັ່ງອາຫານ</title>
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=9">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     /* ແຖວຄ່າອາຫານ / ຄ່າສົ່ງ ໃນຟອມສັ່ງອອນລາຍ */
@@ -27,6 +27,98 @@
     .ol-fee-row.bad { color: #c0392b; }
     .ol-fee-row span:last-child { text-align: right; }
     #ol-fee-row.hidden { display: none; }
+
+    /* ວິທີຊຳລະເງິນ: ເງິນສົດ / ໂອນເງິນ */
+    .olp-choices { display: flex; gap: 10px; }
+    .olp-choice {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 10px 6px;
+      border: 2px solid #eadfd3;
+      border-radius: 12px;
+      background: #fff;
+      color: #6b5a4a;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+    }
+    .olp-choice input { display: none; }
+    .olp-choice small { font-size: 11px; font-weight: 500; }
+    .olp-choice.active {
+      border-color: #2e8b3f;
+      background: #eef8f0;
+      color: #2e8b3f;
+    }
+
+    #ol-transfer {
+      margin-top: 10px;
+      padding: 12px;
+      border: 2px dashed #eadfd3;
+      border-radius: 12px;
+      background: #fffaf3;
+      text-align: center;
+    }
+    #ol-transfer.hidden { display: none; }
+    #ol-transfer .ol-transfer-note {
+      margin: 0 0 8px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6b5a4a;
+    }
+    #ol-qr {
+      display: block;
+      width: 190px;
+      max-width: 100%;
+      margin: 0 auto 12px;
+      border-radius: 10px;
+      border: 1px solid #eadfd3;
+      background: #fff;
+    }
+    #ol-qr.hidden { display: none; }
+
+    /* ປຸ່ມແນບສະລິບ (ຊ່ອງເລືອກໄຟລ໌ຖືກເຊື່ອງ ໃຊ້ປ້າຍເປັນປຸ່ມແທນ) */
+    #ol-slip-input { display: none; }
+    #ol-slip-btn {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 16px 10px;
+      border: 2px dashed #c9a27a;
+      border-radius: 12px;
+      background: #f8ecdd;
+      color: #7a1f10;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+    }
+    #ol-slip-btn:hover { background: #f3e2cc; }
+
+    #ol-slip-preview { margin-top: 8px; }
+    #ol-slip-preview.hidden { display: none; }
+    #ol-slip-img {
+      display: block;
+      max-width: 100%;
+      max-height: 220px;
+      margin: 0 auto 8px;
+      border-radius: 10px;
+      border: 2px solid #2e8b3f;
+    }
+    #ol-slip-preview button {
+      padding: 6px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #f3ece4;
+      color: #c0392b;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
   </style>
 </head>
 
@@ -127,10 +219,28 @@
 
       <div class="ol-pay">
         <div class="ol-pay-label">ວິທີຊຳລະເງິນ</div>
-        <label class="ol-pay-opt">
-          <input type="radio" name="ol-pay" value="cash" checked> 💵 ຈ່າຍເງິນສົດ
-          <small id="ol-pay-note">ຈ່າຍຕອນມາຮັບອາຫານ</small>
-        </label>
+        <div class="olp-choices">
+          <label class="olp-choice active" id="ol-pay-cash-label">
+            <input type="radio" name="ol-pay" value="cash" checked onchange="onPayChange()"> 💵 ເງິນສົດ
+            <small id="ol-pay-note">ຈ່າຍຕອນມາຮັບ</small>
+          </label>
+          <label class="olp-choice" id="ol-pay-transfer-label">
+            <input type="radio" name="ol-pay" value="transfer" onchange="onPayChange()"> 🏦 ໂອນເງິນ
+            <small>ແນບສະລິບ</small>
+          </label>
+        </div>
+
+        <div id="ol-transfer" class="hidden">
+          <p class="ol-transfer-note" id="ol-transfer-note1"></p>
+          <img id="ol-qr" class="hidden" alt="QR ຮັບເງິນ">
+          <p class="ol-transfer-note">2) ແນບສະລິບການໂອນເງິນ</p>
+          <input type="file" id="ol-slip-input" accept="image/*" onchange="pickSlip(this)">
+          <label for="ol-slip-input" id="ol-slip-btn">+ ສະລິບການໂອນ</label>
+          <div id="ol-slip-preview" class="hidden">
+            <img id="ol-slip-img" alt="ສະລິບ">
+            <button type="button" onclick="removeSlip()">ລຶບຮູບ</button>
+          </div>
+        </div>
       </div>
 
       <div class="ol-fee-box">
@@ -160,6 +270,6 @@
 
   <div id="toast"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="script.js?v=6"></script>
+  <script src="script.js?v=9"></script>
 </body>
 </html>
