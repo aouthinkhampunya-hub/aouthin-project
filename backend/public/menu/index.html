@@ -4,8 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ຄຳສັ່ງອາຫານ</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    /* ແຖວຄ່າອາຫານ / ຄ່າສົ່ງ ໃນຟອມສັ່ງອອນລາຍ */
+    .ol-fee-box {
+      margin: 6px 0 4px;
+      padding: 8px 2px 0;
+      border-top: 2px dashed #eadfd3;
+    }
+    .ol-fee-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 2px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #6b5a4a;
+    }
+    .ol-fee-row.muted { color: #9a8a7a; font-weight: 500; }
+    .ol-fee-row.bad { color: #c0392b; }
+    .ol-fee-row span:last-child { text-align: right; }
+    #ol-fee-row.hidden { display: none; }
+  </style>
 </head>
 
 <body>
@@ -79,17 +101,6 @@
     </div>
   </div>
 
-  <div id="table-modal">
-    <div class="table-modal-box">
-      <h2>ກະລຸນາປ້ອນເລກໂຕະ</h2>
-      <p class="table-modal-sub">ຕ້ອງໃສ່ເລກໂຕະກ່ອນຈຶ່ງເບິ່ງເມນູໄດ້</p>
-      <input type="text" id="table-input" inputmode="numeric" pattern="[0-9]*" maxlength="3" autofocus oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-      <p id="table-error" class="table-error hidden">⚠️ ກະລຸນາໃສ່ເລກໂຕະ</p>
-      <button class="confirm-btn" onclick="submitTableNumber()">ຢືນຢັນ</button>
-      <button class="cancel-btn" style="margin-top:8px" onclick="startOnlineMode()">🛵 ສັ່ງອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ)</button>
-    </div>
-  </div>
-
   <!-- ຟອມສັ່ງອອນລາຍ -->
   <div id="online-modal" class="hidden">
     <div class="ol-box">
@@ -105,7 +116,7 @@
       </div>
 
       <input type="text" id="ol-name" placeholder="ຊື່ຂອງທ່ານ" maxlength="100">
-      <input type="tel" id="ol-phone" placeholder="ເບີໂທ ເຊັ່ນ 02012345678" maxlength="15">
+      <input type="tel" id="ol-phone" inputmode="numeric" pattern="[0-9]*" placeholder="ເບີໂທ ເຊັ່ນ 02012345678" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
 
       <div id="ol-delivery-extra" class="hidden">
         <textarea id="ol-address" placeholder="ທີ່ຢູ່ສົ່ງ (ບ້ານ, ເມືອງ, ຈຸດສັງເກດ)" rows="2"></textarea>
@@ -120,6 +131,17 @@
           <input type="radio" name="ol-pay" value="cash" checked> 💵 ຈ່າຍເງິນສົດ
           <small id="ol-pay-note">ຈ່າຍຕອນມາຮັບອາຫານ</small>
         </label>
+      </div>
+
+      <div class="ol-fee-box">
+        <div class="ol-fee-row">
+          <span>🍽️ ຄ່າອາຫານ</span>
+          <span><span id="ol-food">0</span> ກີບ</span>
+        </div>
+        <div id="ol-fee-row" class="ol-fee-row hidden">
+          <span id="ol-fee-label">🛵 ຄ່າສົ່ງ</span>
+          <span id="ol-fee-value"></span>
+        </div>
       </div>
 
       <div class="ol-sum">
@@ -138,6 +160,6 @@
 
   <div id="toast"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="script.js?v=5"></script>
+  <script src="script.js?v=6"></script>
 </body>
 </html>

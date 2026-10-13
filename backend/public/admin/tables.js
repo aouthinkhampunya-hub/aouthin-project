@@ -10,7 +10,42 @@ async function checkAuth() {
 }
 checkAuth();
 
-// ===== ระบบเสียงแจ้งเตือน =====
+/* ===== ຕົວຊ່ວຍ ===== */
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function statusLabel(status) {
+  if (status === 'pending') return 'ລໍຖ້າ';
+  if (status === 'cooking') return 'ກຳລັງເຮັດ';
+  if (status === 'ready') return '🍽️ ເຮັດແລ້ວ ລໍເສີບ';
+  if (status === 'completed') return '✅ ເສີບແລ້ວ';
+  return status;
+}
+
+function billTotal(bill) {
+  return (bill.items || []).reduce((s, i) => s + i.price * i.quantity, 0) + Number(bill.delivery_fee || 0);
+}
+
+// ປະເພດອໍເດີ້: dine_in | pickup | delivery
+function typeOf(bill) { return bill.order_type || 'dine_in'; }
+function isOnline(bill) { return typeOf(bill) !== 'dine_in'; }
+function onlineLabel(bill) {
+  return typeOf(bill) === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ມາຮັບເຄື່ອງເອງ';
+}
+function billNo(bill) { return bill.bill_no ? bill.bill_no : bill.id; }
+
+function slipUrl(path) {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+  return path.startsWith('/') ? path : '/' + path;
+}
+
+/* ===== ສຽງແຈ້ງເຕືອນ ===== */
 let audioCtx = null;
 
 function playBeep() {
@@ -19,7 +54,6 @@ function playBeep() {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
     const now = audioCtx.currentTime;
-
     [0, 0.18].forEach(offset => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -38,587 +72,526 @@ function playBeep() {
   }
 }
 
-let knownOrderIds = new Set();
-let knownReadyIds = new Set();
-let knownOnlineIds = new Set();
-let firstLoad = true;
-
-function statusLabel(status) {
-  if (status === 'pending') return 'ລໍຖ້າ';
-  if (status === 'cooking') return 'ກຳລັງເຮັດ';
-  if (status === 'ready') return '🍽️ ເຮັດແລ້ວ ລໍເສີບ';
-  if (status === 'completed') return '✅ ເສີບແລ້ວ';
-  return status;
-}
-
-// ===== ອໍເດີ້ອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ) ບໍ່ແມ່ນໂຕະ =====
-function isOnline(bill) {
-  return !!bill.order_type && bill.order_type !== 'dine_in';
-}
-
-function onlineLabel(bill) {
-  return bill.order_type === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ແກັບ (ມາຮັບເອງ)';
-}
-
-function sectionId(bill) {
-  return isOnline(bill) ? `table-section-online-${bill.id}` : `table-section-${bill.table_number}`;
-}
-
-function mapLinkHtml(bill) {
-  if (bill.latitude === null || bill.latitude === undefined || bill.latitude === '') return '';
-  if (bill.longitude === null || bill.longitude === undefined || bill.longitude === '') return '';
-  const lat = Number(bill.latitude);
-  const lng = Number(bill.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
-  return `<br><a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" rel="noreferrer">🗺️ ເປີດນຳທາງໃນ Google Maps</a>`;
-}
-
-// ===== ກະດານໂຕະ (ເຫັນທຸກໂຕະພ້ອມກັນ ວ່າງ/ມີຄົນ) =====
-let TOTAL_TABLES = 20;
-
-async function loadTableCount() {
-  try {
-    const res = await fetch('/api/tables/count');
-    const data = await res.json();
-    if (data.count) TOTAL_TABLES = data.count;
-  } catch (e) {}
-}
-
-(function addTableBoardStyle() {
-  const s = document.createElement('style');
-  s.textContent = `
-    .table-board {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .board-cell {
-      border-radius: 12px; padding: 10px 6px; text-align: center;
-      cursor: default; user-select: none;
-      border: 2px solid transparent;
-    }
-    .board-cell .board-num { font-size: 16px; font-weight: 800; }
-    .board-cell .board-sub { font-size: 11px; margin-top: 2px; }
-    .board-cell.empty { background: #f3ece4; color: #9a8a7a; }
-    .board-cell.occupied {
-      background: #fff3cd; border-color: #d9a520; color: #7a1f10; cursor: pointer;
-    }
-    .board-cell.occupied:hover { background: #ffe9a8; }
-    .board-cell.occupied .board-num { color: #7a1f10; }
-    .online-banner {
-      background: #fff3cd; border: 2px solid #d9a520; color: #7a1f10;
-      border-radius: 12px; padding: 12px 16px; margin: 0 0 14px;
-      font-weight: 800; cursor: pointer; text-align: center;
-    }
-    .online-info { margin: 0 0 12px; font-weight: 700; line-height: 1.7; }
-  `;
-  document.head.appendChild(s);
-})();
-
-function ensureTableBoard() {
-  let board = document.getElementById('table-board');
-  if (board) return board;
-  const container = document.getElementById('tables-dashboard');
-  if (!container) return null;
-  board = document.createElement('div');
-  board.id = 'table-board';
-  board.className = 'table-board';
-  container.parentNode.insertBefore(board, container);
-  return board;
-}
-
-function renderOnlineBanner(onlineBills) {
-  let banner = document.getElementById('online-banner');
-  if (onlineBills.length === 0) {
-    if (banner) banner.remove();
-    return;
-  }
-  if (!banner) {
-    banner = document.createElement('div');
-    banner.id = 'online-banner';
-    banner.className = 'online-banner';
-    const board = ensureTableBoard();
-    if (board) board.parentNode.insertBefore(banner, board);
-  }
-  banner.textContent = `🛵 ມີອໍເດີ້ອອນລາຍ ${onlineBills.length} ລາຍການ (ກົດເພື່ອເບິ່ງ)`;
-  banner.onclick = () => scrollToId(sectionId(onlineBills[0]));
-}
-
-function renderTableBoard(dineInBills) {
-  const board = ensureTableBoard();
-  if (!board) return;
-
-  const byTable = {};
-  dineInBills.forEach(b => { byTable[b.table_number] = b; });
-
-  // ສະແດງເຖິງຈຳນວນໂຕະຈິງ ຫຼື ເລກໂຕະສູງສຸດທີ່ມີບິນເປີດຢູ່ (ບໍ່ໃຫ້ບິນຫາຍ)
-  const maxBillTable = dineInBills.reduce((m, b) => Math.max(m, Number(b.table_number) || 0), 0);
-  const boardSize = Math.max(TOTAL_TABLES, maxBillTable);
-
-  const cells = [];
-  for (let n = 1; n <= boardSize; n++) {
-    const bill = byTable[n];
-    if (bill) {
-      const total = bill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      cells.push(`
-        <div class="board-cell occupied" onclick="scrollToTable(${n})">
-          <div class="board-num">${n}</div>
-          <div class="board-sub">${total.toLocaleString()} ກີບ</div>
-        </div>
-      `);
-    } else {
-      cells.push(`
-        <div class="board-cell empty">
-          <div class="board-num">${n}</div>
-          <div class="board-sub">ວ່າງ</div>
-        </div>
-      `);
-    }
-  }
-  board.innerHTML = cells.join('');
-}
-
-function scrollToId(id) {
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function scrollToTable(n) {
-  scrollToId(`table-section-${n}`);
-}
-
-async function loadTables() {
-  await loadTableCount();
-
-  const res = await fetch('/api/orders/bills');
-  const bills = await res.json();
-  billsCache = bills;
-
-  const currentOrderIds = new Set();
-  const currentReadyIds = new Set();
-  bills.forEach(bill => bill.items.forEach(item => {
-    currentOrderIds.add(item.id);
-    if (item.status === 'ready') currentReadyIds.add(item.id);
-  }));
-
-  const onlineBills = bills.filter(isOnline);
-  const dineInBills = bills.filter(b => !isOnline(b));
-  const currentOnlineIds = new Set(onlineBills.map(b => b.id));
-
-  if (!firstLoad) {
-    let hasNew = false;
-    currentOrderIds.forEach(id => {
-      if (!knownOrderIds.has(id)) hasNew = true;
-    });
-    // ມີອາຫານທີ່ຄົວເຮັດແລ້ວ ລໍແອັດມິນເສີບ ກໍຫຼິ້ນສຽງແຈ້ງເຕືອນ
-    currentReadyIds.forEach(id => {
-      if (!knownReadyIds.has(id)) hasNew = true;
-    });
-    if (hasNew) playBeep();
-
-    // ອໍເດີ້ອອນລາຍໃໝ່
-    const fresh = [...currentOnlineIds].filter(id => !knownOnlineIds.has(id));
-    if (fresh.length > 0) {
-      showBillToast(`🛵 ມີອໍເດີ້ອອນລາຍໃໝ່ ${fresh.length} ລາຍການ`, 6000);
-    }
-  }
-  knownOrderIds = currentOrderIds;
-  knownReadyIds = currentReadyIds;
-  knownOnlineIds = currentOnlineIds;
-
-  const container = document.getElementById('tables-dashboard');
-
-  renderTableBoard(dineInBills);
-  renderOnlineBanner(onlineBills);
-
-  if (bills.length === 0) {
-    container.innerHTML = '<p>ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່</p>';
-    return;
-  }
-
-  container.innerHTML = bills.map(bill => {
-    const total = bill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const allServed = bill.items.every(i => i.status === 'completed');
-    const readyIds = bill.items
-      .filter(i => i.status === 'ready')
-      .map(i => i.id);
-    const online = isOnline(bill);
-
-    const head = online
-      ? `
-        <h2>${onlineLabel(bill)} #${bill.id}</h2>
-        <p class="online-info">
-          👤 ${billEsc(bill.customer_name)} &nbsp;📞 ${billEsc(bill.customer_phone)}
-          ${bill.address ? `<br>📍 ${billEsc(bill.address)}` : ''}
-          ${mapLinkHtml(bill)}
-          <br>💵 ຈ່າຍເງິນສົດ
-        </p>`
-      : `<h2>ໂຕະ ${bill.table_number}</h2>`;
-
-    const billBtnText = allServed
-      ? (online ? 'ອອກບິນ / ຮັບເງິນສົດແລ້ວ' : 'ອອກບິນ / ຈ່າຍແລ້ວ')
-      : 'ລໍຖ້າເສີບອາຫານກ່ອນ';
-
-    return `
-      <div class="table-card" id="${sectionId(bill)}">
-        ${head}
-        <table>
-          <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ສະຖານະ</th><th></th></tr>
-          ${bill.items.map(item => `
-            <tr>
-              <td>${billEsc(item.product_name)}</td>
-              <td>${item.quantity}</td>
-              <td>${statusLabel(item.status)}</td>
-              <td>
-                ${item.status === 'ready'
-                  ? `<button class="delete-btn" onclick="updateItemStatus(${item.id}, 'completed')">ເສີບແລ້ວ</button>`
-                  : item.status === 'completed' ? '✅' : '⏳'}
-              </td>
-            </tr>
-          `).join('')}
-        </table>
-        <p class="cart-total">ລວມ: ${total} ກີບ</p>
-        ${readyIds.length > 0 ? `
-          <button class="confirm-btn" onclick='markAllServed(${JSON.stringify(readyIds)})'>
-            🍽️ ເສີບທັງໝົດ
-          </button>
-        ` : ''}
-        <button class="confirm-btn" onclick="goToBill(${bill.id})" ${!allServed ? 'disabled' : ''}>
-          ${billBtnText}
-        </button>
-      </div>
-    `;
-  }).join('');
-}
-
-async function updateItemStatus(orderId, status) {
-  await fetch(`/api/orders/${orderId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status })
-  });
-  loadTables();
-}
-
-async function markAllServed(itemIds) {
-  await Promise.all(
-    itemIds.map(id =>
-      fetch(`/api/orders/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'completed' })
-      })
-    )
-  );
-  loadTables();
-}
-
-// ===== ປັອບອັບໃບບິນ (ອອກບິນ / ຈ່າຍແລ້ວ) =====
-let billsCache = [];
-let billPopupBillId = null;
-
-function billEsc(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-(function addBillPopupStyle() {
-  const s = document.createElement('style');
-  s.textContent = `
-    .bp-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      width: 100vw; height: 100vh; background: rgba(20, 12, 6, 0.75);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 9999; padding: 20px; animation: bpFadeIn 0.2s ease;
-    }
-    .bp-overlay.top { z-index: 10001; }
-    .bp-box {
-      position: relative; background: #fff; border-radius: 22px;
-      width: 100%; max-width: 460px; max-height: 92vh; overflow-y: auto;
-      padding: 26px 24px 22px; box-shadow: 0 24px 60px rgba(0,0,0,0.45);
-      animation: bpPopIn 0.25s ease;
-    }
-    .bp-close {
-      position: absolute; top: 12px; right: 14px; width: 32px; height: 32px;
-      border: none; border-radius: 50%; background: #f3ece4; color: #7a1f10;
-      font-size: 16px; font-weight: 700; cursor: pointer; padding: 0; margin: 0;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .bp-close:hover { background: #e8dccf; }
-    .bp-head { text-align: center; border-bottom: 2px dashed #eadfd3; padding-bottom: 14px; margin-bottom: 14px; }
-    .bp-head h2 { margin: 0 0 4px; color: #2B1B0E; font-size: 19px; }
-    .bp-head p { margin: 0; color: #8a7a6a; font-size: 13px; }
-    .bp-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-    .bp-table th {
-      text-align: left; font-size: 12px; color: #fff; background: #7a1f10;
-      padding: 8px 8px;
-    }
-    .bp-table th:first-child { border-radius: 10px 0 0 10px; }
-    .bp-table th:last-child { border-radius: 0 10px 10px 0; }
-    .bp-table td { padding: 8px; font-size: 14px; border-bottom: 1px solid #eadfd3; }
-    .bp-total {
-      display: flex; justify-content: space-between; align-items: center;
-      padding-top: 12px; border-top: 2px dashed #eadfd3; margin-bottom: 16px;
-    }
-    .bp-total span:first-child { font-size: 15px; color: #8a7a6a; }
-    .bp-total span:last-child { font-size: 24px; font-weight: 800; color: #2B1B0E; }
-    .bp-qr { text-align: center; padding-top: 14px; border-top: 2px dashed #eadfd3; margin-bottom: 18px; }
-    .bp-qr p { margin: 0 0 10px; font-size: 13px; color: #8a7a6a; }
-    .bp-qr img { width: 180px; height: 180px; border-radius: 10px; border: 1px solid #eadfd3; }
-    .bp-actions { display: flex; gap: 12px; }
-    .bp-actions button {
-      flex: 1; padding: 14px; border: none; border-radius: 14px; font-size: 15px;
-      font-weight: 700; cursor: pointer; margin: 0; width: auto;
-    }
-    .bp-print { background: #2B1B0E; color: #FFC93C; box-shadow: 0 4px 12px rgba(43,27,14,0.25); }
-    .bp-print:hover { background: #3D2A18; }
-    .bp-confirm { background: #3C8031; color: #fff; box-shadow: 0 6px 16px rgba(60,128,49,0.35); }
-    .bp-confirm:hover { background: #2C601E; }
-
-    .bp-sub-box {
-      background: #fff; border-radius: 22px; width: 100%; max-width: 340px;
-      padding: 36px 28px 28px; text-align: center;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.45); animation: bpPopIn 0.25s ease;
-    }
-    .bp-sub-icon {
-      width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 50%; font-size: 34px;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(150deg, #FFC93C, #F2760C);
-      box-shadow: 0 8px 20px rgba(242,118,12,0.35);
-    }
-    .bp-sub-box h3 { margin: 0 0 8px; color: #2B1B0E; font-size: 19px; font-weight: 800; }
-    .bp-sub-box p { margin: 0 0 26px; color: #6b5a4a; font-size: 14px; line-height: 1.5; }
-    .bp-sub-actions { display: flex; gap: 10px; }
-    .bp-sub-actions button {
-      flex: 1; padding: 13px; border: none; border-radius: 12px; font-size: 15px;
-      font-weight: 700; cursor: pointer; margin: 0; width: auto;
-    }
-    .bp-no { background: #c0392b; color: #fff; }
-    .bp-no:hover { background: #a5301f; }
-    .bp-yes { background: #3C8031; color: #fff; box-shadow: 0 6px 16px rgba(60,128,49,0.35); }
-    .bp-yes:hover { background: #2C601E; }
-    .bp-yes:disabled { opacity: 0.6; cursor: default; }
-
-    .bp-toast {
-      position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%);
-      background: #2B1B0E; color: #FFC93C; padding: 12px 22px; border-radius: 999px;
-      font-weight: 700; font-size: 15px; z-index: 10002;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-    }
-    @keyframes bpFadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes bpPopIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-    /* ພິມ: ສະແດງສະເພາະໃບບິນໃນປັອບອັບ ແລະຂະຫຍາຍໃຫ້ເຕັມກະດາດ */
-    @media print {
-      @page { margin: 12mm; }
-      body:has(#bill-popup-modal) > *:not(#bill-popup-modal) { display: none !important; }
-      #bill-popup-modal {
-        position: static !important; width: auto !important; height: auto !important;
-        background: #fff !important; padding: 0 !important; display: block !important;
-        animation: none !important;
-      }
-      #bill-popup-modal .bp-box {
-        max-width: 100%; max-height: none; overflow: visible; box-shadow: none;
-        border-radius: 0; padding: 0; animation: none;
-      }
-      #bill-popup-modal .bp-close, #bill-popup-modal .bp-actions, #bill-confirm-modal { display: none !important; }
-      #bill-popup-modal .bp-receipt { border: 1px solid #e5d9cc; border-radius: 16px; padding: 32px; }
-      #bill-popup-modal .bp-head h2 { font-size: 30px; margin-bottom: 8px; }
-      #bill-popup-modal .bp-head p { font-size: 17px; }
-      #bill-popup-modal .bp-table th { font-size: 16px; padding: 10px 8px; }
-      #bill-popup-modal .bp-table td { font-size: 20px; padding: 14px 8px; }
-      #bill-popup-modal .bp-total span:first-child { font-size: 22px; }
-      #bill-popup-modal .bp-total span:last-child { font-size: 38px; }
-      #bill-popup-modal .bp-qr p { font-size: 18px; }
-      #bill-popup-modal .bp-qr img { width: 340px; height: 340px; }
-      #bill-popup-modal .bp-total, #bill-popup-modal .bp-qr { break-inside: avoid; }
-      #bill-popup-modal, #bill-popup-modal * {
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
-      }
-    }
-  `;
-  document.head.appendChild(s);
-})();
-
-function showBillToast(message, ms = 2200) {
-  const old = document.getElementById('bill-toast');
-  if (old) old.remove();
-  const t = document.createElement('div');
-  t.id = 'bill-toast';
-  t.className = 'bp-toast';
-  t.textContent = message;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), ms);
-}
-
-async function goToBill(billId) {
-  const bill = billsCache.find(b => String(b.id) === String(billId));
-  if (!bill) {
-    showBillToast('❌ ບໍ່ພົບໃບບິນນີ້ (ອາດຈະຈ່າຍໄປແລ້ວ)');
-    return;
-  }
-  billPopupBillId = bill.id;
-  const online = isOnline(bill);
-
-  // ອໍເດີ້ອອນລາຍຈ່າຍເງິນສົດ ບໍ່ຕ້ອງໃຊ້ QR
-  let qrImage = null;
-  if (!online) {
-    try {
-      const qrRes = await fetch('/api/settings/qr');
-      const qrData = await qrRes.json();
-      qrImage = qrData.qrImage;
-    } catch (err) {}
-  }
-
-  const total = bill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Vientiane' });
-
-  let overlay = document.getElementById('bill-popup-modal');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'bill-popup-modal';
-    overlay.className = 'bp-overlay';
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeBillPopup();
-    });
-    document.body.appendChild(overlay);
-  }
-
-  const titleLine = online
-    ? `${onlineLabel(bill)} #${bill.id}`
-    : `ໂຕະ ${billEsc(bill.table_number)}`;
-
-  const customerLine = online
-    ? `<p>👤 ${billEsc(bill.customer_name)} &nbsp;📞 ${billEsc(bill.customer_phone)}${bill.address ? `<br>📍 ${billEsc(bill.address)}` : ''}</p>`
-    : '';
-
-  const payArea = online
-    ? `<p>💵 ຊຳລະດ້ວຍເງິນສົດ</p>`
-    : (qrImage
-        ? `<p>ສະແກນ QR ນີ້ເພື່ອຊຳລະເງິນ</p><img src="${qrImage}" alt="QR ຮັບເງິນ">`
-        : `<p>ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ QR ຮັບເງິນ (ໄປທີ່ໜ້າ QR Code)</p>`);
-
-  overlay.innerHTML = `
-    <div class="bp-box">
-      <button class="bp-close" onclick="closeBillPopup()">✕</button>
-      <div class="bp-receipt">
-        <div class="bp-head">
-          <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
-          <p>${titleLine} &nbsp;•&nbsp; ${now}</p>
-          ${customerLine}
-        </div>
-        <table class="bp-table">
-          <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາ</th></tr>
-          ${bill.items.map(i => `
-            <tr>
-              <td>${billEsc(i.product_name)}</td>
-              <td>${i.quantity}</td>
-              <td>${i.price * i.quantity} ກີບ</td>
-            </tr>
-          `).join('')}
-        </table>
-        <div class="bp-total">
-          <span>ຍອດລວມທັງໝົດ</span>
-          <span>${total} ກີບ</span>
-        </div>
-        <div class="bp-qr">
-          ${payArea}
-        </div>
-      </div>
-      <div class="bp-actions">
-        <button class="bp-print" onclick="window.print()">🖨️ ພິມບິນ</button>
-        <button class="bp-confirm" onclick="askConfirmPaid()">${online ? '💵 ຮັບເງິນສົດແລ້ວ' : '🧾 ກວດສອບບິນ'}</button>
-      </div>
-    </div>
-  `;
-}
-
-function closeBillPopup() {
-  const overlay = document.getElementById('bill-popup-modal');
-  if (overlay) overlay.remove();
-  closeConfirmPaid();
-  billPopupBillId = null;
-}
-
-function askConfirmPaid() {
-  const bill = billsCache.find(b => String(b.id) === String(billPopupBillId));
-  const online = bill ? isOnline(bill) : false;
-
-  let overlay = document.getElementById('bill-confirm-modal');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'bill-confirm-modal';
-    overlay.className = 'bp-overlay top';
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeConfirmPaid();
-    });
-    document.body.appendChild(overlay);
-  }
-  overlay.innerHTML = `
-    <div class="bp-sub-box">
-      <div class="bp-sub-icon">💰</div>
-      <h3>ຢືນຢັນຮັບເງິນ</h3>
-      <p>${online ? 'ຮັບເງິນສົດຄົບຖ້ວນແລ້ວແທ້ບໍ?' : 'ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ?'}<br>ການດຳເນີນການນີ້ຈະປິດບິນ</p>
-      <div class="bp-sub-actions">
-        <button class="bp-no" onclick="closeConfirmPaid()">ຍົກເລີກ</button>
-        <button class="bp-yes" id="bill-paid-yes" onclick="doConfirmPaid()">✓ ຢືນຢັນ</button>
-      </div>
-    </div>
-  `;
-}
-
-function closeConfirmPaid() {
-  const overlay = document.getElementById('bill-confirm-modal');
-  if (overlay) overlay.remove();
-}
-
-async function doConfirmPaid() {
-  if (billPopupBillId === null) return;
-  const id = billPopupBillId;
-
-  const btn = document.getElementById('bill-paid-yes');
-  btn.disabled = true;
-
-  try {
-    const res = await fetch(`/api/orders/bills/${id}/close`, { method: 'PUT' });
-    if (!res.ok) {
-      btn.disabled = false;
-      showBillToast('❌ ປິດບິນບໍ່ສຳເລັດ');
-      return;
-    }
-  } catch (err) {
-    btn.disabled = false;
-    showBillToast('❌ ປິດບິນບໍ່ສຳເລັດ');
-    return;
-  }
-
-  closeBillPopup();
-  await loadTables();
-  showBillToast('✅ ປິດບິນແລ້ວ');
-}
-
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
-  if (document.getElementById('bill-confirm-modal')) closeConfirmPaid();
-  else if (document.getElementById('bill-popup-modal')) closeBillPopup();
-});
-
 document.addEventListener('click', () => {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
 }, { once: true });
 
-async function initTables() {
-  await loadTables();
-  firstLoad = false;
+/* ===== ຂໍ້ມູນຂອງໜ້າ ===== */
+let bills = [];
+let tableList = Array.from({ length: 20 }, (_, i) => i + 1);
+let listOpen = null;      // null | 'dinein' | 'pickup' | 'delivery'
+let popup = null;         // { bill, qrImage, now }
+let askPaid = false;
+let paying = false;
+let zoomSrc = null;
+let loaded = false;
+let firstLoad = true;
+let knownOrderIds = new Set();
+let knownReadyIds = new Set();
+let knownOnlineIds = new Set();
+let toastTimer = null;
+
+/* ===== Toast ===== */
+function showToast(msg, ms = 2200) {
+  const old = document.getElementById('bill-toast');
+  if (old) old.remove();
+  const t = document.createElement('div');
+  t.id = 'bill-toast';
+  t.className = 'bp-toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.remove(), ms);
 }
 
-initTables();
+/* ===== ໂຫລດຂໍ້ມູນ ===== */
+async function loadTableCount() {
+  try {
+    const res = await fetch('/api/tables/count');
+    const data = await res.json();
+    if (Array.isArray(data.tables)) {
+      tableList = data.tables.map(Number);
+    } else if (data.count) {
+      tableList = Array.from({ length: Number(data.count) }, (_, i) => i + 1);
+    }
+  } catch (e) {}
+}
+
+async function load() {
+  const res = await fetch('/api/orders/bills');
+  if (!res.ok) throw new Error('load bills failed');
+  const data = await res.json();
+
+  const orderIds = new Set();
+  const readyIds = new Set();
+  data.forEach(b => b.items.forEach(i => {
+    orderIds.add(i.id);
+    if (i.status === 'ready') readyIds.add(i.id);
+  }));
+
+  const onlineIds = new Set(data.filter(isOnline).map(b => b.id));
+
+  if (!firstLoad) {
+    const fresh = [...onlineIds].filter(id => !knownOnlineIds.has(id));
+    if (fresh.length > 0) {
+      const freshBills = data.filter(b => fresh.includes(b.id));
+      const p = freshBills.filter(b => typeOf(b) === 'pickup').length;
+      const d = freshBills.filter(b => typeOf(b) === 'delivery').length;
+      const parts = [];
+      if (p) parts.push(`🥡 ມາຮັບເອງ ${p}`);
+      if (d) parts.push(`🛵 ສົ່ງເຖິງບ້ານ ${d}`);
+      showToast(`ມີອໍເດີ້ໃໝ່: ${parts.join(' • ')}`, 6000);
+    }
+
+    let hasNew = false;
+    orderIds.forEach(id => { if (!knownOrderIds.has(id)) hasNew = true; });
+    readyIds.forEach(id => { if (!knownReadyIds.has(id)) hasNew = true; });
+    if (hasNew) playBeep();
+  }
+
+  knownOnlineIds = onlineIds;
+  knownOrderIds = orderIds;
+  knownReadyIds = readyIds;
+  bills = data;
+  loaded = true;
+  renderAll();
+}
+
+/* ===== ແຍກບິນ 3 ປະເພດ ===== */
+function getGroups() {
+  return {
+    dineIn: bills.filter(b => typeOf(b) === 'dine_in'),
+    pickup: bills.filter(b => typeOf(b) === 'pickup').sort((a, b) => b.id - a.id),
+    delivery: bills.filter(b => typeOf(b) === 'delivery').sort((a, b) => b.id - a.id)
+  };
+}
+
+function getLists() {
+  const g = getGroups();
+  return {
+    dinein: { bills: g.dineIn, title: '🍽️ ອໍເດີ້ໜ້າໂຕະ', empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
+    pickup: { bills: g.pickup, title: '🥡 ມາຮັບເຄື່ອງເອງ', empty: 'ຍັງບໍ່ມີອໍເດີ້ມາຮັບເຄື່ອງເອງ' },
+    delivery: { bills: g.delivery, title: '🛵 ສົ່ງເຖິງບ້ານ', empty: 'ຍັງບໍ່ມີອໍເດີ້ສົ່ງເຖິງບ້ານ' }
+  };
+}
+
+/* ===== ສະແດງຜົນ: tab + ກະດານໂຕະ ===== */
+function renderAll() {
+  const loading = document.getElementById('loading-text');
+  if (loading) loading.style.display = loaded ? 'none' : 'block';
+  renderTabs();
+  renderBoard();
+  renderListPopup();
+}
+
+function renderTabs() {
+  const el = document.getElementById('ord-tabs');
+  if (!el) return;
+  const g = getGroups();
+  const tabs = [
+    { key: 'dinein', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ', count: g.dineIn.length },
+    { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ', count: g.pickup.length },
+    { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ', count: g.delivery.length }
+  ];
+  el.innerHTML = tabs.map(t => `
+    <button type="button" class="ord-tab${t.key !== 'dinein' ? ' online' : ''}${t.count > 0 ? ' has-orders' : ''}" onclick="setListOpen('${t.key}')">
+      ${t.icon} ${t.label}
+      <span class="ord-count">${t.count}</span>
+    </button>
+  `).join('');
+}
+
+function renderBoard() {
+  const el = document.getElementById('table-board');
+  if (!el) return;
+  const g = getGroups();
+  const byTable = {};
+  g.dineIn.forEach(b => { byTable[b.table_number] = b; });
+
+  const numbers = Array.from(new Set([
+    ...tableList,
+    ...g.dineIn.map(b => Number(b.table_number)).filter(n => n > 0)
+  ])).sort((a, b) => a - b);
+
+  el.innerHTML = numbers.map(n => {
+    const bill = byTable[n];
+    if (bill) {
+      return `
+        <div class="board-cell occupied" onclick="openTable(${n})">
+          <div class="board-num">${n}</div>
+          <div class="board-sub">${billTotal(bill).toLocaleString()} ກີບ</div>
+        </div>`;
+    }
+    return `
+      <div class="board-cell empty">
+        <div class="board-num">${n}</div>
+        <div class="board-sub">ວ່າງ</div>
+      </div>`;
+  }).join('');
+}
+
+/* ===== ປັອບອັບລາຍການບິນ ===== */
+function setListOpen(key) {
+  listOpen = key;
+  renderListPopup();
+}
+
+function openTable(n) {
+  setListOpen('dinein');
+  setTimeout(() => {
+    const el = document.getElementById(`table-section-${n}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+}
+
+function renderBillCard(bill) {
+  const total = billTotal(bill);
+  const online = isOnline(bill);
+  const allServed = bill.items.every(i => i.status === 'completed');
+  const readyIds = bill.items.filter(i => i.status === 'ready').map(i => i.id);
+  const cardId = online ? `table-section-online-${bill.id}` : `table-section-${bill.table_number}`;
+
+  let head = '';
+  if (online) {
+    const hasMap = bill.latitude && bill.longitude;
+    let slipHtml = '';
+    if (bill.payment_method === 'transfer') {
+      slipHtml = bill.slip_image
+        ? `<div class="olx-slip-wrap">
+             <div class="olx-slip-label">🧾 ສະລິບການໂອນເງິນ (ກົດເພື່ອຂະຫຍາຍ)</div>
+             <button type="button" class="tb-slip-trigger" onclick="openZoom(${bill.id})">
+               <img class="olx-slip" src="${esc(slipUrl(bill.slip_image))}" alt="ສະລິບໂອນເງິນ">
+             </button>
+           </div>`
+        : `<p class="olx-slip-missing">⚠️ ບໍ່ພົບຮູບສະລິບ</p>`;
+    }
+    head = `
+      <h2>${onlineLabel(bill)} #${esc(billNo(bill))}</h2>
+      <p style="margin: 0 0 12px; font-weight: 700; line-height: 1.7;">
+        👤 ${esc(bill.customer_name)} &nbsp;📞 <a href="tel:${esc(bill.customer_phone)}">${esc(bill.customer_phone)}</a>
+        ${bill.address ? `<br>📍 ${esc(bill.address)}` : ''}
+        ${hasMap ? `<br><a href="https://www.google.com/maps/dir/?api=1&destination=${esc(bill.latitude)},${esc(bill.longitude)}" target="_blank" rel="noreferrer">🗺️ ເປີດນຳທາງໃນ Google Maps</a>` : ''}
+        <br>${bill.payment_method === 'transfer' ? '🏦 ໂອນເງິນ' : '💵 ຈ່າຍເງິນສົດ'}
+      </p>
+      ${slipHtml}`;
+  } else {
+    head = `<h2>ໂຕະ ${esc(bill.table_number)}</h2>`;
+  }
+
+  const billBtnText = allServed
+    ? (online ? 'ອອກບິນ / ຮັບເງິນແລ້ວ' : 'ອອກບິນ / ຈ່າຍແລ້ວ')
+    : 'ລໍຖ້າເສີບອາຫານກ່ອນ';
+
+  return `
+    <div class="table-card" id="${cardId}">
+      ${head}
+      <table>
+        <tbody>
+          <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ສະຖານະ</th><th></th></tr>
+          ${bill.items.map(item => `
+            <tr>
+              <td>${esc(item.product_name)}</td>
+              <td>${item.quantity}</td>
+              <td>${statusLabel(item.status)}</td>
+              <td>
+                ${item.status === 'ready'
+                  ? `<button class="delete-btn" onclick="updateItem(${item.id}, 'completed')">ເສີບແລ້ວ</button>`
+                  : item.status === 'completed' ? '✅' : '⏳'}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ${Number(bill.delivery_fee) > 0 ? `
+        <p style="margin: 0 0 6px; font-weight: 700;">
+          🛵 ຄ່າສົ່ງ (${esc(bill.delivery_distance)} ກມ): ${Number(bill.delivery_fee).toLocaleString()} ກີບ
+        </p>` : ''}
+      <p class="cart-total">ລວມ: ${total} ກີບ</p>
+      ${readyIds.length > 0 ? `
+        <button class="confirm-btn" onclick="markAllServed([${readyIds.join(',')}])">
+          ${online ? '📦 ອໍເດີ້ພ້ອມສົ່ງແລ້ວ' : '🍽️ ເສີບທັງໝົດ'}
+        </button>` : ''}
+      <button class="confirm-btn" ${!allServed ? 'disabled' : ''} onclick="goToBill(${bill.id})">
+        ${billBtnText}
+      </button>
+    </div>`;
+}
+
+function renderListPopup() {
+  let overlay = document.getElementById('olx-overlay');
+  if (!listOpen) {
+    if (overlay) overlay.remove();
+    return;
+  }
+  const current = getLists()[listOpen];
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'olx-overlay';
+    overlay.className = 'olx-overlay';
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) setListOpen(null);
+    });
+    document.body.appendChild(overlay);
+  }
+
+  const oldBox = overlay.querySelector('.olx-box');
+  const scrollTop = oldBox ? oldBox.scrollTop : 0;
+
+  overlay.innerHTML = `
+    <div class="olx-box">
+      <button class="olx-close" onclick="setListOpen(null)">✕</button>
+      <h2 class="olx-title">${current.title} (${current.bills.length})</h2>
+      ${current.bills.length === 0
+        ? `<p class="olx-empty">${current.empty}</p>`
+        : current.bills.map(renderBillCard).join('')}
+    </div>`;
+
+  const newBox = overlay.querySelector('.olx-box');
+  if (newBox) newBox.scrollTop = scrollTop;
+}
+
+/* ===== ປ່ຽນສະຖານະອາຫານ ===== */
+async function updateItem(id, status) {
+  await fetch(`/api/orders/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  load();
+}
+
+async function markAllServed(ids) {
+  await Promise.all(ids.map(id =>
+    fetch(`/api/orders/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'completed' })
+    })
+  ));
+  load();
+}
+
+/* ===== ປັອບອັບໃບບິນ ===== */
+async function goToBill(billId) {
+  const bill = bills.find(b => String(b.id) === String(billId));
+  if (!bill) {
+    showToast('❌ ບໍ່ພົບໃບບິນນີ້ (ອາດຈະຈ່າຍໄປແລ້ວ)');
+    return;
+  }
+  let qrImage = null;
+  if (!isOnline(bill)) {
+    try {
+      const qrRes = await fetch('/api/settings/qr');
+      const qrData = await qrRes.json();
+      qrImage = qrData.qrImage;
+    } catch (e) {}
+  }
+  const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Vientiane' });
+  popup = { bill, qrImage, now };
+  askPaid = false;
+  paying = false;
+  renderBillPopup();
+}
+
+function renderBillPopup() {
+  let pop = document.getElementById('bill-popup-modal');
+  if (!popup) {
+    if (pop) pop.remove();
+    renderConfirm();
+    return;
+  }
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'bill-popup-modal';
+    pop.className = 'bp-overlay';
+    pop.addEventListener('click', (e) => {
+      if (e.target === pop) closePopup();
+    });
+    document.body.appendChild(pop);
+  }
+
+  const bill = popup.bill;
+  const online = isOnline(bill);
+
+  const titleLine = online
+    ? `${onlineLabel(bill)} #${esc(billNo(bill))}`
+    : `ໂຕະ ${esc(bill.table_number)}`;
+
+  const customerLine = online
+    ? `<p>👤 ${esc(bill.customer_name)} &nbsp;📞 ${esc(bill.customer_phone)}${bill.address ? `<br>📍 ${esc(bill.address)}` : ''}</p>`
+    : '';
+
+  let payArea = '';
+  if (online) {
+    payArea = `<p>${bill.payment_method === 'transfer' ? '🏦 ຊຳລະດ້ວຍການໂອນເງິນ' : '💵 ຊຳລະດ້ວຍເງິນສົດ'}</p>`;
+  } else if (popup.qrImage) {
+    payArea = `<p>ສະແກນ QR ນີ້ເພື່ອຊຳລະເງິນ</p><img src="${esc(popup.qrImage)}" alt="QR ຮັບເງິນ">`;
+  } else {
+    payArea = `<p>ຍັງບໍ່ໄດ້ຕັ້ງຄ່າ QR ຮັບເງິນ (ໄປທີ່ໜ້າ QR Code)</p>`;
+  }
+
+  pop.innerHTML = `
+    <div class="bp-box">
+      <button class="bp-close" onclick="closePopup()">✕</button>
+      <div class="bp-receipt">
+        <div class="bp-head">
+          <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
+          <p>${titleLine} &nbsp;•&nbsp; ${esc(popup.now)}</p>
+          ${customerLine}
+        </div>
+        <table class="bp-table">
+          <tbody>
+            <tr><th>ເມນູ</th><th>ຈຳນວນ</th><th>ລາຄາ</th></tr>
+            ${bill.items.map(i => `
+              <tr>
+                <td>${esc(i.product_name)}</td>
+                <td>${i.quantity}</td>
+                <td>${i.price * i.quantity} ກີບ</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        ${Number(bill.delivery_fee) > 0 ? `
+          <p style="text-align: right; margin: 0 0 8px;">
+            🛵 ຄ່າສົ່ງ (${esc(bill.delivery_distance)} ກມ): ${Number(bill.delivery_fee).toLocaleString()} ກີບ
+          </p>` : ''}
+        <div class="bp-total">
+          <span>ຍອດລວມທັງໝົດ</span>
+          <span>${billTotal(bill)} ກີບ</span>
+        </div>
+        <div class="bp-qr">${payArea}</div>
+      </div>
+      <div class="bp-actions">
+        <button class="bp-print" onclick="window.print()">🖨️ ພິມບິນ</button>
+        <button class="bp-confirm" onclick="openConfirm()">${online ? 'ຮັບເງິນແລ້ວ' : 'ຈ່າຍແລ້ວ'}</button>
+      </div>
+    </div>`;
+}
+
+function closePopup() {
+  popup = null;
+  askPaid = false;
+  paying = false;
+  renderBillPopup();
+}
+
+function openConfirm() {
+  askPaid = true;
+  renderConfirm();
+}
+
+function closeConfirm() {
+  askPaid = false;
+  renderConfirm();
+}
+
+function renderConfirm() {
+  let conf = document.getElementById('bill-confirm-modal');
+  if (!askPaid || !popup) {
+    if (conf) conf.remove();
+    return;
+  }
+  if (!conf) {
+    conf = document.createElement('div');
+    conf.id = 'bill-confirm-modal';
+    conf.className = 'bp-overlay top';
+    conf.addEventListener('click', (e) => {
+      if (e.target === conf) closeConfirm();
+    });
+    document.body.appendChild(conf);
+  }
+  const online = isOnline(popup.bill);
+  conf.innerHTML = `
+    <div class="bp-sub-box">
+      <div class="bp-sub-icon">💰</div>
+      <h3>ຢືນຢັນຮັບເງິນ</h3>
+      <p>${online ? 'ຮັບເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ?' : 'ໂຕະນີ້ຈ່າຍເງິນຄົບຖ້ວນແລ້ວແທ້ບໍ?'}<br>ການດຳເນີນການນີ້ຈະປິດບິນ</p>
+      <div class="bp-sub-actions">
+        <button class="bp-no" onclick="closeConfirm()">ຍົກເລີກ</button>
+        <button class="bp-yes" ${paying ? 'disabled' : ''} onclick="doConfirmPaid()">✓ ຢືນຢັນ</button>
+      </div>
+    </div>`;
+}
+
+async function doConfirmPaid() {
+  if (!popup) return;
+  const id = popup.bill.id;
+  paying = true;
+  renderConfirm();
+
+  try {
+    const res = await fetch(`/api/orders/bills/${id}/close`, { method: 'PUT' });
+    if (!res.ok) throw new Error('close failed');
+  } catch (err) {
+    paying = false;
+    renderConfirm();
+    showToast('❌ ປິດບິນບໍ່ສຳເລັດ');
+    return;
+  }
+
+  closePopup();
+  await load();
+  showToast('✅ ປິດບິນແລ້ວ');
+}
+
+/* ===== ຮູບສະລິບຂະຫຍາຍ ===== */
+function openZoom(billId) {
+  const bill = bills.find(b => String(b.id) === String(billId));
+  if (!bill || !bill.slip_image) return;
+  zoomSrc = slipUrl(bill.slip_image);
+  renderZoom();
+}
+
+function closeZoom() {
+  zoomSrc = null;
+  renderZoom();
+}
+
+function renderZoom() {
+  let box = document.getElementById('tb-lightbox');
+  if (!zoomSrc) {
+    if (box) box.remove();
+    return;
+  }
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'tb-lightbox';
+    box.className = 'tb-lightbox';
+    box.addEventListener('click', (e) => {
+      if (e.target === box) closeZoom();
+    });
+    document.body.appendChild(box);
+  }
+  box.innerHTML = `
+    <button type="button" class="tb-lightbox-close" aria-label="ປິດຮູບ" onclick="closeZoom()">✕</button>
+    <img class="tb-lightbox-img" src="${esc(zoomSrc)}" alt="ສະລິບການໂອນເງິນ">
+    <a class="tb-lightbox-open" href="${esc(zoomSrc)}" target="_blank" rel="noreferrer">ເປີດໃນແທັບໃໝ່</a>`;
+}
+
+/* ===== ປຸ່ມ Esc ປິດປັອບອັບ (ປິດອັນເທິງສຸດກ່ອນ) ===== */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (zoomSrc) closeZoom();
+  else if (askPaid) closeConfirm();
+  else if (popup) closePopup();
+  else if (listOpen) setListOpen(null);
+});
+
+/* ===== ເລີ່ມຕົ້ນ ===== */
+(async function init() {
+  try {
+    await loadTableCount();
+    await load();
+  } catch (e) {
+    console.error(e);
+  }
+  firstLoad = false;
+})();
+
 setInterval(() => {
-  loadTables();
+  loadTableCount();
+  load().catch(() => {});
 }, 5000);

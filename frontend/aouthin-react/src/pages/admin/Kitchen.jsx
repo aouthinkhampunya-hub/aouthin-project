@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getBills, updateOrderStatus, cancelOrder } from '../../api.js';
 import '../../styles/admin-kitchen.css';
+import '../../styles/admin-kitchen-extra.css';
 
 // ຄົວເຮັດແຕ່ 2 ຂັ້ນ: pending -> cooking -> ready
 const nextStatus = (s) => (s === 'pending' ? 'cooking' : s === 'cooking' ? 'ready' : null);

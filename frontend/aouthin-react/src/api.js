@@ -79,8 +79,21 @@ export const resetAdminPassword = (id, password) =>
   request(`/admins/${id}/reset-password`, { method: 'PUT', body: JSON.stringify({ password }) });
 
 // ---- ໂຕະ (ເພີ່ມ / ລຶບ / ນັບ) ----
-export const addTable = () => request('/tables', { method: 'POST' });
+// addTable(number): ໃສ່ເລກ = ເພີ່ມໂຕະເລກນັ້ນ | ບໍ່ໃສ່ = ເພີ່ມເລກຖັດໄປ (ເລກສູງສຸດ + 1)
+export const addTable = (number) =>
+  request('/tables', {
+    method: 'POST',
+    body: JSON.stringify(
+      number !== undefined && number !== null && String(number).trim() !== ''
+        ? { number: Number(number) }
+        : {}
+    ),
+  });
+// ລຶບໂຕະໃດກໍໄດ້ ຕາມເລກ
+export const deleteTable = (number) => request(`/tables/${number}`, { method: 'DELETE' });
+// ລຶບໂຕະສຸດທ້າຍ (ເກັບໄວ້ເພື່ອບໍ່ໃຫ້ຂອງເກົ່າພັງ)
 export const deleteLastTable = () => request('/tables', { method: 'DELETE' });
+// ຄືນ { count: ເລກສູງສຸດ, tables: [ລາຍຊື່ເລກໂຕະ] }
 export const getTableCount = () => request('/tables/count');
 export const getOpenBills = () => request('/orders/bills');
 

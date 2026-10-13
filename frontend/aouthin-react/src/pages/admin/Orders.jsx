@@ -19,24 +19,28 @@ const typeLabel = (b) => {
   if (typeOf(b) === 'delivery') return '🛵 ສົ່ງເຖິງບ້ານ';
   return `🍽️ ໂຕະ ${b.table_number}`;
 };
+// ເລກບິນທີ່ສະແດງ: ໃຊ້ bill_no (ແຍກຕາມແຖບ) ຖ້າບໍ່ມີ ໃຊ້ id ແທນ
+const billNo = (b) => (b.bill_no ? b.bill_no : b.id);
 const fmt = (v) => (v ? new Date(v).toLocaleString('en-GB', { timeZone: 'Asia/Vientiane' }) : '-');
 const isPaid = (b) => b.status === 'paid';
 
 export default function Orders() {
   const [allBills, setAllBills] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  // ຊ່ວງວັນທີທີ່ກົດ "ກວດສອບ" ແລ້ວ (ແຍກຈາກຊ່ອງພິມ)
+  const [applied, setApplied] = useState({ from: '', to: '' });
+  const [tab, setTab] = useState('dine_in');      // dine_in | online
+  const [onlineSub, setOnlineSub] = useState('all'); // all | pickup | delivery
   const [detail, setDetail] = useState(null);
+  const [zoomSrc, setZoomSrc] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
         const data = await getBillHistory();
-        const sorted = [...data].sort((a, b) => b.id - a.id);
-        setAllBills(sorted);
-        setFiltered(sorted);
+        setAllBills([...data].sort((a, b) => b.id - a.id));
       } catch (e) {
         console.error(e);
       }
@@ -44,32 +48,185 @@ export default function Orders() {
     })();
   }, []);
 
+  // Esc: ປິດຮູບຂະຫຍາຍກ່ອນ ຖ້າບໍ່ມີຮູບຈຶ່ງປິດປັອບອັບບິນ
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setDetail(null); };
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return;
+      if (zoomSrc) setZoomSrc(null);
+      else setDetail(null);
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, []);
+  }, [zoomSrc]);
 
   function applyFilter() {
-    if (!dateFrom && !dateTo) { setFiltered(allBills); return; }
-    const from = dateFrom ? new Date(dateFrom + 'T00:00:00+07:00') : null;
-    const to = dateTo ? new Date(dateTo + 'T23:59:59+07:00') : null;
-    setFiltered(allBills.filter((b) => {
-      const created = new Date(b.ordered_at);
-      if (from && created < from) return false;
-      if (to && created > to) return false;
-      return true;
-    }));
+    setApplied({ from: dateFrom, to: dateTo });
   }
 
   function clearFilter() {
     setDateFrom('');
     setDateTo('');
-    setFiltered(allBills);
+    setApplied({ from: '', to: '' });
   }
+
+  // ກອງຕາມວັນທີ
+  const inRange = (b) => {
+    const from = applied.from ? new Date(applied.from + 'T00:00:00+07:00') : null;
+    const to = applied.to ? new Date(applied.to + 'T23:59:59+07:00') : null;
+    const created = new Date(b.ordered_at);
+    if (from && created < from) return false;
+    if (to && created > to) return false;
+    return true;
+  };
+  const dated = allBills.filter(inRange);
+
+  const dineBills = dated.filter((b) => typeOf(b) === 'dine_in');
+  const onlineAll = dated.filter((b) => typeOf(b) !== 'dine_in');
+  const pickupBills = onlineAll.filter((b) => typeOf(b) === 'pickup');
+  const deliveryBills = onlineAll.filter((b) => typeOf(b) === 'delivery');
+
+  let filtered = dineBills;
+  if (tab === 'online') {
+    filtered =
+      onlineSub === 'pickup' ? pickupBills :
+      onlineSub === 'delivery' ? deliveryBills :
+      onlineAll;
+  }
+
+  const isOnlineTab = tab === 'online';
 
   return (
     <main>
+      <style>{`
+        body.is-admin .oh-tabs {
+          display: flex;
+          gap: 10px;
+          margin: 0 0 14px;
+          flex-wrap: wrap;
+        }
+        body.is-admin .oh-tab {
+          flex: 1 1 200px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 13px 16px;
+          border: 2px solid #e8d5c4;
+          border-radius: 14px;
+          background: #fff;
+          color: #7a1f0f;
+          font-size: 16px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        body.is-admin .oh-tab:hover { border-color: #b8380e; }
+        body.is-admin .oh-tab.active {
+          background: #7a1f0f;
+          border-color: #7a1f0f;
+          color: #fff;
+        }
+        body.is-admin .oh-tab-count {
+          min-width: 26px;
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: #f3ece4;
+          color: #7a1f0f;
+          font-size: 13px;
+          font-weight: 800;
+          text-align: center;
+        }
+        body.is-admin .oh-tab.active .oh-tab-count {
+          background: #ffc93c;
+          color: #2b1b0e;
+        }
+        body.is-admin .oh-subtabs {
+          display: flex;
+          gap: 8px;
+          margin: 0 0 14px;
+          flex-wrap: wrap;
+        }
+        body.is-admin .oh-subtab {
+          padding: 8px 16px;
+          border: 1.5px solid #e8d5c4;
+          border-radius: 999px;
+          background: #fff;
+          color: #7a1f0f;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        body.is-admin .oh-subtab.active {
+          background: #fff3cd;
+          border-color: #e0a800;
+        }
+        body.is-admin .oh-slip-trigger {
+          display: block;
+          margin: 0 auto;
+          padding: 0;
+          border: none;
+          background: none;
+          cursor: zoom-in;
+        }
+        body.is-admin .oh-lightbox {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          z-index: 11000;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 14px;
+          padding: 24px 16px;
+          background: rgba(10, 6, 3, 0.88);
+          animation: ohLbFade 0.18s ease;
+        }
+        body.is-admin .oh-lightbox-img {
+          max-width: 100%;
+          max-height: calc(100vh - 120px);
+          object-fit: contain;
+          border-radius: 12px;
+          background: #fff;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+        body.is-admin .oh-lightbox-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          width: 44px;
+          height: 44px;
+          border: none;
+          border-radius: 50%;
+          background: #fff;
+          color: #c0392b;
+          font-size: 22px;
+          font-weight: 800;
+          line-height: 1;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+          transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+        }
+        body.is-admin .oh-lightbox-close:hover {
+          background: #c0392b;
+          color: #fff;
+          transform: scale(1.08);
+        }
+        body.is-admin .oh-lightbox-open {
+          padding: 9px 18px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.15);
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+          text-decoration: none;
+          border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+        body.is-admin .oh-lightbox-open:hover {
+          background: rgba(255, 255, 255, 0.28);
+        }
+        @keyframes ohLbFade { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
+
       <div className="date-filter-bar">
         <div className="date-field">
           <label>ຈາກວັນທີ</label>
@@ -83,6 +240,52 @@ export default function Orders() {
         <button className="clear-btn" onClick={clearFilter}>ລ້າງ</button>
       </div>
 
+      {/* ===== 2 ແຖບ: ໜ້າໂຕະ / ອອນລາຍ ===== */}
+      <div className="oh-tabs">
+        <button
+          type="button"
+          className={`oh-tab${tab === 'dine_in' ? ' active' : ''}`}
+          onClick={() => setTab('dine_in')}
+        >
+          🍽️ ສັ່ງໜ້າໂຕະ
+          <span className="oh-tab-count">{dineBills.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`oh-tab${tab === 'online' ? ' active' : ''}`}
+          onClick={() => setTab('online')}
+        >
+          🛵 ສັ່ງອອນລາຍ
+          <span className="oh-tab-count">{onlineAll.length}</span>
+        </button>
+      </div>
+
+      {isOnlineTab && (
+        <div className="oh-subtabs">
+          <button
+            type="button"
+            className={`oh-subtab${onlineSub === 'all' ? ' active' : ''}`}
+            onClick={() => setOnlineSub('all')}
+          >
+            ທັງໝົດ ({onlineAll.length})
+          </button>
+          <button
+            type="button"
+            className={`oh-subtab${onlineSub === 'pickup' ? ' active' : ''}`}
+            onClick={() => setOnlineSub('pickup')}
+          >
+            🥡 ມາຮັບເອງ ({pickupBills.length})
+          </button>
+          <button
+            type="button"
+            className={`oh-subtab${onlineSub === 'delivery' ? ' active' : ''}`}
+            onClick={() => setOnlineSub('delivery')}
+          >
+            🛵 ສົ່ງເຖິງບ້ານ ({deliveryBills.length})
+          </button>
+        </div>
+      )}
+
       <section className="oh-section">
         {!loaded ? null : filtered.length === 0 ? (
           <p className="oh-empty">ບໍ່ພົບບິນໃນຊ່ວງນີ້</p>
@@ -91,8 +294,8 @@ export default function Orders() {
             <table className="oh-table">
               <thead>
                 <tr>
-                  <th>ລະຫັດບິນ</th>
-                  <th>ປະເພດ</th>
+                  <th>ເລກບິນ</th>
+                  <th>{isOnlineTab ? 'ປະເພດ' : 'ໂຕະ'}</th>
                   <th>ລາຍການ</th>
                   <th>ລາຄາລວມ</th>
                   <th>ສະຖານະ</th>
@@ -103,7 +306,7 @@ export default function Orders() {
               <tbody>
                 {filtered.map((b) => (
                   <tr key={b.id} onClick={() => setDetail(b)}>
-                    <td><b>#{b.id}</b></td>
+                    <td><b>#{billNo(b)}</b></td>
                     <td>{typeLabel(b)}</td>
                     <td>{b.items.length}</td>
                     <td>{billTotal(b).toLocaleString()} ກີບ</td>
@@ -129,7 +332,7 @@ export default function Orders() {
 
             <div className="oh-head">
               <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
-              <div className="oh-billno">ບິນ #{detail.id}</div>
+              <div className="oh-billno">ບິນ #{billNo(detail)}</div>
               <div className="oh-badges">
                 <span className="oh-badge">{typeLabel(detail)}</span>
                 <span className={`oh-chip ${isPaid(detail) ? 'paid' : 'open'}`}>
@@ -192,12 +395,38 @@ export default function Orders() {
             {detail.slip_image && (
               <div className="oh-slip-wrap">
                 <p>🧾 ສະລິບການໂອນເງິນ (ກົດເພື່ອຂະຫຍາຍ)</p>
-                <a href={API_BASE + detail.slip_image} target="_blank" rel="noreferrer">
+                <button
+                  type="button"
+                  className="oh-slip-trigger"
+                  onClick={() => setZoomSrc(API_BASE + detail.slip_image)}
+                >
                   <img className="oh-slip" src={API_BASE + detail.slip_image} alt="ສະລິບ" />
-                </a>
+                </button>
               </div>
             )}
           </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ===== ຮູບສະລິບຂະຫຍາຍ (ປິດໄດ້ດ້ວຍ ✕ / ກົດພື້ນມືດ / Esc) ===== */}
+      {zoomSrc && createPortal(
+        <div
+          className="oh-lightbox"
+          onClick={(e) => e.target === e.currentTarget && setZoomSrc(null)}
+        >
+          <button
+            type="button"
+            className="oh-lightbox-close"
+            aria-label="ປິດຮູບ"
+            onClick={() => setZoomSrc(null)}
+          >
+            ✕
+          </button>
+          <img className="oh-lightbox-img" src={zoomSrc} alt="ສະລິບການໂອນເງິນ" />
+          <a className="oh-lightbox-open" href={zoomSrc} target="_blank" rel="noreferrer">
+            ເປີດໃນແທັບໃໝ່
+          </a>
         </div>,
         document.body
       )}

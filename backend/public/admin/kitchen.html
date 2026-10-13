@@ -6,12 +6,60 @@
   <title>ຄົວ - AOUTHIN</title>
   <link rel="stylesheet" href="style.css">
   <style>
-        .kitchen-page {
+    .kitchen-page {
       padding: 20px 40px;
       max-width: 1800px;
       margin: 0 auto;
     }
-        .kitchen-grid {
+
+    /* ===== 3 ແຖບປະເພດອໍເດີ້ ===== */
+    .kitchen-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .kitchen-tabs .kitchen-tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 10px;
+      margin: 0;
+      width: auto;
+      border: 2px solid #eadfd3;
+      border-radius: 14px;
+      background: #fff;
+      color: #7a1f10;
+      font-size: 17px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .kitchen-tabs .kitchen-tab:hover { background: #fff8f0; }
+    .kitchen-tabs .kitchen-tab.has { background: #fff3cd; border-color: #d9a520; }
+    .kitchen-tabs .kitchen-tab.active {
+      background: #7a1f10;
+      border-color: #7a1f10;
+      color: #fff;
+    }
+    .kitchen-tabs .kitchen-tab-count {
+      min-width: 28px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: #b8a898;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .kitchen-tabs .kitchen-tab.has .kitchen-tab-count { background: #c0392b; }
+
+    @media (max-width: 600px) {
+      .kitchen-tabs { flex-direction: column; gap: 8px; }
+    }
+
+    /* ===== ການ໌ດອາຫານ ===== */
+    .kitchen-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 16px;
@@ -24,10 +72,17 @@
       border-left: 6px solid #d4a017;
     }
     .kitchen-card.cooking { border-left-color: #e67e22; }
-        .kitchen-card h2 {
+    .kitchen-card.online-pickup { border-left-color: #d9a520; }
+    .kitchen-card.online-delivery { border-left-color: #2e8b57; }
+    .kitchen-card h2 {
       color: #7a1f0f;
       font-size: 22px;
       margin-bottom: 12px;
+    }
+    .kitchen-cust {
+      margin: -4px 0 10px;
+      font-weight: 700;
+      color: #1a73e8;
     }
     .kitchen-bulk-actions {
       display: flex;
@@ -76,7 +131,7 @@
       margin-left: 6px;
       white-space: nowrap;
     }
-            .kitchen-item-actions {
+    .kitchen-item-actions {
       display: flex;
       flex-direction: row;
       gap: 6px;
@@ -93,7 +148,7 @@
       color: white;
       text-align: center;
     }
-        @media (max-width: 640px) {
+    @media (max-width: 640px) {
       .kitchen-item-actions {
         flex-direction: column;
         width: 110px;
@@ -121,7 +176,7 @@
   <script src="auth-guard.js"></script>
   <header>
     <h1>ຈັດການຮ້ານອາຫານ</h1>
-         <nav>
+    <nav>
       <a href="index.html">ເມນູ</a>
       <a href="orders.html">ບັນທືກການສັ່ງ</a>
       <a href="tables.html">ອໍເດີ້ອາຫານ</a>
@@ -133,6 +188,7 @@
   </header>
 
   <main class="kitchen-page">
+    <div id="kitchen-tabs" class="kitchen-tabs"></div>
     <div id="kitchen-content">
       <p style="text-align:center; padding:40px;">ກຳລັງໂຫລດ...</p>
     </div>

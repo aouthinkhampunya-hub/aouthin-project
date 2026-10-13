@@ -5,6 +5,318 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ບັນທືກການສັ່ງ</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .oh-tabs {
+      display: flex;
+      gap: 10px;
+      margin: 0 0 14px;
+      flex-wrap: wrap;
+    }
+    .oh-tab {
+      flex: 1 1 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 16px;
+      border: 2px solid #e8d5c4;
+      border-radius: 14px;
+      background: #fff;
+      color: #7a1f0f;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .oh-tab:hover { border-color: #b8380e; }
+    .oh-tab.active {
+      background: #7a1f0f;
+      border-color: #7a1f0f;
+      color: #fff;
+    }
+    .oh-tab-count {
+      min-width: 26px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f3ece4;
+      color: #7a1f0f;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .oh-tab.active .oh-tab-count {
+      background: #ffc93c;
+      color: #2b1b0e;
+    }
+    .oh-subtabs {
+      display: flex;
+      gap: 8px;
+      margin: 0 0 14px;
+      flex-wrap: wrap;
+    }
+    .oh-subtabs.hidden { display: none; }
+    .oh-subtab {
+      padding: 8px 16px;
+      border: 1.5px solid #e8d5c4;
+      border-radius: 999px;
+      background: #fff;
+      color: #7a1f0f;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .oh-subtab.active {
+      background: #fff3cd;
+      border-color: #e0a800;
+    }
+
+    /* ===== ຕາຕະລາງບິນ: ໃຊ້ div + grid (ບໍ່ໃຊ້ <table>) ເພື່ອບໍ່ໃຫ້ style.css ມາທັບ ===== */
+    .ohx-wrap {
+      overflow-x: auto;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(122, 31, 15, 0.08);
+    }
+    .ohx-inner { min-width: 820px; }
+    .ohx-row {
+      display: grid;
+      grid-template-columns: 0.8fr 1.3fr 0.9fr 1.4fr 1.5fr 1.7fr 1.7fr;
+      align-items: center;
+      border-bottom: 1px solid #f1e6dc;
+      background: #fff;
+    }
+    .ohx-row.ohx-head {
+      background: #7a1f0f;
+      color: #fff;
+      font-weight: 800;
+      border-bottom: none;
+    }
+    .ohx-row.ohx-click { cursor: pointer; }
+    .ohx-row:not(.ohx-head):hover { background: #fff8f0; }
+    .ohx-cell {
+      padding: 12px 14px;
+      font-size: 15px;
+      line-height: 1.4;
+      text-align: left;
+      color: inherit;
+    }
+    .ohx-row:not(.ohx-head) .ohx-cell { color: #2b1b0e; }
+    .oh-chip {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .oh-chip.paid { background: #e3f4e3; color: #1e6b2e; }
+    .oh-chip.open { background: #fff3cd; color: #7a5b00; }
+    .oh-empty { padding: 24px; text-align: center; color: #7a1f0f; }
+
+    /* ===== ປັອບອັບລາຍລະອຽດບິນ ===== */
+    .ohd-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(20, 10, 4, 0.55);
+    }
+    .ohd-box {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      padding: 26px 24px 24px;
+      border-radius: 28px;
+      background: #fff;
+      color: #2b1b0e;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    }
+    .ohd-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: #f3e4de;
+      color: #7a1f0f;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .ohd-close:hover { background: #7a1f0f; color: #fff; }
+    .ohd-head {
+      text-align: center;
+      padding: 0 44px 14px;
+      border-bottom: 2px dashed #e8dcc0;
+      margin-bottom: 14px;
+    }
+    .ohd-head h2 {
+      margin: 0 0 4px;
+      font-size: 17px;
+      font-weight: 800;
+      color: #2b1b0e;
+    }
+    .ohd-billno {
+      font-size: 32px;
+      font-weight: 900;
+      color: #7a1f0f;
+      margin-bottom: 8px;
+    }
+    .ohd-badges {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .ohd-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #f3ece4;
+      color: #7a1f0f;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .ohd-info {
+      margin: 0 0 16px;
+      padding: 6px 16px;
+      border-radius: 18px;
+      background: #fff6ee;
+    }
+    .ohd-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px dashed #ecd9c8;
+      font-size: 14px;
+    }
+    .ohd-info-row:last-child { border-bottom: none; }
+    .ohd-info-row span { color: #6b5a4c; }
+    .ohd-info-row b { text-align: right; color: #2b1b0e; word-break: break-word; }
+    .ohd-items { margin: 0 0 8px; }
+    .ohd-items-row {
+      display: grid;
+      grid-template-columns: 2fr 0.9fr 1.4fr 1.5fr;
+      align-items: center;
+      font-size: 14px;
+      border-bottom: 1px solid #f1e6dc;
+    }
+    .ohd-items-row.ohd-items-head {
+      background: #7a1f0f;
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      border-bottom: none;
+      border-radius: 12px;
+    }
+    .ohd-items-cell { padding: 11px 9px; }
+    .ohd-fee {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 2px;
+      font-weight: 700;
+    }
+    .ohd-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: #2b1b0e;
+      color: #fff;
+      font-weight: 800;
+    }
+    .ohd-total span:last-child {
+      color: #ffc93c;
+      font-size: 26px;
+      font-weight: 900;
+    }
+    .ohd-slip-wrap { margin-top: 16px; text-align: center; }
+    .ohd-slip-wrap p { margin: 0 0 8px; font-weight: 700; font-size: 14px; }
+    .ohd-slip-btn {
+      display: block;
+      margin: 0 auto;
+      padding: 0;
+      border: none;
+      background: none;
+      cursor: zoom-in;
+    }
+    .ohd-slip-img {
+      max-width: 100%;
+      max-height: 260px;
+      border-radius: 12px;
+      border: 1px solid #e8d5c4;
+    }
+    .ohd-slip-missing {
+      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: #fdecea;
+      color: #a12a1b;
+      font-weight: 700;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    /* ===== ຮູບສະລິບຂະຫຍາຍ ===== */
+    .ohd-lightbox {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 11000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px 16px;
+      background: rgba(10, 6, 3, 0.88);
+    }
+    .ohd-lightbox-img {
+      max-width: 100%;
+      max-height: calc(100vh - 120px);
+      object-fit: contain;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    }
+    .ohd-lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 50%;
+      background: #fff;
+      color: #c0392b;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .ohd-lightbox-close:hover { background: #c0392b; color: #fff; }
+    .ohd-lightbox-open {
+      padding: 9px 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+  </style>
 </head>
 <body> 
   <script src="/admin/auth-guard.js"></script>
@@ -35,10 +347,31 @@
       <button class="clear-btn" onclick="clearDateFilter()">ລ້າງ</button>
     </div>
 
+    <!-- 2 ແຖບ: ສັ່ງໜ້າໂຕະ / ສັ່ງອອນລາຍ -->
+    <div class="oh-tabs">
+      <button type="button" class="oh-tab active" id="tab-dine" onclick="setTab('dine_in')">
+        🍽️ ສັ່ງໜ້າໂຕະ <span class="oh-tab-count" id="count-dine">0</span>
+      </button>
+      <button type="button" class="oh-tab" id="tab-online" onclick="setTab('online')">
+        🛵 ສັ່ງອອນລາຍ <span class="oh-tab-count" id="count-online">0</span>
+      </button>
+    </div>
+
+    <!-- ຕົວກອງຍ່ອຍ (ສະແດງສະເພາະແຖບອອນລາຍ) -->
+    <div class="oh-subtabs hidden" id="online-subtabs">
+      <button type="button" class="oh-subtab active" id="sub-all" onclick="setSub('all')">ທັງໝົດ (<span id="count-sub-all">0</span>)</button>
+      <button type="button" class="oh-subtab" id="sub-pickup" onclick="setSub('pickup')">🥡 ມາຮັບເອງ (<span id="count-sub-pickup">0</span>)</button>
+      <button type="button" class="oh-subtab" id="sub-delivery" onclick="setSub('delivery')">🛵 ສົ່ງເຖິງບ້ານ (<span id="count-sub-delivery">0</span>)</button>
+    </div>
+
     <section id="order-list">
       <p>ກຳລັງໂຫລດ...</p>
     </section>
   </main>
+
+  <!-- ບ່ອນສະແດງປັອບອັບບິນ ແລະ ຮູບສະລິບຂະຫຍາຍ (JS ຈະໃສ່ເນື້ອຫາ) -->
+  <div id="detail-root"></div>
+  <div id="zoom-root"></div>
 
   <script src="orders.js"></script>
   <script src="nav-active.js"></script>

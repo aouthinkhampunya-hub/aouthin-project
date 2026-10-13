@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getProducts, createOrder, callStaff, createOnlineOrder, getOnlineBill, API_BASE } from '../../api.js';
 import OnlineOrderModal from '../../components/OnlineOrderModal.jsx';
-import SlipModal from '../../components/SlipModal.jsx';
 
 // ເລກໂຕະ: ມາຈາກລິ້ງ ?table=N (QR ຂອງໂຕະ). ຖ້າບໍ່ມີ → ສັ່ງອອນລາຍ ('online')
 function getTableNumber() {
@@ -46,7 +45,6 @@ export default function Menu() {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartError, setCartError] = useState(false);
   const [onlineOpen, setOnlineOpen] = useState(false);
-  const [slipData, setSlipData] = useState(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [toast, setToast] = useState('');
   const [callState, setCallState] = useState('idle'); // idle | calling | called
@@ -190,6 +188,7 @@ export default function Menu() {
   }
 
   // ສົ່ງອໍເດີ້ອອນລາຍ (ຄືນຂໍ້ຄວາມ error ຖ້າບໍ່ສຳເລັດ)
+  // ສະລິບໂອນເງິນຖືກແນບມາກັບ info.slip_image ໃນຟອມແລ້ວ ຈຶ່ງບໍ່ຂໍອີກ
   async function submitOnlineOrder(info) {
     const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
     try {
@@ -199,23 +198,10 @@ export default function Menu() {
         JSON.stringify({ id: data.bill_id, phone: info.customer_phone, name: info.customer_name })
       );
 
-      // ຍອດທີ່ຕ້ອງໂອນ = ອາຫານ + ຄ່າສົ່ງ (ໃຊ້ຕົວເລກຈາກ server)
-      let payTotal = cartTotal;
-      try {
-        const bill = await getOnlineBill(data.bill_id, info.customer_phone);
-        payTotal =
-          (bill.items || []).reduce((s, i) => s + i.price * i.quantity, 0) +
-          Number(bill.delivery_fee || 0);
-      } catch (e) {}
-
       setCart([]);
       setCartOpen(false);
       setOnlineOpen(false);
-      if (info.payment_method === 'transfer') {
-        setSlipData({ id: data.bill_id, phone: info.customer_phone, total: payTotal });
-      } else {
-        setSuccessOpen(true);
-      }
+      setSuccessOpen(true);
       loadProducts();
       return '';
     } catch (err) {
@@ -358,18 +344,49 @@ export default function Menu() {
       </div>
 
       <main id="product-list">
-        {filtered.length === 0 ? <p>ບໍ່ພົບເມນູທີ່ຄົ້ນຫາ</p> : filtered.map(p => (
-          <div className="product-card" key={p.id}>
-            {p.image && <img src={p.image.startsWith('http') ? p.image : API_BASE + p.image} className="product-img" alt={p.name} />}
-            <h3>{p.name}</h3>
-            <p>ປະເພດ: {p.size} | ລົດຊາດ: {p.color}</p>
-            <p>ເຫຼືອ: {p.stock} ຈານ</p>
-            <p className="price">{p.price} ກີບ</p>
-            <button onClick={() => addToCart(p)} disabled={p.stock <= 0}>
-              {p.stock <= 0 ? 'ອາຫານໝົດ' : 'ເພີ່ມໃສ່ກະຕ່າ'}
-            </button>
-          </div>
-        ))}
+        {filtered.length === 0 ? <p>ບໍ່ພົບເມນູທີ່ຄົ້ນຫາ</p> : filtered.map(p => {
+          const inCart = cart.find(i => i.product_id === p.id);
+          const qty = inCart ? inCart.quantity : 0;
+
+          return (
+            <div className="product-card" key={p.id}>
+              {p.image && <img src={p.image.startsWith('http') ? p.image : API_BASE + p.image} className="product-img" alt={p.name} />}
+              <h3>{p.name}</h3>
+              <p>ປະເພດ: {p.size} | ລົດຊາດ: {p.color}</p>
+              <p>ເຫຼືອ: {p.stock} ຈານ</p>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <p className="price">{p.price} ກີບ</p>
+                {qty > 0 && (
+                  <span
+                    title={`ໃນກະຕ່າ ${qty} ຈານ`}
+                    style={{
+                      minWidth: 28,
+                      height: 28,
+                      padding: '0 8px',
+                      boxSizing: 'border-box',
+                      borderRadius: 999,
+                      background: '#e53935',
+                      color: '#fff',
+                      fontSize: 14,
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 6px rgba(229,57,53,0.45)',
+                    }}
+                  >
+                    {qty}
+                  </span>
+                )}
+              </div>
+
+              <button onClick={() => addToCart(p)} disabled={p.stock <= 0}>
+                {p.stock <= 0 ? 'ອາຫານໝົດ' : 'ເພີ່ມໃສ່ກະຕ່າ'}
+              </button>
+            </div>
+          );
+        })}
       </main>
 
       <div className="left-buttons">
@@ -417,18 +434,6 @@ export default function Menu() {
           total={cartTotal}
           onClose={() => setOnlineOpen(false)}
           onSubmit={submitOnlineOrder}
-        />
-      )}
-
-      {slipData && (
-        <SlipModal
-          billId={slipData.id}
-          phone={slipData.phone}
-          total={slipData.total}
-          onDone={() => {
-            setSlipData(null);
-            setSuccessOpen(true);
-          }}
         />
       )}
 

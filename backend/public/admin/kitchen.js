@@ -10,6 +10,7 @@ async function checkAuth() {
 }
 checkAuth();
 
+/* ===== ສຽງແຈ້ງເຕືອນ ===== */
 let audioCtx = null;
 function playBeep() {
   try {
@@ -36,7 +37,7 @@ document.addEventListener('click', () => {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }, { once: true });
 
-// ===== ປັອບອັບຢືນຢັນ (ແທນ confirm() ຂອງ browser) =====
+/* ===== ປັອບອັບຢືນຢັນ (ແທນ confirm() ຂອງ browser) ===== */
 (function addKitchenConfirmStyle() {
   const s = document.createElement('style');
   s.textContent = `
@@ -103,8 +104,30 @@ function showKitchenConfirm(title, message) {
   });
 }
 
-let knownItemIds = new Set();
-let firstLoad = true;
+/* ===== ຕົວຊ່ວຍ ===== */
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// 3 ປະເພດອໍເດີ້
+const TABS = [
+  { key: 'dine_in', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ' },
+  { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ' },
+  { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ' }
+];
+
+function typeOf(bill) { return bill.order_type || 'dine_in'; }
+function isOnline(bill) { return typeOf(bill) !== 'dine_in'; }
+
+function billTitle(bill) {
+  if (!isOnline(bill)) return `ໂຕະ ${esc(bill.table_number)}`;
+  const type = typeOf(bill) === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ມາຮັບເອງ';
+  return `${type} #${esc(bill.id)}`;
+}
 
 // ຄົວເຮັດແຕ່ 2 ຂັ້ນ: pending -> cooking -> ready (ແອັດມິນເປັນຄົນກົດເສີບ ຢູ່ໜ້າໂຕະ)
 function nextStatus(status) {
@@ -119,53 +142,72 @@ function nextLabel(status) {
   return '';
 }
 
-async function loadKitchen() {
-  const res = await fetch('/api/orders/bills');
-  const bills = await res.json();
+/* ===== ຂໍ້ມູນຂອງໜ້າ ===== */
+let currentTab = 'dine_in';
+let activeBills = null;   // null = ກຳລັງໂຫລດ
+let knownItemIds = new Set();
+let firstLoad = true;
 
-  // ຄົວເຫັນສະເພາະລາຍການທີ່ຍັງຕ້ອງເຮັດ (pending, cooking)
-  const activeBills = bills
-    .map(bill => ({
-      ...bill,
-      items: bill.items.filter(i => i.status === 'pending' || i.status === 'cooking')
-    }))
-    .filter(bill => bill.items.length > 0);
+/* ===== ສະແດງຜົນ ===== */
+function countOf(key) {
+  return (activeBills || []).filter(b => typeOf(b) === key).length;
+}
 
-  // ກວດລາຍການໃໝ່ ເພື່ອຫຼິ້ນສຽງ
-  const currentIds = new Set();
-  activeBills.forEach(b => b.items.forEach(i => currentIds.add(i.id)));
+function renderTabs() {
+  const el = document.getElementById('kitchen-tabs');
+  if (!el) return;
+  el.innerHTML = TABS.map(t => {
+    const count = countOf(t.key);
+    return `
+      <button type="button"
+        class="kitchen-tab${currentTab === t.key ? ' active' : ''}${count > 0 ? ' has' : ''}"
+        onclick="setTab('${t.key}')">
+        ${t.icon} ${t.label}
+        <span class="kitchen-tab-count">${count}</span>
+      </button>`;
+  }).join('');
+}
 
-  if (!firstLoad) {
-    let hasNew = false;
-    currentIds.forEach(id => { if (!knownItemIds.has(id)) hasNew = true; });
-    if (hasNew) playBeep();
-  }
-  knownItemIds = currentIds;
-
+function renderContent() {
   const container = document.getElementById('kitchen-content');
+  if (!container) return;
 
-  if (activeBills.length === 0) {
-    container.innerHTML = '<div class="kitchen-empty">✅ ບໍ່ມີອາຫານທີ່ຕ້ອງເຮັດຕອນນີ້</div>';
+  if (activeBills === null) {
+    container.innerHTML = '<p style="text-align:center; padding:40px;">ກຳລັງໂຫລດ...</p>';
+    return;
+  }
+
+  const list = activeBills.filter(b => typeOf(b) === currentTab);
+
+  if (list.length === 0) {
+    container.innerHTML = '<div class="kitchen-empty">✅ ບໍ່ມີອາຫານທີ່ຕ້ອງເຮັດໃນປະເພດນີ້</div>';
     return;
   }
 
   container.innerHTML = `<div class="kitchen-grid">
-    ${activeBills.map(bill => {
+    ${list.map(bill => {
+      const online = isOnline(bill);
       const hasCooking = bill.items.some(i => i.status === 'cooking');
       const pendingIds = bill.items.filter(i => i.status === 'pending').map(i => i.id);
       const cookingIds = bill.items.filter(i => i.status === 'cooking').map(i => i.id);
       return `
-        <div class="kitchen-card ${hasCooking ? 'cooking' : ''}">
-          <h2>ໂຕະ ${bill.table_number}</h2>
+        <div class="kitchen-card${hasCooking ? ' cooking' : ''}${online ? ' online-' + typeOf(bill) : ''}">
+          <h2>${billTitle(bill)}</h2>
+          ${online && bill.customer_name ? `
+            <p class="kitchen-cust">
+              👤 ${esc(bill.customer_name)}
+              ${bill.customer_phone ? ` &nbsp;📞 ${esc(bill.customer_phone)}` : ''}
+            </p>
+          ` : ''}
 
           <div class="kitchen-bulk-actions">
             ${pendingIds.length > 0 ? `
-              <button class="btn-start-all" onclick='bulkUpdate(${JSON.stringify(pendingIds)}, "cooking")'>
+              <button class="btn-start-all" onclick="bulkUpdate([${pendingIds.join(',')}], 'cooking')">
                 🔥 ເລີ່ມເຮັດທັງໝົດ (${pendingIds.length})
               </button>
             ` : ''}
             ${cookingIds.length > 0 ? `
-              <button class="btn-done-all" onclick='bulkUpdate(${JSON.stringify(cookingIds)}, "ready")'>
+              <button class="btn-done-all" onclick="bulkUpdate([${cookingIds.join(',')}], 'ready')">
                 ✅ ເຮັດແລ້ວທັງໝົດ (${cookingIds.length})
               </button>
             ` : ''}
@@ -173,8 +215,8 @@ async function loadKitchen() {
 
           ${bill.items.map(item => `
             <div class="kitchen-item">
-              <div>
-                <span class="kitchen-item-name">${item.product_name}</span>
+              <div class="kitchen-item-info">
+                <span class="kitchen-item-name">${esc(item.product_name)}</span>
                 <span class="kitchen-item-qty">x${item.quantity}</span>
               </div>
               <div class="kitchen-item-actions">
@@ -183,7 +225,7 @@ async function loadKitchen() {
                   ${nextLabel(item.status)}
                 </button>
                 <button class="btn-cancel" onclick="cancelItem(${item.id})">
-                   ຍົກເລີກ
+                  ຍົກເລີກ
                 </button>
               </div>
             </div>
@@ -194,35 +236,83 @@ async function loadKitchen() {
   </div>`;
 }
 
-async function updateStatus(orderId, status) {
-  await fetch(`/api/orders/${orderId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status })
-  });
+function render() {
+  renderTabs();
+  renderContent();
+}
 
-  if (status === 'ready') {
-    showKitchenToast('🍽️ ອໍເດີ້ພ້ອມເສີບແລ້ວ');
+function setTab(key) {
+  currentTab = key;
+  render();
+}
+
+/* ===== ໂຫລດຂໍ້ມູນ ===== */
+async function loadKitchen() {
+  try {
+    const res = await fetch('/api/orders/bills');
+    if (!res.ok) throw new Error('load bills failed');
+    const bills = await res.json();
+
+    // ຄົວເຫັນສະເພາະລາຍການທີ່ຍັງຕ້ອງເຮັດ (pending, cooking)
+    const active = (Array.isArray(bills) ? bills : [])
+      .map(bill => ({
+        ...bill,
+        items: (bill.items || []).filter(i => i.status === 'pending' || i.status === 'cooking')
+      }))
+      .filter(bill => bill.items.length > 0);
+
+    // ກວດລາຍການໃໝ່ ເພື່ອຫຼິ້ນສຽງ
+    const currentIds = new Set();
+    active.forEach(b => b.items.forEach(i => currentIds.add(i.id)));
+
+    if (!firstLoad) {
+      let hasNew = false;
+      currentIds.forEach(id => { if (!knownItemIds.has(id)) hasNew = true; });
+      if (hasNew) playBeep();
+    }
+    knownItemIds = currentIds;
+
+    activeBills = active;
+    render();
+  } catch (e) {
+    console.error(e);
   }
+}
 
+/* ===== ປ່ຽນສະຖານະ ===== */
+async function updateStatus(orderId, status) {
+  try {
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (status === 'ready') {
+      showKitchenToast('🍽️ ອໍເດີ້ພ້ອມເສີບແລ້ວ');
+    }
+  } catch (e) {
+    showKitchenToast('❌ ອັບເດດບໍ່ໄດ້');
+  }
   loadKitchen();
 }
 
 async function bulkUpdate(orderIds, status) {
-  await Promise.all(
-    orderIds.map(id =>
-      fetch(`/api/orders/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      })
-    )
-  );
-
-  if (status === 'ready') {
-    showKitchenToast('🍽️ ອໍເດີ້ພ້ອມເສີບແລ້ວ');
+  try {
+    await Promise.all(
+      orderIds.map(id =>
+        fetch(`/api/orders/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        })
+      )
+    );
+    if (status === 'ready') {
+      showKitchenToast('🍽️ ອໍເດີ້ພ້ອມເສີບແລ້ວ');
+    }
+  } catch (e) {
+    showKitchenToast('❌ ອັບເດດບໍ່ໄດ້');
   }
-
   loadKitchen();
 }
 
@@ -233,17 +323,22 @@ async function cancelItem(orderId) {
   );
   if (!confirmCancel) return;
 
-  const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
-  const data = await res.json();
+  try {
+    const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+    const data = await res.json();
 
-  if (res.ok) {
-    showKitchenToast('✅ ຍົກເລີກອໍເດີ້ສຳເລັດ');
-    loadKitchen();
-  } else {
-    showKitchenToast('❌ ' + (data.error || 'ຍົກເລີກບໍ່ໄດ້'));
+    if (res.ok) {
+      showKitchenToast('✅ ຍົກເລີກອໍເດີ້ສຳເລັດ');
+    } else {
+      showKitchenToast('❌ ' + (data.error || 'ຍົກເລີກບໍ່ໄດ້'));
+    }
+  } catch (e) {
+    showKitchenToast('❌ ຍົກເລີກບໍ່ໄດ້');
   }
+  loadKitchen();
 }
 
+/* ===== Toast ===== */
 (function addKitchenToastCenterStyle() {
   const s = document.createElement('style');
   s.textContent = `
@@ -276,7 +371,9 @@ function showKitchenToast(message) {
   setTimeout(() => t.remove(), 2600);
 }
 
+/* ===== ເລີ່ມຕົ້ນ ===== */
 async function init() {
+  renderTabs();
   await loadKitchen();
   firstLoad = false;
 }

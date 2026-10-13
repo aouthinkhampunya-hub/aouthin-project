@@ -92,6 +92,7 @@
       gap: 14px;
     }
     .table-qr-card {
+      position: relative;
       background: #fff;
       border-radius: 14px;
       padding: 14px;
@@ -111,13 +112,50 @@
       font-size: 15px;
     }
 
-    /* ===== ປຸ່ມເພີ່ມ / ລຶບ / ພິມ ===== */
+    /* ===== ປຸ່ມຖັງຂີ້ເຫຍື້ອ (ມຸມຂວາເທິງຂອງບັດ) ===== */
+    .tq-del {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #f3c9c4;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #d93025;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+      transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .tq-del:hover:not(:disabled) {
+      background: #d93025;
+      color: #ffffff;
+      border-color: #d93025;
+      transform: scale(1.1);
+      box-shadow: 0 4px 10px rgba(217,48,37,0.45);
+    }
+    .tq-del:active:not(:disabled) { transform: scale(0.95); }
+    .tq-del:disabled { opacity: 0.45; cursor: not-allowed; }
+    .tq-del svg { display: block; }
+
+    /* ===== ປຸ່ມເພີ່ມ / ພິມ + ຊ່ອງພິມເລກໂຕະ ===== */
     .table-qr-actions {
       display: flex;
       gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
       margin-top: 20px;
+    }
+    .tq-add-input {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+      min-width: 230px;
     }
     .table-qr-print-btn {
       background: #2B1B0E;
@@ -142,18 +180,6 @@
     }
     .table-qr-add-btn:hover { background: #256428; }
     .table-qr-add-btn:disabled { opacity: .6; cursor: wait; }
-    .table-qr-del-btn {
-      background: #c0392b;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 22px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .table-qr-del-btn:hover { background: #a5301f; }
-    .table-qr-del-btn:disabled { opacity: .6; cursor: wait; }
 
     /* ===== ປັອບອັບຢືນຢັນ (ແທນ confirm) ===== */
     .cf-overlay {
@@ -213,6 +239,7 @@
       .table-qr-section { margin-top: 0; max-width: 100%; }
       .table-qr-section h2 { color: #2B1B0E; }
       .table-qr-actions { display: none !important; }
+      .tq-del { display: none !important; }
       .table-qr-grid { grid-template-columns: repeat(4, 1fr); }
       .table-qr-card { box-shadow: none; border: 1px solid #e5d9cc; break-inside: avoid; }
       .cf-overlay, .qr-toast { display: none !important; }
@@ -249,8 +276,15 @@
         <p style="color:#ffe0cc; text-align:center;">ກຳລັງສ້າງ QR...</p>
       </div>
       <div class="table-qr-actions">
+        <input
+          class="tq-add-input"
+          id="new-table-number"
+          type="text"
+          inputmode="numeric"
+          maxlength="3"
+          placeholder="ເພີ່ມເລກໂຕະ"
+        >
         <button class="table-qr-add-btn" id="add-table-btn" onclick="addTable()">➕ ເພີ່ມໂຕະ</button>
-        <button class="table-qr-del-btn" id="del-table-btn" onclick="deleteTable()">🗑️ ລຶບໂຕະສຸດທ້າຍ</button>
         <button class="table-qr-print-btn" onclick="window.print()">🖨️ ພິມ QR ທັງໝົດ</button>
       </div>
     </div>
@@ -329,6 +363,18 @@
     }
     loadQR();
 
+    // ===== ໄອຄອນຖັງຂີ້ເຫຍື້ອ (SVG) =====
+    const TRASH_SVG = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 6h18"></path>
+        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+        <path d="M10 11v6"></path>
+        <path d="M14 11v6"></path>
+      </svg>
+    `;
+
     // ===== ກະດານ QR ຕາມໂຕະ =====
     async function loadTableQRs() {
       const grid = document.getElementById('table-qr-grid');
@@ -336,9 +382,11 @@
         const res = await fetch('/api/qrcode/tables');
         const data = await res.json();
 
-        document.getElementById('table-count').textContent = '1-' + data.tables.length;
+        document.getElementById('table-count').textContent = 'ທັງໝົດ ' + data.tables.length + ' ໂຕະ';
         grid.innerHTML = data.tables.map(t => `
           <div class="table-qr-card">
+            <button type="button" class="tq-del" data-table="${t.table}"
+                    title="ລຶບໂຕະ ${t.table}" aria-label="ລຶບໂຕະ ${t.table}">${TRASH_SVG}</button>
             <img src="${t.qrImage}" alt="QR ໂຕະ ${t.table}">
             <div class="tq-label">ໂຕະ ${t.table}</div>
           </div>
@@ -349,17 +397,41 @@
     }
     loadTableQRs();
 
+    // ກົດຖັງຂີ້ເຫຍື້ອໃນບັດໃດກໍໄດ້ (ໃຊ້ event delegation ເພາະບັດຖືກສ້າງໃໝ່ທຸກຄັ້ງ)
+    document.getElementById('table-qr-grid').addEventListener('click', (e) => {
+      const btn = e.target.closest('.tq-del');
+      if (!btn || btn.disabled) return;
+      deleteTable(Number(btn.dataset.table), btn);
+    });
+
+    // ຊ່ອງເລກໂຕະ: ຮັບແຕ່ຕົວເລກ 0-9 ແລະກົດ Enter ເພື່ອເພີ່ມ
+    const numberInput = document.getElementById('new-table-number');
+    numberInput.addEventListener('input', () => {
+      numberInput.value = numberInput.value.replace(/\D/g, '');
+    });
+    numberInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTable();
+    });
+
     // ===== ເພີ່ມໂຕະ =====
+    // ມີເລກໃນຊ່ອງ = ເພີ່ມເລກນັ້ນ | ຊ່ອງວ່າງ = ເລກຖັດໄປ (ເລກສູງສຸດ + 1)
     async function addTable() {
       const btn = document.getElementById('add-table-btn');
+      if (btn.disabled) return;
       btn.disabled = true;
       try {
-        const res = await fetch('/api/tables', { method: 'POST' });
+        const raw = numberInput.value.trim();
+        const body = raw !== '' ? { number: Number(raw) } : {};
+        const res = await fetch('/api/tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'ເພີ່ມໂຕະບໍ່ສຳເລັດ');
+        numberInput.value = '';
         await loadTableQRs();
-        showToast('✅ ເພີ່ມໂຕະ ' + data.count + ' ແລ້ວ');
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        showToast('✅ ເພີ່ມໂຕະ ' + data.table + ' ແລ້ວ');
       } catch (err) {
         showToast('❌ ' + err.message);
       } finally {
@@ -367,21 +439,21 @@
       }
     }
 
-    // ===== ລຶບໂຕະສຸດທ້າຍ =====
-    async function deleteTable() {
-      const btn = document.getElementById('del-table-btn');
-      btn.disabled = true;
+    // ===== ລຶບໂຕະ ຕາມເລກ (n) =====
+    async function deleteTable(n, btn) {
+      if (btn) btn.disabled = true;
       try {
-        const countRes = await fetch('/api/tables/count');
-        const { count } = await countRes.json();
-
         const billsRes = await fetch('/api/orders/bills');
         const bills = await billsRes.json();
-        if (bills.some(b => Number(b.table_number) === count)) {
+        const hasBill = Array.isArray(bills) && bills.some(
+          b => (b.order_type || 'dine_in') === 'dine_in' && Number(b.table_number) === n
+        );
+
+        if (hasBill) {
           await askConfirm({
             icon: '⚠️',
             title: 'ລຶບບໍ່ໄດ້',
-            text: `ໂຕະ ${count} ຍັງມີບິນເປີດຢູ່<br>ກະລຸນາປິດບິນກ່ອນ`,
+            text: `ໂຕະ ${n} ຍັງມີບິນເປີດຢູ່<br>ກະລຸນາປິດບິນກ່ອນ`,
             okText: 'ຮັບຮູ້',
             cancelText: 'ປິດ',
             danger: false
@@ -392,21 +464,21 @@
         const ok = await askConfirm({
           icon: '🗑️',
           title: 'ຢືນຢັນລຶບໂຕະ',
-          text: `ລຶບໂຕະ ${count} ແທ້ບໍ່?<br>QR ຂອງໂຕະນີ້ຈະໃຊ້ບໍ່ໄດ້ອີກ`,
+          text: `ລຶບໂຕະ ${n} ແທ້ບໍ່?<br>QR ຂອງໂຕະນີ້ຈະໃຊ້ບໍ່ໄດ້ອີກ`,
           okText: '🗑️ ລຶບ',
           cancelText: 'ຍົກເລີກ'
         });
         if (!ok) return;
 
-        const res = await fetch('/api/tables', { method: 'DELETE' });
+        const res = await fetch('/api/tables/' + n, { method: 'DELETE' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'ລຶບໂຕະບໍ່ສຳເລັດ');
         await loadTableQRs();
-        showToast('✅ ລຶບໂຕະ ' + count + ' ແລ້ວ');
+        showToast('✅ ລຶບໂຕະ ' + n + ' ແລ້ວ');
       } catch (err) {
         showToast('❌ ' + err.message);
       } finally {
-        btn.disabled = false;
+        if (btn) btn.disabled = false;
       }
     }
 

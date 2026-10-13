@@ -7,6 +7,10 @@ import './online-order.css';
 // ປ່ຽນເປັນພິກັດຮ້ານຂອງເຈົ້າ (ເປີດ Google Maps ກົດຂວາທີ່ຮ້ານ ຈະເຫັນເລກ lat, lng)
 const DEFAULT_CENTER = [17.9757, 102.6331];
 
+// ເບີໂທລາວ: 020 + ເລກ 8 ໂຕ = 11 ໂຕ ພໍດີ
+const PHONE_LEN = 11;
+const PHONE_REGEX = /^020\d{8}$/;
+
 const pinIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -51,7 +55,8 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   const [type, setType] = useState('pickup');
   const [payment, setPayment] = useState('cash'); // cash | transfer
   const [name, setName] = useState(saved?.name || '');
-  const [phone, setPhone] = useState(saved?.phone || '');
+  // ເອົາສະເພາະຕົວເລກ ແລະ ຕັດໃຫ້ເຫຼືອບໍ່ເກີນ 11 ໂຕ (ກັນກໍລະນີເບີເກົ່າທີ່ເກັບໄວ້ຍາວເກີນ)
+  const [phone, setPhone] = useState(String(saved?.phone || '').replace(/\D/g, '').slice(0, PHONE_LEN));
   const [address, setAddress] = useState('');
   const [hint, setHint] = useState('👆 ກົດເທິງແຜນທີ່ ຫຼື ລາກໝຸດ ເພື່ອເລືອກຈຸດສົ່ງ');
   const [slip, setSlip] = useState('');           // data URL ຂອງສະລິບ
@@ -182,7 +187,9 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
 
   const submit = async () => {
     if (!name.trim()) return setError('ກະລຸນາໃສ່ຊື່');
-    if (!/^[0-9+\s-]{8,15}$/.test(phone.trim())) return setError('ເບີໂທບໍ່ຖືກຕ້ອງ');
+    if (!PHONE_REGEX.test(phone.trim())) {
+      return setError('ເບີໂທບໍ່ຖືກຕ້ອງ ຕ້ອງຂຶ້ນຕົ້ນດ້ວຍ 020 ຕາມດ້ວຍເລກ 8 ໂຕ (ລວມ 11 ໂຕ)');
+    }
     if (type === 'delivery' && !address.trim()) return setError('ກະລຸນາໃສ່ທີ່ຢູ່ສົ່ງ');
     if (type === 'delivery' && !pinRef.current) return setError('ກະລຸນາປັກໝຸດຈຸດສົ່ງເທິງແຜນທີ່');
     if (type === 'delivery' && feeInfo.status !== 'ok') return setError('ຍັງຄິດຄ່າສົ່ງບໍ່ໄດ້ ກະລຸນາລໍຖ້າ ຫຼື ປັກໝຸດໃໝ່');
@@ -201,6 +208,22 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
     });
     setBusy(false);
     if (msg) setError(msg);
+  };
+
+  // ສະໄຕລ໌ປຸ່ມ "+ ສະລິບການໂອນ" (ຂອບປະ ສີຄີມ)
+  const slipBtnStyle = {
+    display: 'block',
+    width: '100%',
+    padding: '16px 14px',
+    border: '2px dashed #c9a98a',
+    borderRadius: 14,
+    background: '#f8eee2',
+    color: '#7a1f0f',
+    fontSize: 16,
+    fontWeight: 800,
+    textAlign: 'center',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
   };
 
   const qrSrc = payQr
@@ -234,8 +257,27 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
     );
   };
 
+  // ສະຖານະເບີໂທ: ເຕືອນເມື່ອພິມແລ້ວແຕ່ຍັງບໍ່ຖືກ
+  const phoneOk = PHONE_REGEX.test(phone);
+  const phoneBad = phone.length > 0 && !phoneOk;
+  let phoneNote = '';
+  if (phone.length > 0) {
+    if (phone.length >= 3 && !phone.startsWith('020')) phoneNote = 'ເບີຕ້ອງຂຶ້ນຕົ້ນດ້ວຍ 020';
+    else if (!phoneOk) phoneNote = `ໃສ່ແລ້ວ ${phone.length}/${PHONE_LEN} ໂຕ (020 + ເລກ 8 ໂຕ)`;
+  }
+
   return (
     <div className="ol-overlay">
+      {/* ຊ່ອນແຖບເລື່ອນຂອງກ່ອງຟອມ (ຍັງເລື່ອນດ້ວຍນິ້ວ/ລໍ້ເມົ້າໄດ້) */}
+      <style>{`
+        .ol-box {
+          scrollbar-width: none;      /* Firefox */
+          -ms-overflow-style: none;   /* Edge ເກົ່າ */
+        }
+        .ol-box::-webkit-scrollbar {
+          display: none;              /* Chrome, Safari, Edge */
+        }
+      `}</style>
       <div className="ol-box">
         <h2>🛵 ຂໍ້ມູນການສັ່ງອອນລາຍ</h2>
 
@@ -265,11 +307,24 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
         />
         <input
           type="tel"
+          inputMode="numeric"
           placeholder="ເບີໂທ ເຊັ່ນ 02012345678"
-          maxLength={15}
+          maxLength={PHONE_LEN}
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, PHONE_LEN))}
         />
+        {phoneNote && (
+          <p
+            style={{
+              margin: '-6px 4px 10px',
+              fontSize: 13,
+              fontWeight: 700,
+              color: phoneBad ? '#c0392b' : '#6b5a4c',
+            }}
+          >
+            {phoneNote}
+          </p>
+        )}
 
         {type === 'delivery' && (
           <div>
@@ -323,12 +378,21 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
               )}
 
               <p className="ol-transfer-note">2) ແນບສະລິບການໂອນເງິນ</p>
+              {/* ຊ່ອງເລືອກໄຟລ໌ຖືກຊ່ອນ ແລ້ວໃຊ້ປຸ່ມຂອບປະແທນ */}
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
                 onChange={pickSlip}
+                style={{ display: 'none' }}
               />
+              <button
+                type="button"
+                style={slipBtnStyle}
+                onClick={() => fileRef.current && fileRef.current.click()}
+              >
+                {slip ? '🔄 ປ່ຽນຮູບສະລິບການໂອນ' : '+ ສະລິບການໂອນ'}
+              </button>
               {slip && (
                 <div className="ol-slip-preview">
                   <img src={slip} alt="ສະລິບ" />

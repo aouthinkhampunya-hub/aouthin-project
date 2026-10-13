@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
@@ -22,6 +24,17 @@ async function columnExists(tableName, columnName) {
     [process.env.DB_NAME, tableName, columnName]
   );
   return rows.length > 0;
+}
+
+// ຈຳນວນໂຕະທີ່ເຄີຍເກັບໃນໄຟລ໌ເກົ່າ (ໃຊ້ຕອນຍ້າຍມາ MySQL ຄັ້ງທຳອິດເທົ່ານັ້ນ)
+function legacyTableCount() {
+  try {
+    const file = path.join(__dirname, 'table-settings.json');
+    const n = Number(JSON.parse(fs.readFileSync(file, 'utf8')).count);
+    return Number.isInteger(n) && n >= 1 && n <= 200 ? n : 20;
+  } catch (e) {
+    return 20;
+  }
 }
 
 async function initDb() {
@@ -70,7 +83,7 @@ async function initDb() {
     await pool.query(`ALTER TABLE orders ADD COLUMN slip_image VARCHAR(500)`);
   }
 
-  // ===== ຄໍລຳຂອງ bills ສຳລັບອໍເດີ້ອອນລາຍ + ຄ່າສົ່ງ =====
+  // ===== ຄໍລຳຂອງ bills ສຳລັບອໍເດີ້ອອນລາຍ + ຄ່າສົ່ງ + ເລກບິນແຍກຕາມແຖບ =====
   const billCols = [
     ['order_type', `VARCHAR(20) NOT NULL DEFAULT 'dine_in'`],
     ['customer_name', `VARCHAR(255) NULL`],
@@ -82,11 +95,34 @@ async function initDb() {
     ['longitude', `DECIMAL(10,7) NULL`],
     ['delivery_fee', `INT NOT NULL DEFAULT 0`],
     ['delivery_distance', `DECIMAL(6,1) NULL`],
+    ['bill_no', `INT NULL`],
   ];
   for (const [name, def] of billCols) {
     if (!(await columnExists('bills', name))) {
       await pool.query(`ALTER TABLE bills ADD COLUMN ${name} ${def}`);
     }
+  }
+
+  // ===== ໃສ່ເລກບິນ (bill_no) ໃຫ້ບິນເກົ່າທີ່ຍັງບໍ່ມີ =====
+  // ໜ້າໂຕະ ນັບ 1,2,3... ແຍກ ແລະ ອອນລາຍ ນັບ 1,2,3... ແຍກ (ຮຽງຕາມ id ເດີມ)
+  // ເຮັດຄັ້ງດຽວ: ຖ້າບິນທຸກໃບມີ bill_no ແລ້ວ ຈະບໍ່ເຮັດຫຍັງ
+  const [missing] = await pool.query(
+    `SELECT id, order_type FROM bills WHERE bill_no IS NULL ORDER BY id`
+  );
+  if (missing.length > 0) {
+    const [[d]] = await pool.query(
+      `SELECT COALESCE(MAX(bill_no), 0) AS m FROM bills WHERE order_type = 'dine_in'`
+    );
+    const [[o]] = await pool.query(
+      `SELECT COALESCE(MAX(bill_no), 0) AS m FROM bills WHERE order_type <> 'dine_in'`
+    );
+    let dineNo = Number(d.m);
+    let onlineNo = Number(o.m);
+    for (const b of missing) {
+      const no = b.order_type === 'dine_in' ? ++dineNo : ++onlineNo;
+      await pool.query(`UPDATE bills SET bill_no = ? WHERE id = ?`, [no, b.id]);
+    }
+    console.log(`✅ ໃສ່ເລກບິນ (bill_no) ໃຫ້ບິນເກົ່າ ${missing.length} ໃບແລ້ວ`);
   }
 
   await pool.query(`
@@ -104,6 +140,20 @@ async function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // ===== ລາຍຊື່ໂຕະ (ເພີ່ມເລກເອງ / ລຶບໂຕະໃດກໍໄດ້) =====
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS restaurant_tables (
+      table_number INT PRIMARY KEY
+    )
+  `);
+  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM restaurant_tables`);
+  if (Number(total) === 0) {
+    const count = legacyTableCount();
+    const rows = Array.from({ length: count }, (_, i) => [i + 1]);
+    await pool.query(`INSERT INTO restaurant_tables (table_number) VALUES ?`, [rows]);
+    console.log(`✅ ສ້າງລາຍຊື່ໂຕະ 1-${count} ຈາກຄ່າເກົ່າແລ້ວ`);
+  }
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admins (

@@ -1,4 +1,6 @@
 let cart = [];
+let allProducts = [];
+let tableNumber = null;
 
 function cartStorageKey() {
   return `cart_table_${tableNumber}`;
@@ -18,17 +20,23 @@ function loadSavedCart() {
     cart = [];
   }
 }
-let allProducts = [];
-let tableNumber = null;
 
+// ໂຕະທີ່ລູກຄ້າສະແກນ QR ມາ (ຖ້າມີ) ໄວ້ໃຫ້ສະຫຼັບກັບມາສັ່ງຢູ່ໂຕະໄດ້
+function getDineTable() {
+  return sessionStorage.getItem('dineTable') || '';
+}
+
+// ===== ເລີ່ມແອັບ =====
+// ມີ ?table=N → ສັ່ງຢູ່ໂຕະ N | ບໍ່ມີ → ສັ່ງອອນລາຍທັນທີ (ບໍ່ຖາມເລກໂຕະ)
 function initApp() {
   const params = new URLSearchParams(window.location.search);
-  let table = params.get('table') || sessionStorage.getItem('tableNumber');
+  const fromUrl = params.get('table');
 
-  if (table) {
-    setTableNumber(table);
+  if (fromUrl && /^\d{1,3}$/.test(fromUrl)) {
+    sessionStorage.setItem('dineTable', fromUrl);
+    setTableNumber(fromUrl);
   } else {
-    document.getElementById('table-modal').classList.remove('hidden');
+    setTableNumber(sessionStorage.getItem('tableNumber') || 'online');
   }
 }
 
@@ -38,57 +46,11 @@ function setTableNumber(table) {
   document.getElementById('table-label').textContent =
     table === 'online' ? '🛵 ສັ່ງອອນລາຍ' : `ໂຕະ ${table}`;
   updateModeButton();
-  document.getElementById('table-modal').classList.add('hidden');
+  updateStaffButton();
   loadSavedCart();
   renderCart();
   loadProducts();
   restoreStaffCooldown();
-}
-
-async function submitTableNumber() {
-  const input = document.getElementById('table-input');
-  const errorEl = document.getElementById('table-error');
-  const value = input.value.trim();
-
-  if (!value || !/^[0-9]+$/.test(value)) {
-    errorEl.textContent = '⚠️ ກະລຸນາໃສ່ຕົວເລກໂຕະເທົ່ານັ້ນ';
-    errorEl.classList.remove('hidden');
-    input.focus();
-    return;
-  }
-
-  // ດຶງຈຳນວນໂຕະຈິງຈາກ server
-  let maxTable = 20;
-  try {
-    const cres = await fetch('/api/tables/count');
-    const cdata = await cres.json();
-    if (cdata.count) maxTable = cdata.count;
-  } catch (e) {}
-
-  const tableNum = Number(value);
-  if (tableNum < 1 || tableNum > maxTable) {
-    errorEl.textContent = `⚠️ ເລກໂຕະຕ້ອງຢູ່ລະຫວ່າງ 1-${maxTable}`;
-    errorEl.classList.remove('hidden');
-    input.focus();
-    return;
-  }
-
-  errorEl.classList.add('hidden');
-
-  // ກວດວ່າໂຕະນີ້ມີຄົນນັ່ງ/ມີອໍເດີ້ຄ້າງຢູ່ແລ້ວບໍ່
-  try {
-    const res = await fetch('/api/orders/bills');
-    const bills = await res.json();
-    const taken = bills.some(b => String(b.table_number) === value);
-    if (taken) {
-      errorEl.textContent = `⚠️ ໂຕະ ${value} ມີຄົນນັ່ງຢູ່ແລ້ວ ກະລຸນາເລືອກເລກໂຕະອື່ນ ຫຼືສອບຖາມພະນັກງານ`;
-      errorEl.classList.remove('hidden');
-      input.focus();
-      return;
-    }
-  } catch (e) {}
-
-  setTableNumber(value);
 }
 
 async function loadProducts() {
@@ -134,12 +96,34 @@ function renderProducts(products) {
       <h3>${p.name}</h3>
       <p>ປະເພດ: ${p.size} | ລົດຊາດ: ${p.color}</p>
       <p>ເຫຼືອ: ${p.stock} ຈານ</p>
-      <p class="price">${p.price} ກີບ</p>
+      <div style="display:flex; align-items:center; justify-content:space-between;">
+        <p class="price">${p.price} ກີບ</p>
+        <span class="cart-badge" data-badge-id="${p.id}" style="display:none; min-width:28px; height:28px; padding:0 8px; box-sizing:border-box; border-radius:999px; background:#e53935; color:#fff; font-size:14px; font-weight:800; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(229,57,53,0.45);"></span>
+      </div>
       <button onclick="addToCart(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>
         ${p.stock <= 0 ? 'ອາຫານໝົດ' : 'ເພີ່ມໃສ່ກະຕ່າ'}
       </button>
     </div>
   `).join('');
+
+  updateCartBadges();
+}
+
+// ອັບເດດວົງແດງ (ຈຳນວນໃນກະຕ່າ) ຂອງແຕ່ລະເມນູ ໂດຍບໍ່ວາດລາຍການໃໝ່
+function updateCartBadges() {
+  document.querySelectorAll('[data-badge-id]').forEach(el => {
+    const id = Number(el.getAttribute('data-badge-id'));
+    const item = cart.find(i => i.product_id === id);
+    const qty = item ? item.quantity : 0;
+
+    if (qty > 0) {
+      el.textContent = qty;
+      el.title = `ໃນກະຕ່າ ${qty} ຈານ`;
+      el.style.display = 'flex';
+    } else {
+      el.style.display = 'none';
+    }
+  });
 }
 
 function addToCart(id) {
@@ -238,6 +222,7 @@ function renderCart() {
 
   const total = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
   document.getElementById('cart-total').textContent = total;
+    updateCartBadges();
 }
 
 function openCart() {
@@ -285,7 +270,6 @@ async function confirmCartOrder() {
     alert('ເກີດຂໍ້ຜິດພາດ: ' + data.error);
   }
 }
-initApp();
 
 // ===== ສັ່ງອອນລາຍ (ແກັບ / ສົ່ງເຖິງບ້ານ, ຈ່າຍເງິນສົດ) =====
 function startOnlineMode() {
@@ -295,18 +279,41 @@ function startOnlineMode() {
 function updateModeButton() {
   const b = document.getElementById('mode-switch');
   if (!b) return;
-  b.textContent = tableNumber === 'online'
-    ? '🍽️ ສັ່ງຢູ່ໂຕະ (ປ່ຽນເລກໂຕະ)'
-    : '🛵 ສັ່ງອອນລາຍ';
+  const dine = getDineTable();
+
+  if (tableNumber === 'online') {
+    // ໂໝດອອນລາຍ: ສະແດງປຸ່ມກັບໂຕະ ສະເພາະຄົນທີ່ມາຈາກ QR ຂອງໂຕະ
+    b.style.display = dine ? '' : 'none';
+    b.textContent = `🍽️ ສັ່ງຢູ່ໂຕະ (ໂຕະ ${dine})`;
+  } else {
+    b.style.display = '';
+    b.textContent = '🛵 ສັ່ງອອນລາຍ';
+  }
 }
 
 function toggleOnlineMode() {
   if (tableNumber === 'online') {
-    sessionStorage.removeItem('tableNumber');
-    window.location.href = 'index.html';
+    const dine = getDineTable();
+    if (!dine) return;
+    setTableNumber(dine);
   } else {
     startOnlineMode();
   }
+}
+
+// ປຸ່ມເອີ້ນພະນັກງານ: ສະແດງສະເພາະໂໝດສັ່ງຢູ່ໂຕະ
+function updateStaffButton() {
+  const btn = document.getElementById('call-staff-button');
+  if (!btn) return;
+
+  btn.style.display = tableNumber === 'online' ? 'none' : '';
+
+  if (staffCooldownTimer) {
+    clearInterval(staffCooldownTimer);
+    staffCooldownTimer = null;
+  }
+  btn.disabled = false;
+  btn.textContent = STAFF_CALL_LABEL;
 }
 
 // ===== ແຜນທີ່ເລືອກຈຸດສົ່ງ (OpenStreetMap) =====
@@ -318,9 +325,94 @@ let olMarker = null;
 let olLat = null;
 let olLng = null;
 
+// ຄ່າສົ່ງ: status = idle | loading | ok | far | error
+let olFee = { status: 'idle' };
+let olFeeReq = 0;
+let olSubmitting = false;
+
 function setMapHint(text) {
   const el = document.getElementById('ol-map-hint');
   if (el) el.textContent = text;
+}
+
+function currentOnlineType() {
+  const checked = document.querySelector('input[name="ol-type"]:checked');
+  return checked ? checked.value : 'pickup';
+}
+
+// ຖາມ server ວ່າຄ່າສົ່ງເທົ່າໃດ
+async function fetchOnlineFee(lat, lng) {
+  const id = ++olFeeReq;
+  olFee = { status: 'loading' };
+  renderOnlineTotals();
+
+  try {
+    const res = await fetch(`/api/orders/delivery-fee?lat=${lat}&lng=${lng}`);
+    const d = await res.json().catch(() => ({}));
+    if (id !== olFeeReq) return; // ມີຄຳຂໍໃໝ່ກວ່າ ຂ້າມອັນເກົ່າ
+
+    if (!res.ok) {
+      olFee = { status: 'error', msg: d.error || 'ຄິດຄ່າສົ່ງບໍ່ໄດ້ ກະລຸນາລອງໃໝ່' };
+    } else if (d.tooFar) {
+      olFee = { status: 'far', km: d.km, max: d.max_km };
+    } else {
+      olFee = { status: 'ok', km: d.km, fee: d.fee };
+    }
+  } catch (e) {
+    if (id !== olFeeReq) return;
+    olFee = { status: 'error', msg: 'ຄິດຄ່າສົ່ງບໍ່ໄດ້ ກະລຸນາລອງໃໝ່' };
+  }
+  renderOnlineTotals();
+}
+
+// ສະແດງ ຄ່າອາຫານ / ຄ່າສົ່ງ / ຍອດລວມ ໃນຟອມອອນລາຍ
+function renderOnlineTotals() {
+  const food = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const isDelivery = currentOnlineType() === 'delivery';
+
+  const feeRow = document.getElementById('ol-fee-row');
+  const feeLabel = document.getElementById('ol-fee-label');
+  const feeValue = document.getElementById('ol-fee-value');
+
+  let fee = 0;
+  let blocked = false;
+
+  if (isDelivery) {
+    feeRow.classList.remove('hidden');
+    feeRow.classList.remove('muted');
+    feeRow.classList.remove('bad');
+
+    if (olFee.status === 'idle') {
+      feeRow.classList.add('muted');
+      feeLabel.textContent = '🛵 ຄ່າສົ່ງ';
+      feeValue.textContent = 'ປັກໝຸດເພື່ອຄິດຄ່າສົ່ງ';
+    } else if (olFee.status === 'loading') {
+      feeRow.classList.add('muted');
+      feeLabel.textContent = '🛵 ຄ່າສົ່ງ';
+      feeValue.textContent = '⏳ ກຳລັງຄິດ...';
+      blocked = true;
+    } else if (olFee.status === 'far') {
+      feeRow.classList.add('bad');
+      feeLabel.textContent = `🛵 ໄລຍະທາງ ${olFee.km} ກມ`;
+      feeValue.textContent = `ໄກເກີນ ${olFee.max} ກມ ບໍ່ຮັບສົ່ງ`;
+      blocked = true;
+    } else if (olFee.status === 'error') {
+      feeRow.classList.add('bad');
+      feeLabel.textContent = '🛵 ຄ່າສົ່ງ';
+      feeValue.textContent = olFee.msg;
+      blocked = true;
+    } else {
+      fee = olFee.fee;
+      feeLabel.textContent = `🛵 ຄ່າສົ່ງ (${olFee.km} ກມ)`;
+      feeValue.textContent = `${fee.toLocaleString()} ກີບ`;
+    }
+  } else {
+    feeRow.classList.add('hidden');
+  }
+
+  document.getElementById('ol-food').textContent = food.toLocaleString();
+  document.getElementById('ol-total').textContent = (food + fee).toLocaleString();
+  document.getElementById('ol-submit').disabled = blocked || olSubmitting;
 }
 
 function setOnlinePin(lat, lng, pan = true) {
@@ -337,6 +429,7 @@ function setOnlinePin(lat, lng, pan = true) {
   }
   if (pan) olMap.setView([lat, lng], 17);
   setMapHint(`📍 ປັກໝຸດແລ້ວ (${lat.toFixed(5)}, ${lng.toFixed(5)})`);
+  fetchOnlineFee(lat, lng);
 }
 
 function initOnlineMap() {
@@ -374,8 +467,6 @@ function useMyLocation() {
 
 function openOnlineForm() {
   document.getElementById('ol-error').classList.add('hidden');
-  document.getElementById('ol-total').textContent =
-    cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const saved = JSON.parse(sessionStorage.getItem('onlineBill') || 'null');
   if (saved) {
@@ -391,7 +482,7 @@ function closeOnlineForm() {
 }
 
 function onOnlineTypeChange() {
-  const type = document.querySelector('input[name="ol-type"]:checked').value;
+  const type = currentOnlineType();
   document.getElementById('ol-type-pickup').classList.toggle('active', type === 'pickup');
   document.getElementById('ol-type-delivery').classList.toggle('active', type === 'delivery');
 
@@ -401,13 +492,19 @@ function onOnlineTypeChange() {
   document.getElementById('ol-pay-note').textContent =
     type === 'delivery' ? 'ຈ່າຍຕອນຮັບອາຫານທີ່ບ້ານ' : 'ຈ່າຍຕອນມາຮັບອາຫານ';
 
-  if (type === 'delivery') initOnlineMap();
+  if (type === 'delivery') {
+    initOnlineMap();
+    // ຖ້າເຄີຍປັກໝຸດໄວ້ແລ້ວ ແຕ່ຍັງບໍ່ໄດ້ຄິດຄ່າສົ່ງ ໃຫ້ຄິດໃໝ່
+    if (olLat !== null && olLng !== null && olFee.status === 'idle') {
+      fetchOnlineFee(olLat, olLng);
+    }
+  }
+  renderOnlineTotals();
 }
 
 async function submitOnlineOrder() {
   const errEl = document.getElementById('ol-error');
-  const btn = document.getElementById('ol-submit');
-  const type = document.querySelector('input[name="ol-type"]:checked').value;
+  const type = currentOnlineType();
   const name = document.getElementById('ol-name').value.trim();
   const phone = document.getElementById('ol-phone').value.trim();
   const address = document.getElementById('ol-address').value.trim();
@@ -423,10 +520,14 @@ async function submitOnlineOrder() {
   if (type === 'delivery' && (olLat === null || olLng === null)) {
     return fail('ກະລຸນາປັກໝຸດຈຸດສົ່ງເທິງແຜນທີ່');
   }
+  if (type === 'delivery' && olFee.status !== 'ok') {
+    return fail('ຍັງຄິດຄ່າສົ່ງບໍ່ໄດ້ ກະລຸນາລໍຖ້າ ຫຼື ປັກໝຸດໃໝ່');
+  }
   errEl.classList.add('hidden');
 
   const items = cart.map(i => ({ product_id: i.product_id, quantity: i.quantity }));
-  btn.disabled = true;
+  olSubmitting = true;
+  renderOnlineTotals();
 
   try {
     const res = await fetch('/api/orders/online', {
@@ -456,11 +557,13 @@ async function submitOnlineOrder() {
     closeCart();
     closeOnlineForm();
     loadProducts();
+    olFee = { status: 'idle' };
     document.getElementById('success-overlay').classList.remove('hidden');
   } catch (e) {
     fail('ເຊື່ອມຕໍ່ບໍ່ໄດ້ ກະລຸນາລອງໃໝ່');
   } finally {
-    btn.disabled = false;
+    olSubmitting = false;
+    renderOnlineTotals();
   }
 }
 
@@ -519,7 +622,10 @@ async function openBillModal() {
       return;
     }
 
-    const total = myBill.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    // ຄ່າສົ່ງ (ມີສະເພາະບິນອອນລາຍແບບສົ່ງເຖິງບ້ານ)
+    const deliveryFee = tableNumber === 'online' ? Number(myBill.delivery_fee || 0) : 0;
+    const total =
+      myBill.items.reduce((sum, i) => sum + i.price * i.quantity, 0) + deliveryFee;
 
     itemsEl.innerHTML = myBill.items.map(i => `
       <tr>
@@ -535,7 +641,12 @@ async function openBillModal() {
         <td>${i.quantity}</td>
         <td>${i.price * i.quantity} ກີບ</td>
       </tr>
-    `).join('');
+    `).join('') + (deliveryFee > 0
+      ? `<tr>
+           <td colspan="2">🛵 ຄ່າສົ່ງ${myBill.delivery_distance ? ` (${escapeHtml(myBill.delivery_distance)} ກມ)` : ''}</td>
+           <td>${deliveryFee.toLocaleString()} ກີບ</td>
+         </tr>`
+      : '');
     totalEl.textContent = `${total} ກີບ`;
 
     // ອອນລາຍ = ຈ່າຍເງິນສົດ ບໍ່ຕ້ອງສະແດງ QR
@@ -746,7 +857,7 @@ function startStaffCooldown(until) {
 }
 
 function restoreStaffCooldown() {
-  if (!tableNumber) return;
+  if (!tableNumber || tableNumber === 'online') return;
   const until = getStaffCooldownUntil();
   if (until > Date.now()) startStaffCooldown(until);
 }
@@ -789,3 +900,6 @@ async function callStaff() {
   setStaffCooldownUntil(until);
   startStaffCooldown(until);
 }
+
+// ເລີ່ມແອັບ (ຕ້ອງຢູ່ທ້າຍໄຟລ໌ເພື່ອໃຫ້ຕົວປ່ຽນທັງໝົດຖືກປະກາດກ່ອນ)
+initApp();

@@ -100,7 +100,7 @@ export default function Dashboard() {
   return (
     <div className="dash-page">
       <div className="dash-box">
-        <h2>📊 ປຽບທຽບຍອດຂາຍ (ກົດເລືອກຊ່ວງເວລາ)</h2>
+        <h2>📊 ຍອດຂາຍ</h2>
 
         <div className="dash-period-tabs">
           {PERIODS.map((p) => (

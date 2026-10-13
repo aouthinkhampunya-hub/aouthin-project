@@ -15,6 +15,16 @@ function toCoord(v) {
   return Number(v);
 }
 
+// ເລກບິນຖັດໄປ ແຍກເປັນ 2 ກຸ່ມ: ໜ້າໂຕະ (dine_in) ກັບ ອອນລາຍ (pickup / delivery)
+// ຕ້ອງເອີ້ນພາຍໃນ transaction ແລະກ່ອນ INSERT ບິນ
+async function nextBillNo(connection, isOnline) {
+  const cond = isOnline ? `order_type <> 'dine_in'` : `order_type = 'dine_in'`;
+  const [[row]] = await connection.query(
+    `SELECT COALESCE(MAX(bill_no), 0) + 1 AS next FROM bills WHERE ${cond} FOR UPDATE`
+  );
+  return Number(row.next);
+}
+
 // ===== ສະລິບໂອນເງິນ =====
 const SLIP_DIR = path.join(__dirname, '../../public/uploads/slips');
 const SLIP_MAX_BYTES = 5 * 1024 * 1024;
@@ -52,7 +62,8 @@ function writeSlip({ buf, ext }) {
 router.get('/', async (req, res) => {
   try {
     const [orders] = await pool.query(`
-      SELECT orders.*, products.name AS product_name, products.price, bills.table_number
+      SELECT orders.*, products.name AS product_name, products.price,
+             bills.table_number, bills.bill_no, bills.order_type
       FROM orders
       JOIN products ON orders.product_id = products.id
       JOIN bills ON orders.bill_id = bills.id
@@ -160,11 +171,13 @@ router.post('/', async (req, res) => {
     let bill = bills[0];
 
     if (!bill) {
+      // ບິນໃໝ່ຂອງໂຕະ → ຮັບເລກບິນຖັດໄປຂອງກຸ່ມ "ໜ້າໂຕະ"
+      const billNo = await nextBillNo(connection, false);
       const [result] = await connection.query(
-        `INSERT INTO bills (table_number) VALUES (?)`,
-        [table_number]
+        `INSERT INTO bills (table_number, bill_no) VALUES (?, ?)`,
+        [table_number, billNo]
       );
-      bill = { id: result.insertId };
+      bill = { id: result.insertId, bill_no: billNo };
     }
 
     for (const item of items) {
@@ -200,7 +213,7 @@ router.post('/', async (req, res) => {
     await connection.commit();
     connection.release();
 
-    res.json({ bill_id: bill.id, message: 'ສັ່ງອາຫານສຳເລັດ' });
+    res.json({ bill_id: bill.id, bill_no: bill.bill_no, message: 'ສັ່ງອາຫານສຳເລັດ' });
   } catch (err) {
     await connection.rollback();
     connection.release();
@@ -222,8 +235,8 @@ router.post('/online', async (req, res) => {
   if (!customer_name || !String(customer_name).trim()) {
     return res.status(400).json({ error: 'ກະລຸນາໃສ່ຊື່' });
   }
-  if (!/^[0-9+\s-]{8,15}$/.test(String(customer_phone || ''))) {
-    return res.status(400).json({ error: 'ເບີໂທບໍ່ຖືກຕ້ອງ' });
+    if (!/^020\d{8}$/.test(String(customer_phone || '').trim())) {
+    return res.status(400).json({ error: 'ເບີໂທບໍ່ຖືກຕ້ອງ (ຕ້ອງເປັນ 020 ຕາມດ້ວຍເລກ 8 ໂຕ, ລວມ 11 ໂຕ)' });
   }
   if (order_type === 'delivery' && !String(address || '').trim()) {
     return res.status(400).json({ error: 'ກະລຸນາໃສ່ທີ່ຢູ່ສົ່ງ' });
@@ -295,10 +308,13 @@ router.post('/online', async (req, res) => {
     // ບັນທຶກຮູບສະລິບ ຫຼັງຈາກກວດສະຕັອກຜ່ານແລ້ວ
     if (slip) savedSlip = writeSlip(slip);
 
+    // ຮັບເລກບິນຖັດໄປຂອງກຸ່ມ "ອອນລາຍ"
+    const billNo = await nextBillNo(connection, true);
+
     const [result] = await connection.query(
       `INSERT INTO bills
-         (table_number, order_type, customer_name, customer_phone, address, payment_method, slip_image, latitude, longitude, delivery_fee, delivery_distance)
-       VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (table_number, order_type, customer_name, customer_phone, address, payment_method, slip_image, latitude, longitude, delivery_fee, delivery_distance, bill_no)
+       VALUES (0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         order_type,
         String(customer_name).trim(),
@@ -310,6 +326,7 @@ router.post('/online', async (req, res) => {
         lng,
         deliveryFee,
         deliveryKm,
+        billNo,
       ]
     );
     const billId = result.insertId;
@@ -326,7 +343,7 @@ router.post('/online', async (req, res) => {
     }
 
     await connection.commit();
-    res.json({ bill_id: billId, message: 'ສັ່ງອາຫານສຳເລັດ' });
+    res.json({ bill_id: billId, bill_no: billNo, message: 'ສັ່ງອາຫານສຳເລັດ' });
   } catch (err) {
     await connection.rollback();
     // ລຶບຮູບສະລິບທີ່ບັນທຶກໄປແລ້ວ ຖ້າສັ່ງບໍ່ສຳເລັດ
@@ -348,7 +365,7 @@ router.get('/online/:id', async (req, res) => {
   try {
     const phone = String(req.query.phone || '').trim();
     const [bills] = await pool.query(
-      `SELECT id, status, order_type, customer_name, address, payment_method,
+      `SELECT id, bill_no, status, order_type, customer_name, address, payment_method,
               delivery_fee, delivery_distance
        FROM bills
        WHERE id = ? AND customer_phone = ? AND order_type <> 'dine_in'`,

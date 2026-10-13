@@ -42,18 +42,21 @@ const typeOf = (bill) => bill.order_type || 'dine_in';
 const isOnline = (bill) => typeOf(bill) !== 'dine_in';
 const onlineLabel = (bill) =>
   typeOf(bill) === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ມາຮັບເຄື່ອງເອງ';
+// ເລກບິນທີ່ສະແດງ: ໃຊ້ bill_no (ແຍກຕາມໜ້າໂຕະ/ອອນລາຍ) ຖ້າບໍ່ມີ ໃຊ້ id ແທນ
+const billNo = (bill) => (bill.bill_no ? bill.bill_no : bill.id);
 
 export default function Tables() {
   const [bills, setBills] = useState([]);
   const [calls, setCalls] = useState([]);
   const [loaded, setLoaded] = useState(false);
-  const [totalTables, setTotalTables] = useState(20);
+  const [tableList, setTableList] = useState([]);        // ລາຍຊື່ເລກໂຕະຈາກ backend (ອາດຂ້າມເລກ)
   const [listOpen, setListOpen] = useState(null);        // null | 'dinein' | 'pickup' | 'delivery'
   const [focusTable, setFocusTable] = useState(null);
   const [popup, setPopup] = useState(null);
   const [askPaid, setAskPaid] = useState(false);
   const [paying, setPaying] = useState(false);
   const [toast, setToast] = useState('');
+  const [zoomSrc, setZoomSrc] = useState(null);          // ຮູບສະລິບທີ່ຂະຫຍາຍຢູ່
 
   const audioCtxRef = useRef(null);
   const knownOrderIds = useRef(new Set());
@@ -72,7 +75,7 @@ export default function Tables() {
   async function loadTableCount() {
     try {
       const c = await getTableCount();
-      if (c?.count) setTotalTables(c.count);
+      if (Array.isArray(c?.tables)) setTableList(c.tables.map(Number));
     } catch (e) {}
   }
 
@@ -142,11 +145,12 @@ export default function Tables() {
     return () => { clearInterval(t); document.removeEventListener('click', unlock); };
   }, []);
 
-  // Esc ປິດ popup (ປິດອັນເທິງສຸດກ່ອນ)
+  // Esc ປິດ popup (ປິດອັນເທິງສຸດກ່ອນ: ຮູບສະລິບຂະຫຍາຍ → ຢືນຢັນຈ່າຍ → ໃບບິນ → ລາຍການ)
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
-      if (askPaid) setAskPaid(false);
+      if (zoomSrc) setZoomSrc(null);
+      else if (askPaid) setAskPaid(false);
       else if (popup) closePopup();
       else if (listOpen) setListOpen(null);
     };
@@ -214,8 +218,13 @@ export default function Tables() {
   const byTable = {};
   dineInBills.forEach((b) => { byTable[b.table_number] = b; });
 
-  const maxBillTable = dineInBills.reduce((m, b) => Math.max(m, Number(b.table_number) || 0), 0);
-  const boardSize = Math.max(totalTables, maxBillTable);
+  // ເລກໂຕະທີ່ສະແດງໃນກະດານ = ລາຍຊື່ຈາກ backend + ໂຕະທີ່ມີບິນເປີດຢູ່ (ກັນບິນຫາຍ ຖ້າໂຕະຖືກລຶບ)
+  const boardNumbers = Array.from(
+    new Set([
+      ...tableList,
+      ...dineInBills.map((b) => Number(b.table_number)).filter((n) => n > 0),
+    ])
+  ).sort((a, b) => a - b);
 
   const LISTS = {
     dinein: { bills: dineInBills, title: '🍽️ ອໍເດີ້ໜ້າໂຕະ', empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
@@ -235,7 +244,7 @@ export default function Tables() {
       <div className="table-card" id={online ? `table-section-online-${bill.id}` : `table-section-${bill.table_number}`} key={bill.id}>
         {online ? (
           <>
-            <h2>{onlineLabel(bill)} #{bill.id}</h2>
+            <h2>{onlineLabel(bill)} #{billNo(bill)}</h2>
             <p style={{ margin: '0 0 12px', fontWeight: 700, lineHeight: 1.7 }}>
               👤 {bill.customer_name} &nbsp;📞{' '}
               <a href={`tel:${bill.customer_phone}`}>{bill.customer_phone}</a>
@@ -257,10 +266,14 @@ export default function Tables() {
             {bill.payment_method === 'transfer' && (
               bill.slip_image ? (
                 <div className="olx-slip-wrap">
-                  <div className="olx-slip-label">🧾 ສະລິບການໂອນເງິນ (ກົດເພື່ອເບິ່ງຂະໜາດເຕັມ)</div>
-                  <a href={API_BASE + bill.slip_image} target="_blank" rel="noreferrer">
+                  <div className="olx-slip-label">🧾 ສະລິບການໂອນເງິນ (ກົດເພື່ອຂະຫຍາຍ)</div>
+                  <button
+                    type="button"
+                    className="tb-slip-trigger"
+                    onClick={() => setZoomSrc(API_BASE + bill.slip_image)}
+                  >
                     <img className="olx-slip" src={API_BASE + bill.slip_image} alt="ສະລິບໂອນເງິນ" />
-                  </a>
+                  </button>
                 </div>
               ) : (
                 <p className="olx-slip-missing">⚠️ ບໍ່ພົບຮູບສະລິບ</p>
@@ -287,14 +300,16 @@ export default function Tables() {
             ))}
           </tbody>
         </table>
-                {Number(bill.delivery_fee) > 0 && (
+        {Number(bill.delivery_fee) > 0 && (
           <p style={{ margin: '0 0 6px', fontWeight: 700 }}>
             🛵 ຄ່າສົ່ງ ({bill.delivery_distance} ກມ): {Number(bill.delivery_fee).toLocaleString()} ກີບ
           </p>
         )}
         <p className="cart-total">ລວມ: {total} ກີບ</p>
         {readyIds.length > 0 && (
-          <button className="confirm-btn" onClick={() => markAllServed(readyIds)}>🍽️ ເສີບທັງໝົດ</button>
+          <button className="confirm-btn" onClick={() => markAllServed(readyIds)}>
+            {online ? '📦 ອໍເດີ້ພ້ອມສົ່ງແລ້ວ' : '🍽️ ເສີບທັງໝົດ'}
+          </button>
         )}
         <button className="confirm-btn" disabled={!allServed} onClick={() => goToBill(bill.id)}>
           {allServed
@@ -307,6 +322,73 @@ export default function Tables() {
 
   return (
     <main>
+      {/* ສະໄຕລ໌ຂອງຮູບສະລິບຂະຫຍາຍ (lightbox) */}
+      <style>{`
+        body.is-admin .tb-slip-trigger {
+          display: block;
+          margin: 0;
+          padding: 0;
+          border: none;
+          background: none;
+          cursor: zoom-in;
+        }
+        body.is-admin .tb-lightbox {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          z-index: 20000;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 14px;
+          padding: 24px 16px;
+          background: rgba(10, 6, 3, 0.88);
+        }
+        body.is-admin .tb-lightbox-img {
+          max-width: 100%;
+          max-height: calc(100vh - 120px);
+          object-fit: contain;
+          border-radius: 12px;
+          background: #fff;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+        body.is-admin .tb-lightbox-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          width: 44px;
+          height: 44px;
+          border: none;
+          border-radius: 50%;
+          background: #fff;
+          color: #c0392b;
+          font-size: 22px;
+          font-weight: 800;
+          line-height: 1;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+          transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+        }
+        body.is-admin .tb-lightbox-close:hover {
+          background: #c0392b;
+          color: #fff;
+          transform: scale(1.08);
+        }
+        body.is-admin .tb-lightbox-open {
+          padding: 9px 18px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.15);
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+          text-decoration: none;
+          border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+        body.is-admin .tb-lightbox-open:hover {
+          background: rgba(255, 255, 255, 0.28);
+        }
+      `}</style>
+
       <div id="staff-calls-bar">
         {calls.map((c) => (
           <div className="staff-call-alert" key={c.id}>
@@ -335,9 +417,9 @@ export default function Tables() {
         ))}
       </div>
 
-      {/* ກະດານໂຕະໃນຮ້ານ (ກົດໂຕະທີ່ມີຄົນ ເພື່ອເປີດລາຍລະອຽດ) */}
+      {/* ກະດານໂຕະໃນຮ້ານ (ອ່ານຈາກລາຍຊື່ເລກໂຕະ ກົດໂຕະທີ່ມີຄົນ ເພື່ອເປີດລາຍລະອຽດ) */}
       <div id="table-board" className="table-board">
-        {Array.from({ length: boardSize }, (_, i) => i + 1).map((n) => {
+        {boardNumbers.map((n) => {
           const bill = byTable[n];
           return bill ? (
             <div key={n} className="board-cell occupied" onClick={() => openTable(n)}>
@@ -380,7 +462,7 @@ export default function Tables() {
                   <h2>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h2>
                   <p>
                     {isOnline(popup.bill)
-                      ? `${onlineLabel(popup.bill)} #${popup.bill.id}`
+                      ? `${onlineLabel(popup.bill)} #${billNo(popup.bill)}`
                       : `ໂຕະ ${popup.bill.table_number}`}
                     &nbsp;•&nbsp; {popup.now}
                   </p>
@@ -404,10 +486,10 @@ export default function Tables() {
                   </tbody>
                 </table>
                 {Number(popup.bill.delivery_fee) > 0 && (
-  <p style={{ textAlign: 'right', margin: '0 0 8px' }}>
-    🛵 ຄ່າສົ່ງ ({popup.bill.delivery_distance} ກມ): {Number(popup.bill.delivery_fee).toLocaleString()} ກີບ
-  </p>
-)}
+                  <p style={{ textAlign: 'right', margin: '0 0 8px' }}>
+                    🛵 ຄ່າສົ່ງ ({popup.bill.delivery_distance} ກມ): {Number(popup.bill.delivery_fee).toLocaleString()} ກີບ
+                  </p>
+                )}
                 <div className="bp-total">
                   <span>ຍອດລວມທັງໝົດ</span>
                   <span>{billTotal(popup.bill)} ກີບ</span>
@@ -446,6 +528,28 @@ export default function Tables() {
             </div>
           )}
         </>,
+        document.body
+      )}
+
+      {/* ===== ຮູບສະລິບຂະຫຍາຍ (ປິດໄດ້ດ້ວຍ ✕ / ກົດພື້ນມືດ / Esc) ===== */}
+      {zoomSrc && createPortal(
+        <div
+          className="tb-lightbox"
+          onClick={(e) => e.target === e.currentTarget && setZoomSrc(null)}
+        >
+          <button
+            type="button"
+            className="tb-lightbox-close"
+            aria-label="ປິດຮູບ"
+            onClick={() => setZoomSrc(null)}
+          >
+            ✕
+          </button>
+          <img className="tb-lightbox-img" src={zoomSrc} alt="ສະລິບການໂອນເງິນ" />
+          <a className="tb-lightbox-open" href={zoomSrc} target="_blank" rel="noreferrer">
+            ເປີດໃນແທັບໃໝ່
+          </a>
+        </div>,
         document.body
       )}
 
