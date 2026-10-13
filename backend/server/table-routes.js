@@ -29,11 +29,17 @@ function parseTableNumber(v) {
   return n >= 1 && n <= MAX_TABLE_NUMBER ? n : null;
 }
 
-// ລິ້ງຂອງ QR ໂຕະ: ຖ້າຕັ້ງ FRONTEND_URL ໃນ .env ຈະຊີ້ໄປໜ້າ React ກົງໆ
-// ຖ້າບໍ່ຕັ້ງ ໃຊ້ໜ້າເມນູຂອງ backend ຄືເກົ່າ
+// ລິ້ງຂອງ QR ໂຕະ:
+// - ຖ້າຕັ້ງ FRONTEND_URL ແລະມັນບໍ່ແມ່ນ localhost -> ຊີ້ໄປໜ້າ React ຕາມ FRONTEND_URL
+// - ຖ້າ FRONTEND_URL ເປັນ localhost ແຕ່ server ແລ່ນ online (ເຊັ່ນ Render) -> ບໍ່ໃຊ້ມັນ
+//   (ມືຖືລູກຄ້າເປີດ localhost ບໍ່ໄດ້) ໃຊ້ທີ່ຢູ່ຈິງຂອງ server ແທນ
+// - ຖ້າບໍ່ຕັ້ງ ໃຊ້ໜ້າເມນູຂອງ backend ຄືເກົ່າ
 function menuBaseUrl(req) {
   const front = (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
-  if (front) return `${front}/menu`;
+  const frontIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(front);
+  const reqIsLocal = /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(req.get('host') || '');
+
+  if (front && (!frontIsLocal || reqIsLocal)) return `${front}/menu`;
   return `${req.protocol}://${req.get('host')}/menu/index.html`;
 }
 
@@ -55,16 +61,20 @@ async function removeTable(n, res) {
 }
 
 module.exports = function (app) {
-  // ສ້າງ QR ທຸກໂຕະ
+  // ສ້າງ QR ທຸກໂຕະ (ມີ menuUrl ໃຫ້ກວດໄດ້ວ່າ QR ຊີ້ໄປບ່ອນໃດ)
   app.get('/api/qrcode/tables', async (req, res) => {
     try {
       const base = menuBaseUrl(req);
       const numbers = await getTables();
       const tables = await Promise.all(
-        numbers.map(async (n) => ({
-          table: n,
-          qrImage: await QRCode.toDataURL(`${base}?table=${n}`),
-        }))
+        numbers.map(async (n) => {
+          const menuUrl = `${base}?table=${n}`;
+          return {
+            table: n,
+            menuUrl,
+            qrImage: await QRCode.toDataURL(menuUrl),
+          };
+        })
       );
       res.json({ tables });
     } catch (err) {
