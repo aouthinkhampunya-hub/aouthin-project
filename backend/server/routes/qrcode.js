@@ -9,9 +9,14 @@ const TOTAL_TABLES = 20;
 const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || 'https://aouthin-project-1.onrender.com').replace(/\/$/, '');
 
 // ທີ່ຢູ່ໜ້າ React (frontend) ຖ້າຕັ້ງ FRONTEND_URL ໄວ້ ຈະໃຊ້ອັນນີ້ກ່ອນ
-function getFrontendBase() {
-  const raw = process.env.FRONTEND_URL;
-  return raw ? raw.replace(/\/$/, '') : '';
+// ຍົກເວັ້ນ: ຖ້າມັນເປັນ localhost ແຕ່ server ແລ່ນ online ຈະບໍ່ໃຊ້ (ມືຖືລູກຄ້າເປີດ localhost ບໍ່ໄດ້)
+function getFrontendBase(req) {
+  const raw = (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
+  if (!raw) return '';
+  const frontIsLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(raw);
+  const reqIsLocal = /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(req.get('host') || '');
+  if (frontIsLocal && !reqIsLocal) return '';
+  return raw;
 }
 
 // QR ອັນດຽວ (ໜ້າເມນູລວມ ບໍ່ລະບຸໂຕະ)
@@ -19,7 +24,7 @@ function getFrontendBase() {
 // ບໍ່ມີ            -> PUBLIC_BASE_URL/menu/index.html (ໜ້າເກົ່າ)
 router.get('/', async (req, res) => {
   try {
-    const frontend = getFrontendBase();
+    const frontend = getFrontendBase(req);
     const menuUrl = frontend
       ? `${frontend}/menu`
       : `${PUBLIC_BASE_URL}/menu/index.html`;
