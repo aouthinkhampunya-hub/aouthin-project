@@ -227,7 +227,7 @@ export default function Tables() {
   ).sort((a, b) => a - b);
 
   const LISTS = {
-    dinein: { bills: dineInBills, title: '🍽️ ອໍເດີ້ໜ້າໂຕະ', empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
+    dinein: { bills: dineInBills, title: '🍽️ ອໍເດີ້ໜ້າຮ່່້ານ', empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
     pickup: { bills: pickupBills, title: '🥡 ມາຮັບເຄື່ອງເອງ', empty: 'ຍັງບໍ່ມີອໍເດີ້ມາຮັບເຄື່ອງເອງ' },
     delivery: { bills: deliveryBills, title: '🛵 ສົ່ງເຖິງບ້ານ', empty: 'ຍັງບໍ່ມີອໍເດີ້ສົ່ງເຖິງບ້ານ' },
   };
@@ -401,7 +401,7 @@ export default function Tables() {
       {/* 3 ປຸ່ມ: ໜ້າໂຕະ / ມາຮັບເຄື່ອງເອງ / ສົ່ງເຖິງບ້ານ */}
       <div className="ord-tabs">
         {[
-          { key: 'dinein', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ', count: dineInBills.length },
+          { key: 'dinein', icon: '🍽️', label: 'ອໍເດີ້ໜ້າຮ້ານ', count: dineInBills.length },
           { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ', count: pickupBills.length },
           { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ', count: deliveryBills.length },
         ].map((t) => (

@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
 const path = require('path');
 const { initDb } = require('./db');
 const productsRouter = require('./routes/products');
@@ -38,7 +40,89 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+
+// ===== ແຍກໜ້າ (ຝັ່ງ backend / ໜ້າ HTML ເກົ່າ): ບັນຊີຄົວ (role 'kitchen') ເປີດໜ້າ admin ເກົ່າ (/admin/*.html) ບໍ່ໄດ້ =====
+// ຖືກສົ່ງໄປໜ້າຄົວຂອງ backend ເອງ (/kitchen/) ບໍ່ໄດ້ສົ່ງໄປ frontend. ຍົກເວັ້ນໜ້າລັອກອິນ ເພື່ອໃຫ້ສະຫຼັບບັນຊີໄດ້
+const KITCHEN_HOME = '/kitchen/';
+
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+
+  const p = req.path;
+  const isAdminPage =
+    p === '/admin' || p === '/admin/' || (p.startsWith('/admin/') && p.endsWith('.html'));
+  if (!isAdminPage || p === '/admin/login.html') return next();
+
+  const token = req.cookies && req.cookies.token;
+  if (!token) return next();
+
+  try {
+    const user = jwt.verify(token, authRouter.JWT_SECRET);
+    if (user.role === 'kitchen') return res.redirect(KITCHEN_HOME);
+  } catch (e) {
+    // token ໝົດອາຍຸ/ບໍ່ຖືກ → ປ່ອຍຕາມປົກກະຕິ
+  }
+  next();
+});
+
+// ===== ໜ້າຄົວຂອງ backend (ແຍກຈາກ admin): /kitchen/ ແລະ ໜ້າລັອກອິນຄົວ /kitchen/login =====
+// ໄຟລ໌ຢູ່ backend/public/kitchen/ (index.html = ໜ້າຄົວ, login.html = ລັອກອິນຄົວ)
+app.get('/kitchen/login', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/kitchen/login.html'));
+});
+
+// ===== ເອົາ "ຄົວ" ອອກຈາກໜ້າ admin ເກົ່າ (/admin/*.html) =====
+// - /admin/kitchen.html ສົ່ງໄປໜ້າຄົວແຍກຂອງ backend (/kitchen/) ສຳລັບທຸກຄົນ
+// - ໜ້າ admin ອື່ນ: ລຶບລິ້ງ "ຄົວ" (href="kitchen.html") ອອກຈາກແຖບເມນູກ່ອນສົ່ງໃຫ້ browser
+//   (ວິທີຊົ່ວຄາວ ບໍ່ຕ້ອງແກ້ HTML ທຸກໄຟລ໌)
+app.get(/^\/admin\/([\w-]+)\.html$/, (req, res, next) => {
+  const name = req.params[0];
+  if (name === 'kitchen') return res.redirect(KITCHEN_HOME);
+
+  const file = path.join(__dirname, '../public/admin', name + '.html');
+  fs.readFile(file, 'utf8', (err, html) => {
+    if (err) return next();
+    const cleaned = html.replace(/<a\b[^>]*\bhref=["']kitchen\.html["'][^>]*>[\s\S]*?<\/a>[ \t]*/gi, '');
+    res.type('html').send(cleaned);
+  });
+});
+
 app.use(express.static(path.join(__dirname, '../public')));
+
+// ===== ບັນຊີຄົວ (role 'kitchen') ໃຊ້ API ໄດ້ສະເພາະທີ່ຄົວຕ້ອງໃຊ້ =====
+// ຄົວຕ້ອງໃຊ້ແຕ່: ກວດ session, ອອກຈາກລະບົບ, ເບິ່ງບິນ, ປ່ຽນສະຖານະອາຫານ, ຍົກເລີກລາຍການ
+// API ອື່ນທັງໝົດ (ເມນູ, ລາຍງານ, ພະນັກງານ, ຕັ້ງຄ່າ, ປິດບິນ...) ຖືກບລັອກສຳລັບບັນຊີຄົວ
+const KITCHEN_ALLOWED = [
+  ['GET', /^\/api\/auth\/me$/],
+  ['POST', /^\/api\/auth\/login$/],
+  ['POST', /^\/api\/auth\/logout$/],
+  ['GET', /^\/api\/health$/],
+  ['GET', /^\/api\/orders\/bills$/],
+  ['PUT', /^\/api\/orders\/\d+$/],
+  ['DELETE', /^\/api\/orders\/\d+$/],
+];
+
+app.use('/api', (req, res, next) => {
+  if (req.method === 'OPTIONS') return next();
+
+  const token = req.cookies && req.cookies.token;
+  if (!token) return next();
+
+  let user;
+  try {
+    user = jwt.verify(token, authRouter.JWT_SECRET);
+  } catch (e) {
+    return next(); // token ໝົດອາຍຸ/ບໍ່ຖືກ → ປ່ອຍໃຫ້ middleware ຂອງແຕ່ລະເສັ້ນທາງຈັດການ
+  }
+
+  if (user.role !== 'kitchen') return next();
+
+  const p = req.originalUrl.split('?')[0];
+  const ok = KITCHEN_ALLOWED.some(([method, re]) => method === req.method && re.test(p));
+  if (ok) return next();
+
+  return res.status(403).json({ error: 'ບັນຊີຄົວບໍ່ມີສິດໃຊ້ງານສ່ວນນີ້' });
+});
 
 app.use('/api/auth', authRouter);
 app.use('/api/products', productsRouter);

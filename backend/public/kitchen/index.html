@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ຫ້ອງຄົວ AOUTHIN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Noto Sans Lao', 'Phetsarath OT', system-ui, sans-serif;
+      background: #fff7f0;
+      color: #2b1b0e;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 24px;
+      background: linear-gradient(to right, #8B0000, #a30000);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      font-size: 14px;
+    }
+    .topbar strong { font-size: 18px; }
+    .topbar .right { display: flex; align-items: center; gap: 14px; }
+    .topbar button {
+      cursor: pointer;
+      padding: 6px 16px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .page { padding: 20px; max-width: 1400px; margin: 0 auto; }
+
+    /* ແຖບ 3 ປະເພດ */
+    .tabs { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .tab {
+      flex: 1 1 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px;
+      border: 2px solid #e8d5c4;
+      border-radius: 16px;
+      background: #fff;
+      color: #7a1f0f;
+      font-size: 17px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .tab.has { background: #fff3cd; border-color: #e0a800; }
+    .tab.active { background: #7a1f0f; border-color: #7a1f0f; color: #fff; }
+    .tab-count {
+      min-width: 28px;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: #b9a898;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .tab.has .tab-count { background: #c0392b; }
+    .tab.active .tab-count { background: #ffc93c; color: #2b1b0e; }
+
+    .empty { text-align: center; padding: 70px 16px; color: #6b5a4c; font-size: 17px; }
+
+    /* ບັດອໍເດີ້ */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .card {
+      padding: 18px;
+      border-radius: 18px;
+      background: #fff;
+      border-left: 8px solid #e0a800;
+      box-shadow: 0 2px 12px rgba(122, 31, 15, 0.1);
+    }
+    .card.cooking { border-left-color: #2e7d32; }
+    .card h2 { margin: 0 0 6px; font-size: 22px; color: #7a1f0f; }
+    .cust { margin: 0 0 10px; font-weight: 700; color: #4a3a2c; }
+    .bulk { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .bulk button {
+      flex: 1 1 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-start-all { background: #e67e22; }
+    .btn-done-all { background: #2e7d32; }
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      border-top: 1px solid #f1e6dc;
+    }
+    .item-name { font-size: 17px; font-weight: 700; }
+    .item-qty { color: #b8380e; font-weight: 900; font-size: 17px; }
+    .item-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .item-actions button {
+      padding: 9px 12px;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-start { background: #e67e22; }
+    .btn-done { background: #2e7d32; }
+    .btn-cancel { background: #c0392b; }
+
+    /* popup ຢືນຢັນຍົກເລີກ */
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(20, 10, 4, 0.55);
+    }
+    .modal {
+      width: 100%;
+      max-width: 360px;
+      padding: 26px 22px 20px;
+      border-radius: 22px;
+      background: #fff;
+      text-align: center;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    }
+    .modal .icon { font-size: 40px; }
+    .modal h3 { margin: 8px 0; color: #7a1f0f; }
+    .modal p { margin: 0 0 18px; color: #4a3a2c; }
+    .modal .actions { display: flex; gap: 10px; }
+    .modal .actions button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .modal .no { background: #f3e4de; color: #7a1f0f; }
+    .modal .yes { background: #c0392b; color: #fff; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      z-index: 2000;
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: #2b1b0e;
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>👨‍🍳 ຫ້ອງຄົວ AOUTHIN</strong>
+    <span class="right">
+      <span id="user-name"></span>
+      <button type="button" data-act="logout">ອອກຈາກລະບົບ</button>
+    </span>
+  </div>
+
+  <main class="page">
+    <div class="tabs" id="tabs"></div>
+    <div id="content"></div>
+  </main>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+
+  <script>
+    // ຄົວເຮັດແຕ່ 2 ຂັ້ນ: pending -> cooking -> ready
+    var TABS = [
+      { key: 'dine_in', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ' },
+      { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ' },
+      { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ' }
+    ];
+
+    var state = { bills: null, tab: 'dine_in', cancelId: null };
+    var knownIds = {};
+    var firstLoad = true;
+    var audioCtx = null;
+    var toastTimer = null;
+
+    function esc(v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ເອີ້ນ API (ຖ້າ session ໝົດ ສົ່ງໄປໜ້າລັອກອິນຄົວຂອງ backend)
+    async function api(path, options) {
+      var res = await fetch(path, Object.assign({
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      }, options || {}));
+      var data = await res.json().catch(function () { return {}; });
+      if (res.status === 401) {
+        window.location.href = '/kitchen/login.html';
+        throw data;
+      }
+      if (!res.ok) throw data;
+      return data;
+    }
+
+    function typeOf(b) { return b.order_type || 'dine_in'; }
+    function isOnline(b) { return typeOf(b) !== 'dine_in'; }
+    function billTitle(b) {
+      if (!isOnline(b)) return 'ໂຕະ ' + esc(b.table_number);
+      var t = typeOf(b) === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ມາຮັບເອງ';
+      return t + ' #' + esc(b.bill_no ? b.bill_no : b.id);
+    }
+
+    // ===== ສຽງແຈ້ງເຕືອນ =====
+    function getCtx() {
+      if (!audioCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      return audioCtx;
+    }
+    function playBeep() {
+      try {
+        var ctx = getCtx();
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        [0, 0.18].forEach(function (offset) {
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = 880;
+          gain.gain.setValueAtTime(0.001, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.9, now + offset + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.15);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + 0.16);
+        });
+      } catch (e) {}
+    }
+    document.addEventListener('click', function () { getCtx(); }, { once: true });
+
+    function showToast(msg) {
+      var root = document.getElementById('toast-root');
+      root.innerHTML = '<div class="toast">' + esc(msg) + '</div>';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { root.innerHTML = ''; }, 2600);
+    }
+
+    // ===== ໂຫຼດອໍເດີ້ =====
+    async function load() {
+      try {
+        var data = await api('/api/orders/bills');
+        // ຄົວເຫັນສະເພາະລາຍການທີ່ຍັງຕ້ອງເຮັດ (pending, cooking)
+        var active = (Array.isArray(data) ? data : []).map(function (b) {
+          var items = (b.items || []).filter(function (i) {
+            return i.status === 'pending' || i.status === 'cooking';
+          });
+          return Object.assign({}, b, { items: items });
+        }).filter(function (b) { return b.items.length > 0; });
+
+        var current = {};
+        var hasNew = false;
+        active.forEach(function (b) {
+          b.items.forEach(function (i) {
+            current[i.id] = true;
+            if (!firstLoad && !knownIds[i.id]) hasNew = true;
+          });
+        });
+        if (hasNew) playBeep();
+        knownIds = current;
+        firstLoad = false;
+        state.bills = active;
+        render();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // ===== ແສດງຜົນ =====
+    function countOf(key) {
+      return (state.bills || []).filter(function (b) { return typeOf(b) === key; }).length;
+    }
+
+    function render() {
+      document.getElementById('tabs').innerHTML = TABS.map(function (t) {
+        var c = countOf(t.key);
+        return '<button type="button" class="tab' + (state.tab === t.key ? ' active' : '') +
+          (c > 0 ? ' has' : '') + '" data-act="tab" data-key="' + t.key + '">' +
+          t.icon + ' ' + t.label + '<span class="tab-count">' + c + '</span></button>';
+      }).join('');
+
+      var content = document.getElementById('content');
+      if (state.bills === null) { content.innerHTML = ''; return; }
+
+      var list = state.bills.filter(function (b) { return typeOf(b) === state.tab; });
+      if (list.length === 0) {
+        content.innerHTML = '<div class="empty">✅ ບໍ່ມີອາຫານທີ່ຕ້ອງເຮັດໃນປະເພດນີ້</div>';
+      } else {
+        content.innerHTML = '<div class="grid">' + list.map(cardHtml).join('') + '</div>';
+      }
+
+      document.getElementById('modal-root').innerHTML = state.cancelId === null ? '' :
+        '<div class="overlay" data-act="cancel-bg"><div class="modal">' +
+        '<div class="icon">🗑️</div><h3>ຍົກເລີກລາຍການ</h3>' +
+        '<p>ຢືນຢັນວ່າຈະຍົກເລີກລາຍການນີ້? (ວັດຖຸດິບໝົດ ຫຼື ເຫດຜົນອື່ນ)</p>' +
+        '<div class="actions"><button type="button" class="no" data-act="cancel-no">ຍົກເລີກ</button>' +
+        '<button type="button" class="yes" data-act="cancel-yes">ຢືນຢັນ</button></div></div></div>';
+    }
+
+    function cardHtml(bill) {
+      var hasCooking = bill.items.some(function (i) { return i.status === 'cooking'; });
+      var pendingIds = bill.items.filter(function (i) { return i.status === 'pending'; }).map(function (i) { return i.id; });
+      var cookingIds = bill.items.filter(function (i) { return i.status === 'cooking'; }).map(function (i) { return i.id; });
+
+      var html = '<div class="card' + (hasCooking ? ' cooking' : '') + '">';
+      html += '<h2>' + billTitle(bill) + '</h2>';
+      if (isOnline(bill) && bill.customer_name) {
+        html += '<p class="cust">👤 ' + esc(bill.customer_name) +
+          (bill.customer_phone ? ' &nbsp;📞 ' + esc(bill.customer_phone) : '') + '</p>';
+      }
+
+      html += '<div class="bulk">';
+      if (pendingIds.length > 0) {
+        html += '<button type="button" class="btn-start-all" data-act="bulk" data-status="cooking" data-ids="' +
+          pendingIds.join(',') + '">🔥 ເລີ່ມເຮັດທັງໝົດ (' + pendingIds.length + ')</button>';
+      }
+      if (cookingIds.length > 0) {
+        html += '<button type="button" class="btn-done-all" data-act="bulk" data-status="ready" data-ids="' +
+          cookingIds.join(',') + '">✅ ເຮັດແລ້ວທັງໝົດ (' + cookingIds.length + ')</button>';
+      }
+      html += '</div>';
+
+      bill.items.forEach(function (item) {
+        var next = item.status === 'pending' ? 'cooking' : 'ready';
+        html += '<div class="item"><div><span class="item-name">' + esc(item.product_name) +
+          '</span> <span class="item-qty">x' + esc(item.quantity) + '</span></div>' +
+          '<div class="item-actions">' +
+          '<button type="button" class="' + (item.status === 'pending' ? 'btn-start' : 'btn-done') +
+          '" data-act="item" data-id="' + Number(item.id) + '" data-status="' + next + '">' +
+          (item.status === 'pending' ? '🔥 ເລີ່ມເຮັດ' : '✅ ເຮັດແລ້ວ') + '</button>' +
+          '<button type="button" class="btn-cancel" data-act="cancel" data-id="' + Number(item.id) + '">ຍົກເລີກ</button>' +
+          '</div></div>';
+      });
+
+      return html + '</div>';
+    }
+
+    // ===== ການກະທຳ =====
+    async function setStatus(ids, status) {
+      try {
+        await Promise.all(ids.map(function (id) {
+          return api('/api/orders/' + id, { method: 'PUT', body: JSON.stringify({ status: status }) });
+        }));
+        if (status === 'ready') showToast('🍽️ ອໍເດີ້ພ້ອມເສີບແລ້ວ');
+      } catch (e) {
+        showToast('❌ ' + ((e && e.error) || 'ອັບເດດບໍ່ໄດ້'));
+      }
+      load();
+    }
+
+    async function doCancel() {
+      var id = state.cancelId;
+      state.cancelId = null;
+      render();
+      try {
+        await api('/api/orders/' + id, { method: 'DELETE' });
+        showToast('✅ ຍົກເລີກອໍເດີ້ສຳເລັດ');
+      } catch (e) {
+        showToast('❌ ' + ((e && e.error) || 'ຍົກເລີກບໍ່ໄດ້'));
+      }
+      load();
+    }
+
+    document.addEventListener('click', async function (e) {
+      var el = e.target.closest('[data-act]');
+      if (!el) return;
+      var act = el.getAttribute('data-act');
+
+      if (act === 'cancel-bg') {
+        if (e.target === el) { state.cancelId = null; render(); }
+        return;
+      }
+      if (act === 'tab') { state.tab = el.getAttribute('data-key'); render(); }
+      else if (act === 'item') {
+        setStatus([Number(el.getAttribute('data-id'))], el.getAttribute('data-status'));
+      } else if (act === 'bulk') {
+        var ids = el.getAttribute('data-ids').split(',').map(Number);
+        setStatus(ids, el.getAttribute('data-status'));
+      } else if (act === 'cancel') {
+        state.cancelId = Number(el.getAttribute('data-id'));
+        render();
+      } else if (act === 'cancel-no') { state.cancelId = null; render(); }
+      else if (act === 'cancel-yes') { doCancel(); }
+      else if (act === 'logout') {
+        try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (err) {}
+        window.location.href = '/kitchen/login.html';
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && state.cancelId !== null) { state.cancelId = null; render(); }
+    });
+
+    // ===== ເລີ່ມຕົ້ນ: ກວດລັອກອິນ ແລ້ວໂຫຼດອໍເດີ້ທຸກ 5 ວິນາທີ =====
+    api('/api/auth/me').then(function (user) {
+      document.getElementById('user-name').textContent = user.name || '';
+      load();
+      setInterval(load, 5000);
+    }).catch(function () {
+      window.location.href = '/kitchen/login.html';
+    });
+  </script>
+</body>
+</html>

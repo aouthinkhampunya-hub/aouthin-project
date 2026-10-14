@@ -115,7 +115,7 @@ function esc(value) {
 
 // 3 ປະເພດອໍເດີ້
 const TABS = [
-  { key: 'dine_in', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ' },
+  { key: 'dine_in', icon: '🍽️', label: 'ອໍເດີ້ໜ້າຮ້ານ' },
   { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ' },
   { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ' }
 ];

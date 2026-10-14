@@ -9,7 +9,7 @@ const nextLabel = (s) => (s === 'pending' ? '🔥 ເລີ່ມເຮັດ' :
 
 // 3 ປະເພດອໍເດີ້
 const TABS = [
-  { key: 'dine_in', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ' },
+  { key: 'dine_in', icon: '🍽️', label: 'ອໍເດີ້ໜ້າຮ້ານ' },
   { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ' },
   { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ' },
 ];
@@ -19,7 +19,7 @@ const isOnline = (bill) => typeOf(bill) !== 'dine_in';
 const billTitle = (bill) => {
   if (!isOnline(bill)) return `ໂຕະ ${bill.table_number}`;
   const type = typeOf(bill) === 'delivery' ? '🛵 ສົ່ງເຖິງບ້ານ' : '🥡 ມາຮັບເອງ';
-  return `${type} #${bill.id}`;
+  return `${type} #${bill.bill_no || bill.id}`;
 };
 
 export default function Kitchen() {

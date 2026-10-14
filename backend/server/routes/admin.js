@@ -5,6 +5,9 @@ const bcrypt = require('bcryptjs');
 const requireAuth = require('../middleware/requireAuth');
 const { requireOwner } = require('../middleware/requireAuth');
 
+// role ທີ່ອະນຸຍາດໃຫ້ສ້າງຜ່ານໜ້າພະນັກງານ (owner ສ້າງບໍ່ໄດ້)
+const CREATABLE_ROLES = ['staff', 'kitchen'];
+
 router.get('/', requireAuth, async (req, res) => {
   try {
     const [admins] = await pool.query('SELECT id, username, name, role FROM admins');
@@ -22,6 +25,9 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'ຂໍ້ມູນບໍ່ຄບ' });
     }
 
+    // ບົດບາດ: staff (ພະນັກງານ) ຫຼື kitchen (ຄົວ) ຖ້າບໍ່ສົ່ງມາ ຖືວ່າເປັນ staff
+    const role = CREATABLE_ROLES.includes(req.body.role) ? req.body.role : 'staff';
+
     const [existsRows] = await pool.query('SELECT * FROM admins WHERE username = ?', [username]);
     if (existsRows[0]) {
       return res.status(400).json({ error: 'username ນີ້ມີຄົນໃຊ້ແລ້ວ' });
@@ -30,7 +36,7 @@ router.post('/', requireAuth, async (req, res) => {
     const hashed = bcrypt.hashSync(password, 10);
     const [result] = await pool.query(
       'INSERT INTO admins (username, password, name, role) VALUES (?, ?, ?, ?)',
-      [username, hashed, name, 'staff']
+      [username, hashed, name, role]
     );
     res.json({ id: result.insertId });
   } catch (err) {

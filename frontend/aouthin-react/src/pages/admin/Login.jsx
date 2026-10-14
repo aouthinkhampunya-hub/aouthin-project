@@ -12,7 +12,8 @@ export default function Login() {
     e.preventDefault();
     setError('');
     try {
-      await login(username, password);
+      // area 'admin': ບັນຊີຄົວຈະຖືກປະຕິເສດ ແລະ ຖືກບອກໃຫ້ໄປໜ້າລັອກອິນຄົວ
+      await login(username, password, 'admin');
       navigate('/admin');
     } catch (err) {
       setError(err.error || 'ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ');

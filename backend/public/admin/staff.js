@@ -1,6 +1,15 @@
 let currentRole = null;
 let resetTargetId = null;
 let deleteTargetId = null;
+let addRole = 'staff'; // ບົດບາດຂອງບັນຊີທີ່ກຳລັງເພີ່ມ: 'staff' ຫຼື 'kitchen'
+
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 function showNotice(message) {
   document.getElementById('notice-modal-text').textContent = message;
@@ -21,26 +30,29 @@ async function checkAuth() {
   currentRole = data.role;
 }
 
-async function loadStaff() {
-  await checkAuth();
+function roleLabel(role) {
+  if (role === 'owner') return '👑 ເຈົ້າຂອງຮ້ານ';
+  if (role === 'kitchen') return '👨‍🍳 ພະນັກງານຄົວ';
+  return '👤 ພະນັກງານ';
+}
 
-  const res = await fetch('/api/admins');
-  const admins = await res.json();
-
-    const table = document.getElementById('staff-table');
+// ແຖວຂອງຕາຕະລາງ (ໃຊ້ທັງຕາຕະລາງພະນັກງານ ແລະ ຕາຕະລາງຄົວ)
+function renderTable(tableId, list, emptyText) {
+  const table = document.getElementById(tableId);
   table.innerHTML = `
     <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th>ບົດບາດ</th><th></th></tr>
-    ${admins.map((a, index) => `
+    ${list.length === 0 ? `<tr class="staff-empty-row"><td colspan="5">${emptyText}</td></tr>` : ''}
+    ${list.map((a, index) => `
       <tr>
         <td>${index + 1}</td>
-        <td>${a.username}</td>
-        <td>${a.name}</td>
-        <td>${a.role === 'owner' ? '👑 ເຈົ້າຂອງຮ້ານ' : '👤 ພະນັກງານ'}</td>
-                        <td>
+        <td>${esc(a.username)}</td>
+        <td>${esc(a.name)}</td>
+        <td>${roleLabel(a.role)}</td>
+        <td>
           ${currentRole === 'owner' && a.role !== 'owner'
             ? `<div class="staff-actions">
-                 <button class="delete-btn" onclick="deleteStaff(${a.id}, '${a.name}')">ລົບ</button>
-                 <button class="reset-btn" onclick="resetPassword(${a.id}, '${a.name}')">ຣີເຊັດລະຫັດ</button>
+                 <button class="delete-btn" data-name="${esc(a.name)}" onclick="deleteStaff(${Number(a.id)}, this.dataset.name)">ລົບ</button>
+                 <button class="reset-btn" data-name="${esc(a.name)}" onclick="resetPassword(${Number(a.id)}, this.dataset.name)">ຣີເຊັດລະຫັດ</button>
                </div>`
             : ''}
         </td>
@@ -49,9 +61,24 @@ async function loadStaff() {
   `;
 }
 
+async function loadStaff() {
+  await checkAuth();
+
+  const res = await fetch('/api/admins');
+  const admins = await res.json();
+  const all = Array.isArray(admins) ? admins : [];
+
+  // ແຍກລາຍຊື່: ພະນັກງານ (ລວມເຈົ້າຂອງຮ້ານ) / ພະນັກງານຄົວ
+  renderTable('staff-table', all.filter((a) => a.role !== 'kitchen'), 'ຍັງບໍ່ມີພະນັກງານ');
+  renderTable('kitchen-table', all.filter((a) => a.role === 'kitchen'), 'ຍັງບໍ່ມີບັນຊີຄົວ');
+
+  // ລິ້ງລັອກອິນຄົວ (ຂອງ backend ເອງ ບໍ່ແມ່ນ frontend)
+  document.getElementById('kitchen-login-url').textContent = window.location.origin + '/kitchen/login';
+}
+
 function deleteStaff(id, name) {
   deleteTargetId = id;
-  document.getElementById('delete-modal-text').textContent = `ຢືນຢັນລົບພະນັກງານ "${name}"?`;
+  document.getElementById('delete-modal-text').textContent = `ຢືນຢັນລົບບັນຊີ "${name}"?`;
   document.getElementById('delete-modal').style.display = 'flex';
 }
 
@@ -105,7 +132,7 @@ document.getElementById('reset-modal-ok').addEventListener('click', async () => 
   }
 });
 
-// ===== ປັອບອັບເພີ່ມພະນັກງານໃໝ່ (ແທນໜ້າ add-staff.html) =====
+// ===== ປັອບອັບເພີ່ມພະນັກງານໃໝ່ / ພະນັກງານຄົວ (ແທນໜ້າ add-staff.html) =====
 (function addStaffPopupStyle() {
   const s = document.createElement('style');
   s.textContent = `
@@ -148,7 +175,11 @@ document.getElementById('reset-modal-ok').addEventListener('click', async () => 
   document.head.appendChild(s);
 })();
 
-function openAddStaff() {
+// role = 'staff' (ພະນັກງານ) ຫຼື 'kitchen' (ພະນັກງານຄົວ)
+function openAddStaff(role) {
+  addRole = role === 'kitchen' ? 'kitchen' : 'staff';
+  const isKitchen = addRole === 'kitchen';
+
   let overlay = document.getElementById('add-staff-modal');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -160,7 +191,7 @@ function openAddStaff() {
 
   overlay.innerHTML = `
     <div class="sp-box">
-      <h3>➕ ເພີ່ມພະນັກງານໃໝ່</h3>
+      <h3>${isKitchen ? '➕ ເພີ່ມພະນັກງານຄົວໃໝ່' : '➕ ເພີ່ມພະນັກງານໃໝ່'}</h3>
 
       <div class="sp-field">
         <label>Username</label>
@@ -171,8 +202,8 @@ function openAddStaff() {
         <input type="password" id="sp-password" placeholder="Password">
       </div>
       <div class="sp-field">
-        <label>ຊື່ພະນັກງານ</label>
-        <input type="text" id="sp-name" placeholder="ຊື່ພະນັກງານ">
+        <label>${isKitchen ? 'ຊື່ພະນັກງານຄົວ' : 'ຊື່ພະນັກງານ'}</label>
+        <input type="text" id="sp-name" placeholder="${isKitchen ? 'ຊື່ພະນັກງານຄົວ' : 'ຊື່ພະນັກງານ'}">
       </div>
 
       <div class="sp-error" id="sp-error"></div>
@@ -222,7 +253,7 @@ async function submitAddStaff() {
     const res = await fetch('/api/admins', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, name })
+      body: JSON.stringify({ username, password, name, role: addRole })
     });
     const data = await res.json();
 
@@ -241,7 +272,7 @@ async function submitAddStaff() {
 
   closeAddStaff();
   await loadStaff();
-  showNotice('✅ ເພີ່ມພະນັກງານແລ້ວ');
+  showNotice(addRole === 'kitchen' ? '✅ ເພີ່ມພະນັກງານຄົວແລ້ວ' : '✅ ເພີ່ມພະນັກງານແລ້ວ');
 }
 
 document.addEventListener('keydown', (e) => {

@@ -11,7 +11,14 @@ export default function AdminLayout() {
 
   useEffect(() => {
     authMe()
-      .then(setAdmin)
+      .then((data) => {
+        // ບັນຊີຄົວ ເຂົ້າໜ້າ admin ບໍ່ໄດ້ → ສົ່ງໄປໜ້າຄົວ
+        if (data.role === 'kitchen') {
+          navigate('/kitchen');
+          return;
+        }
+        setAdmin(data);
+      })
       .catch(() => navigate('/admin/login'))
       .finally(() => setLoading(false));
   }, []);
@@ -30,43 +37,53 @@ export default function AdminLayout() {
     <>
       <div style={{
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        gap: '16px',
+        flexWrap: 'wrap',
+        gap: '12px 16px',
         padding: '10px 24px',
         background: 'linear-gradient(to right, #8B0000, #a30000)',
         color: 'white',
         boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
         fontSize: '14px'
       }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          👋 ສະບາຍດີແອັດມິນ <strong>{admin.name}</strong>
+        <span style={{
+          fontSize: '19px',
+          fontWeight: 700,
+          letterSpacing: '0.5px',
+          color: '#ffffff',
+          whiteSpace: 'nowrap'
+        }}>
+          ຈັດການຮ້ານອາຫານ
         </span>
-        <button
-          onClick={handleLogout}
-          style={{
-            cursor: 'pointer',
-            padding: '6px 16px',
-            background: 'rgba(255,255,255,0.15)',
-            border: '1px solid rgba(255,255,255,0.4)',
-            borderRadius: '6px',
-            color: 'white',
-            fontSize: '13px',
-            transition: 'background 0.2s'
-          }}
-          onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
-          onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-        >
-          ອອກຈາກລະບົບ
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            👋 ສະບາຍດີແອັດມິນ <strong>{admin.name}</strong>
+          </span>
+          <button
+            onClick={handleLogout}
+            style={{
+              cursor: 'pointer',
+              padding: '6px 16px',
+              background: 'rgba(255,255,255,0.15)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              borderRadius: '6px',
+              color: 'white',
+              fontSize: '13px',
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+            onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+          >
+            ອອກຈາກລະບົບ
+          </button>
+        </div>
       </div>
       <header>
-        <h1>ຈັດການຮ້ານອາຫານ</h1>
         <nav>
           <Link to="/admin" className={isActive('/admin')}>ເມນູ</Link>
           <Link to="/admin/orders" className={isActive('/admin/orders')}>ບັນທືກການສັ່ງ</Link>
           <Link to="/admin/tables" className={isActive('/admin/tables')}>ອໍເດີ້ອາຫານ</Link>
-          <Link to="/admin/kitchen" className={isActive('/admin/kitchen')}>ຄົວ</Link>
           <Link to="/admin/qrcode" className={isActive('/admin/qrcode')}>QR Code</Link>
           <Link to="/admin/dashboard" className={isActive('/admin/dashboard')}>ລາຍງານ</Link>
           <Link to="/admin/staff" className={isActive('/admin/staff')}>ພະນັກງານ</Link>

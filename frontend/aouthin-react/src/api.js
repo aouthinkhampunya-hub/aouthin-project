@@ -15,8 +15,9 @@ async function request(path, options = {}) {
 // ---- Auth ----
 export const authCheck = () => request('/auth/check');
 export const authMe = () => request('/auth/me');
-export const login = (username, password) =>
-  request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+// area: 'admin' (ໜ້າລັອກອິນ admin) ຫຼື 'kitchen' (ໜ້າລັອກອິນຄົວ)
+export const login = (username, password, area = 'admin') =>
+  request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password, area }) });
 export const logout = () => request('/auth/logout', { method: 'POST' });
 
 // ---- Products ----
@@ -72,8 +73,9 @@ export const ackStaffCall = (id) => request(`/staffcall/${id}/ack`, { method: 'P
 
 // ---- Admins ----
 export const getAdmins = () => request('/admins');
-export const addAdmin = (username, password, name) =>
-  request('/admins', { method: 'POST', body: JSON.stringify({ username, password, name }) });
+// role: 'staff' (ພະນັກງານ) ຫຼື 'kitchen' (ຄົວ)
+export const addAdmin = (username, password, name, role = 'staff') =>
+  request('/admins', { method: 'POST', body: JSON.stringify({ username, password, name, role }) });
 export const deleteAdmin = (id) => request(`/admins/${id}`, { method: 'DELETE' });
 export const resetAdminPassword = (id, password) =>
   request(`/admins/${id}/reset-password`, { method: 'PUT', body: JSON.stringify({ password }) });

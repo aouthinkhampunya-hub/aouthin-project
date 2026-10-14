@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ເຂົ້າສູ່ລະບົບຄົວ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      font-family: 'Noto Sans Lao', 'Phetsarath OT', system-ui, sans-serif;
+      background: linear-gradient(160deg, #2b1b0e 0%, #7a1f0f 100%);
+    }
+    .box {
+      width: 100%;
+      max-width: 380px;
+      padding: 32px 26px 26px;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    }
+    .icon { text-align: center; font-size: 46px; line-height: 1; }
+    h1 {
+      margin: 10px 0 4px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 900;
+      color: #7a1f0f;
+    }
+    .sub { margin: 0 0 20px; text-align: center; color: #6b5a4c; font-size: 14px; }
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      border: 2px solid #e8d5c4;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+    }
+    input:focus { border-color: #b8380e; }
+    .error {
+      display: none;
+      margin: 0 0 12px;
+      color: #c0392b;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .error.show { display: block; }
+    button {
+      width: 100%;
+      padding: 14px 16px;
+      border: none;
+      border-radius: 12px;
+      background: #7a1f0f;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    button:disabled { background: #b8967f; cursor: default; }
+  </style>
+</head>
+<body>
+  <form class="box" id="login-form">
+    <div class="icon">👨‍🍳</div>
+    <h1>ເຂົ້າສູ່ລະບົບຄົວ</h1>
+    <p class="sub">ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</p>
+
+    <input type="text" id="username" placeholder="ຊື່ຜູ້ໃຊ້" autocomplete="username" autofocus>
+    <input type="password" id="password" placeholder="ລະຫັດຜ່ານ" autocomplete="current-password">
+
+    <p class="error" id="error"></p>
+    <button type="submit" id="submit-btn">ເຂົ້າສູ່ລະບົບ</button>
+  </form>
+
+  <script>
+    var form = document.getElementById('login-form');
+    var errorEl = document.getElementById('error');
+    var btn = document.getElementById('submit-btn');
+
+    function showError(msg) {
+      errorEl.textContent = '⚠️ ' + msg;
+      errorEl.className = 'error show';
+    }
+
+    // ຖ້າລັອກອິນຢູ່ແລ້ວ ໄປໜ້າຄົວຂອງ backend ເລີຍ (/kitchen/)
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(function (res) { if (res.ok) window.location.href = '/kitchen/'; })
+      .catch(function () {});
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      errorEl.className = 'error';
+
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value;
+      if (!username || !password) {
+        showError('ກະລຸນາໃສ່ຊື່ຜູ້ໃຊ້ ແລະ ລະຫັດຜ່ານ');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'ກຳລັງເຂົ້າສູ່ລະບົບ...';
+      try {
+        var res = await fetch('/api/auth/login', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username, password: password, area: 'kitchen' })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          showError(data.error || 'ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ');
+        } else {
+          window.location.href = '/kitchen/';
+          return;
+        }
+      } catch (err) {
+        showError('ເຊື່ອມຕໍ່ server ບໍ່ໄດ້ ກະລຸນາລອງໃໝ່');
+      }
+      btn.disabled = false;
+      btn.textContent = 'ເຂົ້າສູ່ລະບົບ';
+    });
+  </script>
+</body>
+</html>

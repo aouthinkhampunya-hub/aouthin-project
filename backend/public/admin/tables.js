@@ -171,7 +171,7 @@ function getGroups() {
 function getLists() {
   const g = getGroups();
   return {
-    dinein: { bills: g.dineIn, title: '🍽️ ອໍເດີ້ໜ້າໂຕະ', empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
+    dinein: { bills: g.dineIn, title: '🍽️ ອໍເດີ້ໜ້າຮ້ານ', empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
     pickup: { bills: g.pickup, title: '🥡 ມາຮັບເຄື່ອງເອງ', empty: 'ຍັງບໍ່ມີອໍເດີ້ມາຮັບເຄື່ອງເອງ' },
     delivery: { bills: g.delivery, title: '🛵 ສົ່ງເຖິງບ້ານ', empty: 'ຍັງບໍ່ມີອໍເດີ້ສົ່ງເຖິງບ້ານ' }
   };
@@ -191,7 +191,7 @@ function renderTabs() {
   if (!el) return;
   const g = getGroups();
   const tabs = [
-    { key: 'dinein', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ', count: g.dineIn.length },
+    { key: 'dinein', icon: '🍽️', label: 'ອໍເດີ້ໜ້າຮ້ານ', count: g.dineIn.length },
     { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ', count: g.pickup.length },
     { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ', count: g.delivery.length }
   ];

@@ -2,12 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { authMe, getAdmins, addAdmin, deleteAdmin, resetAdminPassword } from '../../api.js';
 import '../../styles/admin-staff.css';
 
+// ຫົວຂໍ້ຂອງແຕ່ລະສ່ວນ (ຢູ່ເທິງຕາຕະລາງ)
+const sectionTitleStyle = {
+  margin: '0 0 12px',
+  fontSize: 20,
+  fontWeight: 800,
+  color: '#7a1f0f',
+};
+
 export default function Staff() {
   const [role, setRole] = useState(null);
   const [admins, setAdmins] = useState([]);
 
-  // popup ເພີ່ມພະນັກງານ
+  // popup ເພີ່ມບັນຊີ: addRole = 'staff' (ພະນັກງານ) ຫຼື 'kitchen' (ພະນັກງານຄົວ)
   const [addOpen, setAddOpen] = useState(false);
+  const [addRole, setAddRole] = useState('staff');
   const [form, setForm] = useState({ username: '', password: '', name: '' });
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -32,14 +41,15 @@ export default function Staff() {
     loadStaff();
   }, []);
 
-  // ກົດ Esc ປິດ popup ເພີ່ມພະນັກງານ
+  // ກົດ Esc ປິດ popup ເພີ່ມບັນຊີ
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setAddOpen(false); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  const openAdd = () => {
+  const openAdd = (whichRole) => {
+    setAddRole(whichRole);
     setForm({ username: '', password: '', name: '' });
     setAddError('');
     setSaving(false);
@@ -57,7 +67,7 @@ export default function Staff() {
     }
     setSaving(true);
     try {
-      await addAdmin(username, password, name);
+      await addAdmin(username, password, name, addRole);
     } catch (e) {
       setAddError(e?.error || 'ບັນທຶກບໍ່ສຳເລັດ');
       setSaving(false);
@@ -66,7 +76,7 @@ export default function Staff() {
     setAddOpen(false);
     setSaving(false);
     await loadStaff();
-    setNotice('✅ ເພີ່ມພະນັກງານແລ້ວ');
+    setNotice(addRole === 'kitchen' ? '✅ ເພີ່ມພະນັກງານຄົວແລ້ວ' : '✅ ເພີ່ມພະນັກງານແລ້ວ');
   };
 
   const confirmDelete = async () => {
@@ -98,44 +108,70 @@ export default function Staff() {
 
   const setField = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
+  // ແຍກລາຍຊື່: ພະນັກງານ (ລວມເຈົ້າຂອງຮ້ານ) / ພະນັກງານຄົວ
+  const staffList = admins.filter((a) => a.role !== 'kitchen');
+  const kitchenList = admins.filter((a) => a.role === 'kitchen');
+
+  const kitchenLoginUrl = `${window.location.origin}/kitchen/login`;
+
+  // ປຸ່ມ ລົບ / ຣີເຊັດລະຫັດ (ສະເພາະເຈົ້າຂອງຮ້ານ ແລະ ບໍ່ແມ່ນແຖວເຈົ້າຂອງ)
+  const renderActions = (a) =>
+    role === 'owner' && a.role !== 'owner' && (
+      <div className="staff-actions">
+        <button className="staff-del-btn" onClick={() => setDeleteTarget({ id: a.id, name: a.name })}>ລົບ</button>
+        <button
+          className="staff-reset-btn"
+          onClick={() => { setResetTarget({ id: a.id, name: a.name }); setResetPw(''); }}
+        >
+          ຣີເຊັດລະຫັດ
+        </button>
+      </div>
+    );
+
+  const renderTable = (list, emptyText) => (
+    <table className="staff-table">
+      <thead>
+        <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th>ບົດບາດ</th><th></th></tr>
+      </thead>
+      <tbody>
+        {list.length === 0 && (
+          <tr><td colSpan={5} style={{ textAlign: 'center', color: '#6b5a4c' }}>{emptyText}</td></tr>
+        )}
+        {list.map((a, index) => (
+          <tr key={a.id}>
+            <td>{index + 1}</td>
+            <td>{a.username}</td>
+            <td>{a.name}</td>
+            <td>
+              {a.role === 'owner' ? '👑 ເຈົ້າຂອງຮ້ານ' : a.role === 'kitchen' ? '👨‍🍳 ພະນັກງານຄົວ' : '👤 ພະນັກງານ'}
+            </td>
+            <td>{renderActions(a)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
   return (
     <div className="staff-page">
-      <button type="button" className="staff-add-btn" onClick={openAdd}>➕ ເພີ່ມພະນັກງານ</button>
+      {/* ===== ສ່ວນ 1: ພະນັກງານ ===== */}
+      <h2 style={sectionTitleStyle}>👥 ພະນັກງານ</h2>
+      <button type="button" className="staff-add-btn" onClick={() => openAdd('staff')}>➕ ເພີ່ມພະນັກງານ</button>
+      {renderTable(staffList, 'ຍັງບໍ່ມີພະນັກງານ')}
 
-      <table className="staff-table">
-        <thead>
-          <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th>ບົດບາດ</th><th></th></tr>
-        </thead>
-        <tbody>
-          {admins.map((a, index) => (
-            <tr key={a.id}>
-              <td>{index + 1}</td>
-              <td>{a.username}</td>
-              <td>{a.name}</td>
-              <td>{a.role === 'owner' ? '👑 ເຈົ້າຂອງຮ້ານ' : '👤 ພະນັກງານ'}</td>
-              <td>
-                {role === 'owner' && a.role !== 'owner' && (
-                  <div className="staff-actions">
-                    <button className="staff-del-btn" onClick={() => setDeleteTarget({ id: a.id, name: a.name })}>ລົບ</button>
-                    <button
-                      className="staff-reset-btn"
-                      onClick={() => { setResetTarget({ id: a.id, name: a.name }); setResetPw(''); }}
-                    >
-                      ຣີເຊັດລະຫັດ
-                    </button>
-                  </div>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* ===== ສ່ວນ 2: ພະນັກງານຄົວ ===== */}
+      <h2 style={{ ...sectionTitleStyle, marginTop: 40 }}>👨‍🍳 ພະນັກງານຄົວ</h2>
+      <p style={{ margin: '0 0 12px', color: '#6b5a4c', fontSize: 14, lineHeight: 1.6 }}>
+        ບັນຊີຄົວເຂົ້າໄດ້ສະເພາະໜ້າຄົວ ທີ່ລິ້ງ <b>{kitchenLoginUrl}</b>
+      </p>
+      <button type="button" className="staff-add-btn" onClick={() => openAdd('kitchen')}>➕ ເພີ່ມພະນັກງານຄົວ</button>
+      {renderTable(kitchenList, 'ຍັງບໍ່ມີບັນຊີຄົວ')}
 
-      {/* ເພີ່ມພະນັກງານ (ບໍ່ປິດເມື່ອກົດພື້ນມືດ ເພື່ອກັນຂໍ້ມູນຫາຍ) */}
+      {/* ເພີ່ມບັນຊີ (ບໍ່ປິດເມື່ອກົດພື້ນມືດ ເພື່ອກັນຂໍ້ມູນຫາຍ) */}
       {addOpen && (
         <div className="sp-overlay">
           <div className="sp-box">
-            <h3>➕ ເພີ່ມພະນັກງານໃໝ່</h3>
+            <h3>{addRole === 'kitchen' ? '➕ ເພີ່ມພະນັກງານຄົວໃໝ່' : '➕ ເພີ່ມພະນັກງານໃໝ່'}</h3>
             <div className="sp-field">
               <label>Username</label>
               <input type="text" placeholder="Username" value={form.username} onChange={setField('username')} autoFocus />
@@ -145,8 +181,13 @@ export default function Staff() {
               <input type="password" placeholder="Password" value={form.password} onChange={setField('password')} />
             </div>
             <div className="sp-field">
-              <label>ຊື່ພະນັກງານ</label>
-              <input type="text" placeholder="ຊື່ພະນັກງານ" value={form.name} onChange={setField('name')} />
+              <label>{addRole === 'kitchen' ? 'ຊື່ພະນັກງານຄົວ' : 'ຊື່ພະນັກງານ'}</label>
+              <input
+                type="text"
+                placeholder={addRole === 'kitchen' ? 'ຊື່ພະນັກງານຄົວ' : 'ຊື່ພະນັກງານ'}
+                value={form.name}
+                onChange={setField('name')}
+              />
             </div>
             {addError && <div className="sp-error">{addError}</div>}
             <div className="sp-actions">
@@ -163,7 +204,7 @@ export default function Staff() {
       {deleteTarget && (
         <div className="sm-overlay">
           <div className="sm-box">
-            <p>ຢືນຢັນລົບພະນັກງານ "{deleteTarget.name}"?</p>
+            <p>ຢືນຢັນລົບບັນຊີ "{deleteTarget.name}"?</p>
             <div className="sm-buttons">
               <button className="sm-cancel" onClick={() => setDeleteTarget(null)}>ຍົກເລີກ</button>
               <button className="sm-danger" onClick={confirmDelete}>ລົບ</button>

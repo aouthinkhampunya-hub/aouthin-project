@@ -3,8 +3,22 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
 const { calcDelivery } = require('../delivery');
+const requireAuth = require('../middleware/requireAuth');
+const { JWT_SECRET } = require('./auth');
+
+// ອ່ານຜູ້ໃຊ້ຈາກ cookie (ຄືນ null ຖ້າບໍ່ໄດ້ລັອກອິນ) ໃຊ້ໃນເສັ້ນທາງທີ່ລູກຄ້າກໍເຂົ້າໄດ້
+function getUser(req) {
+  const token = req.cookies && req.cookies.token;
+  if (!token) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    return null;
+  }
+}
 
 // pending = ລໍຖ້າ, cooking = ກຳລັງເຮັດ, ready = ຄົວເຮັດແລ້ວ ລໍເສີບ, completed = ເສີບແລ້ວ
 const ALLOWED_STATUSES = ['pending', 'cooking', 'ready', 'completed'];
@@ -59,7 +73,7 @@ function writeSlip({ buf, ext }) {
   return { url: `/uploads/slips/${name}`, file: path.join(SLIP_DIR, name) };
 }
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const [orders] = await pool.query(`
       SELECT orders.*, products.name AS product_name, products.price,
@@ -78,8 +92,13 @@ router.get('/', async (req, res) => {
 
 router.get('/bills', async (req, res) => {
   try {
+    // ຜູ້ທີ່ລັອກອິນ (admin / ຄົວ) ເຫັນທຸກບິນ. ລູກຄ້າທົ່ວໄປ (ບໍ່ລັອກອິນ) ເຫັນສະເພາະບິນໜ້າໂຕະ
+    // ເພື່ອບໍ່ໃຫ້ຊື່ ເບີໂທ ທີ່ຢູ່ ແລະ ສະລິບຂອງລູກຄ້າອອນລາຍຫຼຸດອອກສູ່ສາທາລະນະ
+    const loggedIn = !!getUser(req);
     const [bills] = await pool.query(
-      `SELECT * FROM bills WHERE status = 'open' ORDER BY table_number`
+      loggedIn
+        ? `SELECT * FROM bills WHERE status = 'open' ORDER BY table_number`
+        : `SELECT * FROM bills WHERE status = 'open' AND order_type = 'dine_in' ORDER BY table_number`
     );
 
     const billsWithItems = await Promise.all(
@@ -114,7 +133,7 @@ router.get('/delivery-fee', (req, res) => {
 });
 
 // ປະຫວັດບິນທັງໝົດ (ເປີດຢູ່ + ປິດແລ້ວ) ພ້ອມລາຍການອາຫານ, ກອງຕາມວັນທີໄດ້
-router.get('/history', async (req, res) => {
+router.get('/history', requireAuth, async (req, res) => {
   try {
     const from = /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '') ? req.query.from : null;
     const to = /^\d{4}-\d{2}-\d{2}$/.test(req.query.to || '') ? req.query.to : null;
@@ -235,7 +254,7 @@ router.post('/online', async (req, res) => {
   if (!customer_name || !String(customer_name).trim()) {
     return res.status(400).json({ error: 'ກະລຸນາໃສ່ຊື່' });
   }
-    if (!/^020\d{8}$/.test(String(customer_phone || '').trim())) {
+  if (!/^020\d{8}$/.test(String(customer_phone || '').trim())) {
     return res.status(400).json({ error: 'ເບີໂທບໍ່ຖືກຕ້ອງ (ຕ້ອງເປັນ 020 ຕາມດ້ວຍເລກ 8 ໂຕ, ລວມ 11 ໂຕ)' });
   }
   if (order_type === 'delivery' && !String(address || '').trim()) {
@@ -428,12 +447,18 @@ router.post('/online/:id/slip', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { status } = req.body;
 
     if (!ALLOWED_STATUSES.includes(status)) {
       return res.status(400).json({ error: 'ສະຖານະບໍ່ຖືກຕ້ອງ' });
+    }
+
+    // ຄົວປ່ຽນໄດ້ສະເພາະ ລໍຖ້າ → ກຳລັງເຮັດ → ເຮັດແລ້ວ. "ເສີບແລ້ວ" ເປັນໜ້າທີ່ຂອງພະນັກງານເສີບ
+    const user = getUser(req);
+    if (user && user.role === 'kitchen' && status === 'completed') {
+      return res.status(403).json({ error: 'ບັນຊີຄົວປ່ຽນເປັນ "ເສີບແລ້ວ" ບໍ່ໄດ້' });
     }
 
     await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
@@ -466,7 +491,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-router.put('/bills/:id/close', async (req, res) => {
+router.put('/bills/:id/close', requireAuth, async (req, res) => {
   try {
     await pool.query(
       `UPDATE bills SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = ?`,

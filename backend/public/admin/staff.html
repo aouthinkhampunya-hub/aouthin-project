@@ -6,13 +6,16 @@
   <title>ພະນັກງານ - AOUTHIN</title>
   <link rel="stylesheet" href="style.css">
     <style>
-    #staff-table {
+    #staff-table,
+    #kitchen-table {
       width: 100%;
     }
 
     /* ຄໍລຳສຸດທ້າຍ (ປຸ່ມ): ຫຍໍ້ຕາມເນື້ອໃນ ແລະ ຊິດຂວາ */
     #staff-table th:last-child,
-    #staff-table td:last-child {
+    #staff-table td:last-child,
+    #kitchen-table th:last-child,
+    #kitchen-table td:last-child {
       white-space: nowrap;
       text-align: right;
     }
@@ -26,6 +29,25 @@
     .staff-actions button {
       width: 110px;
       box-sizing: border-box;
+    }
+
+    /* ຫົວຂໍ້ຂອງແຕ່ລະສ່ວນ */
+    .staff-section-title {
+      margin: 0 0 12px;
+      font-size: 20px;
+      font-weight: 800;
+      color: #7a1f0f;
+    }
+    .staff-section-title.kitchen { margin-top: 40px; }
+    .staff-section-note {
+      margin: 0 0 12px;
+      color: #6b5a4c;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .staff-empty-row td {
+      text-align: center !important;
+      color: #6b5a4c;
     }
 
     @media (max-width: 640px) {
@@ -48,7 +70,6 @@
       <a href="index.html">ເມນູ</a>
       <a href="orders.html">ບັນທືກການສັ່ງ</a>
       <a href="tables.html">ອໍເດີ້ອາຫານ</a>
-      <a href="kitchen.html">ຄົວ</a>
       <a href="qrcode.html">QR Code</a>
       <a href="dashboard.html">ລາຍງານ</a>
       <a href="staff.html">ພະນັກງານ</a>
@@ -56,11 +77,23 @@
   </header>
 
   <main>
-    <button type="button" class="confirm-btn" onclick="openAddStaff()" style="display:inline-block; width:auto; margin-bottom:16px; border:none; cursor:pointer;">➕ ເພີ່ມພະນັກງານ</button>
+    <!-- ===== ສ່ວນ 1: ພະນັກງານ ===== -->
+    <h2 class="staff-section-title">👥 ພະນັກງານ</h2>
+    <button type="button" class="confirm-btn" onclick="openAddStaff('staff')" style="display:inline-block; width:auto; margin-bottom:16px; border:none; cursor:pointer;">➕ ເພີ່ມພະນັກງານ</button>
 
     <table id="staff-table">
-      <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th></th></tr>
+      <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th>ບົດບາດ</th><th></th></tr>
     </table>
+
+    <!-- ===== ສ່ວນ 2: ພະນັກງານຄົວ ===== -->
+    <h2 class="staff-section-title kitchen">👨‍🍳 ພະນັກງານຄົວ</h2>
+    <p class="staff-section-note">ບັນຊີຄົວເຂົ້າໄດ້ສະເພາະໜ້າຄົວ ທີ່ລິ້ງ <b id="kitchen-login-url"></b></p>
+    <button type="button" class="confirm-btn" onclick="openAddStaff('kitchen')" style="display:inline-block; width:auto; margin-bottom:16px; border:none; cursor:pointer;">➕ ເພີ່ມພະນັກງານຄົວ</button>
+
+    <table id="kitchen-table">
+      <tr><th>ລະຫັດ</th><th>Username</th><th>ຊື່</th><th>ບົດບາດ</th><th></th></tr>
+    </table>
+
     <div id="reset-modal" class="modal-overlay">
   <div class="modal-box">
     <p id="reset-modal-text">ໃສ່ລະຫັດຜ່ານໃໝ່</p>

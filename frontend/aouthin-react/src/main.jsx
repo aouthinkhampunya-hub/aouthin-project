@@ -17,14 +17,19 @@ import Settings from './pages/admin/Settings.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
 import Staff from './pages/admin/Staff.jsx';
 
+// ໜ້າຄົວ (ແຍກຈາກ admin): ລັອກອິນຄົວ + ໂຄງໜ້າຄົວ
+import KitchenLogin from './pages/Kitchen/KitchenLogin.jsx';
+import KitchenLayout from './pages/Kitchen/KitchenLayout.jsx';
+
 import './styles/menu.css';
 import './styles/admin.css';
 
-// ໃສ່ຄລາດ is-admin ໃຫ້ body ເມື່ອຢູ່ໜ້າ /admin ເພື່ອໃຫ້ admin.css ເຮັດວຽກສະເພາະໜ້າແອັດມິນ
+// ໃສ່ຄລາດ is-admin ໃຫ້ body ເມື່ອຢູ່ໜ້າ /admin ແລະ /kitchen ເພື່ອໃຫ້ admin.css ເຮັດວຽກສະເພາະໜ້າຫຼັງບ້ານ
 function BodyClassByRoute() {
   const { pathname } = useLocation();
   useEffect(() => {
-    document.body.classList.toggle('is-admin', pathname.startsWith('/admin'));
+    const backOffice = pathname.startsWith('/admin') || pathname.startsWith('/kitchen');
+    document.body.classList.toggle('is-admin', backOffice);
   }, [pathname]);
   return null;
 }
@@ -38,18 +43,25 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/menu" element={<Menu />} />
         <Route path="/menu/bill" element={<CustomerBill />} />
 
-        {/* ===== ຝັ່ງຫຼັງບ້ານ ===== */}
+        {/* ===== ຝັ່ງຫຼັງບ້ານ (admin) ===== */}
         <Route path="/admin/login" element={<Login />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Products />} />
           <Route path="orders" element={<Orders />} />
           <Route path="tables" element={<Tables />} />
-          <Route path="kitchen" element={<Kitchen />} />
+          {/* ລິ້ງເກົ່າ /admin/kitchen ສົ່ງໄປໜ້າຄົວໃໝ່ */}
+          <Route path="kitchen" element={<Navigate to="/kitchen" replace />} />
           <Route path="bill" element={<AdminBill />} />
           <Route path="qrcode" element={<QrCodePage />} />
           <Route path="settings" element={<Settings />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="staff" element={<Staff />} />
+        </Route>
+
+        {/* ===== ຄົວ (ແຍກຕ່າງຫາກ ມີລັອກອິນຂອງຕົນເອງ) ===== */}
+        <Route path="/kitchen/login" element={<KitchenLogin />} />
+        <Route path="/kitchen" element={<KitchenLayout />}>
+          <Route index element={<Kitchen />} />
         </Route>
 
         <Route path="/" element={<Navigate to="/menu" replace />} />
