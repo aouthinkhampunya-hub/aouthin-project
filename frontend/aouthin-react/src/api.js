@@ -64,6 +64,9 @@ export const getTableQRs = () => request('/qrcode/tables');
 export const getPaymentQR = () => request('/settings/qr');
 export const uploadPaymentQR = (formData) =>
   request('/settings/qr', { method: 'POST', body: formData });
+// QR ຮັບເງິນທີ່ມີຈຳນວນເງິນຢູ່ໃນ QR ແລ້ວ (ລູກຄ້າສະແກນແລ້ວຈຳນວນເງິນຂຶ້ນເອງ) ຄືນ { qrImage }
+export const getAmountQR = (amount) =>
+  request(`/payqr/amount?amount=${encodeURIComponent(amount)}`);
 
 // ---- Staff calls ----
 export const getStaffCalls = () => request('/staffcall');

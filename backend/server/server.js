@@ -9,6 +9,7 @@ const productsRouter = require('./routes/products');
 const ordersRouter = require('./routes/orders');
 const qrcodeRouter = require('./routes/qrcode');
 const settingsRouter = require('./routes/settings');
+const payqrRouter = require('./routes/payqr');
 const adminsRouter = require('./routes/admin');
 const staffCallRouter = require('./routes/staffcall');
 const authRouter = require('./routes/auth');
@@ -133,6 +134,7 @@ require('./table-routes')(app);
 
 app.use('/api/qrcode', qrcodeRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/payqr', payqrRouter);
 app.use('/api/admins', adminsRouter);
 app.use('/api/staffcall', staffCallRouter);
 

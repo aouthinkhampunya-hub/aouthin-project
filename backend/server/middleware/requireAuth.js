@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../routes/auth');
+const { getToken } = require('./authCookie');
 
 function requireAuth(req, res, next) {
-  const token = req.cookies.token;
+  const token = getToken(req);
   if (!token) {
     return res.status(401).json({ error: 'ກະລນາເຂົ້າສູ່ລະບົບກ່ອນ' });
   }
@@ -17,7 +18,7 @@ function requireAuth(req, res, next) {
 }
 
 function requireOwner(req, res, next) {
-  const token = req.cookies.token;
+  const token = getToken(req);
   if (!token) {
     return res.status(401).json({ error: 'ກະລນາເຂົ້າສູ່ລະບົບກ່ອນ' });
   }

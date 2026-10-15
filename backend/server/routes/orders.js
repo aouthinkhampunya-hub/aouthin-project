@@ -20,6 +20,24 @@ function getUser(req) {
   }
 }
 
+// ກວດວ່າລັອກອິນແລ້ວບໍ ໂດຍໃຊ້ requireAuth ອັນດຽວກັບທີ່ໃຊ້ຢູ່ໜ້າອື່ນ (ໃຫ້ຜົນຕົງກັນສະເໝີ)
+// ຄືນ true ຖ້າຜ່ານ, false ຖ້າບໍ່ຜ່ານ (ບໍ່ສົ່ງ error ຫາຜູ້ໃຊ້)
+function isLoggedIn(req) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 2000);
+    const done = (v) => { clearTimeout(timer); resolve(v); };
+    // res ປອມ: ເມື່ອ requireAuth ພະຍາຍາມຕອບ error (401) ຖືວ່າບໍ່ໄດ້ລັອກອິນ
+    const fakeRes = new Proxy({}, {
+      get: () => () => { done(false); return fakeRes; },
+    });
+    try {
+      requireAuth(req, fakeRes, () => done(true));
+    } catch (e) {
+      done(false);
+    }
+  });
+}
+
 // pending = ລໍຖ້າ, cooking = ກຳລັງເຮັດ, ready = ຄົວເຮັດແລ້ວ ລໍເສີບ, completed = ເສີບແລ້ວ
 const ALLOWED_STATUSES = ['pending', 'cooking', 'ready', 'completed'];
 
@@ -94,7 +112,7 @@ router.get('/bills', async (req, res) => {
   try {
     // ຜູ້ທີ່ລັອກອິນ (admin / ຄົວ) ເຫັນທຸກບິນ. ລູກຄ້າທົ່ວໄປ (ບໍ່ລັອກອິນ) ເຫັນສະເພາະບິນໜ້າໂຕະ
     // ເພື່ອບໍ່ໃຫ້ຊື່ ເບີໂທ ທີ່ຢູ່ ແລະ ສະລິບຂອງລູກຄ້າອອນລາຍຫຼຸດອອກສູ່ສາທາລະນະ
-    const loggedIn = !!getUser(req);
+    const loggedIn = await isLoggedIn(req);
     const [bills] = await pool.query(
       loggedIn
         ? `SELECT * FROM bills WHERE status = 'open' ORDER BY table_number`
@@ -456,7 +474,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 
     // ຄົວປ່ຽນໄດ້ສະເພາະ ລໍຖ້າ → ກຳລັງເຮັດ → ເຮັດແລ້ວ. "ເສີບແລ້ວ" ເປັນໜ້າທີ່ຂອງພະນັກງານເສີບ
-    const user = getUser(req);
+    const user = getUser(req) || req.user || req.admin || null;
     if (user && user.role === 'kitchen' && status === 'completed') {
       return res.status(403).json({ error: 'ບັນຊີຄົວປ່ຽນເປັນ "ເສີບແລ້ວ" ບໍ່ໄດ້' });
     }

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { getPaymentQR, getDeliveryFee, API_BASE } from '../api.js';
+import { getPaymentQR, getAmountQR, getDeliveryFee, API_BASE } from '../api.js';
 import './online-order.css';
 
 // ປ່ຽນເປັນພິກັດຮ້ານຂອງເຈົ້າ (ເປີດ Google Maps ກົດຂວາທີ່ຮ້ານ ຈະເຫັນເລກ lat, lng)
@@ -61,6 +61,7 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   const [hint, setHint] = useState('👆 ກົດເທິງແຜນທີ່ ຫຼື ລາກໝຸດ ເພື່ອເລືອກຈຸດສົ່ງ');
   const [slip, setSlip] = useState('');           // data URL ຂອງສະລິບ
   const [payQr, setPayQr] = useState('');
+  const [amountQr, setAmountQr] = useState('');   // QR ທີ່ມີຈຳນວນເງິນຢູ່ໃນ QR ແລ້ວ
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   // ຄ່າສົ່ງ: status = idle | loading | ok | far | error
@@ -145,6 +146,23 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
       .then((d) => { if (d?.qrImage) setPayQr(d.qrImage); })
       .catch(() => {});
   }, [payment, payQr]);
+
+  // ສ້າງ QR ທີ່ມີຈຳນວນເງິນຢູ່ໃນ QR (ສະແກນແລ້ວຈຳນວນເງິນຂຶ້ນເອງ) ເມື່ອຍອດລວມປ່ຽນ
+  // ສົ່ງເຖິງບ້ານ: ຕ້ອງຄິດຄ່າສົ່ງໄດ້ກ່ອນ ຈຶ່ງຈະສ້າງ (ກັນໂອນຂາດຄ່າສົ່ງ)
+  const qrReady = type === 'pickup' || feeInfo.status === 'ok';
+  useEffect(() => {
+    if (payment !== 'transfer' || !qrReady || grandTotal < 1) {
+      setAmountQr('');
+      return undefined;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      getAmountQR(grandTotal)
+        .then((d) => { if (!cancelled) setAmountQr(d?.qrImage || ''); })
+        .catch(() => { if (!cancelled) setAmountQr(''); });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [payment, qrReady, grandTotal]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -365,11 +383,21 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
 
           {payment === 'transfer' && (
             <div className="ol-transfer">
-              {qrSrc ? (
+              {!qrReady ? (
+                <p className="ol-transfer-note">
+                  1) ປັກໝຸດຈຸດສົ່ງເທິງແຜນທີ່ ເພື່ອຄິດຄ່າສົ່ງກ່ອນ ຈຶ່ງຈະສະແດງ QR ໂອນເງິນ
+                </p>
+              ) : amountQr ? (
+                <>
+                  <p className="ol-transfer-note">
+                    1) ສະແກນ QR ເພື່ອໂອນເງິນ {grandTotal.toLocaleString()} ກີບ (ຈຳນວນເງິນຈະຂຶ້ນໃຫ້ເອງ)
+                  </p>
+                  <img className="ol-qr" src={amountQr} alt="QR ຮັບເງິນ" />
+                </>
+              ) : qrSrc ? (
                 <>
                   <p className="ol-transfer-note">
                     1) ສະແກນ QR ເພື່ອໂອນເງິນ {grandTotal.toLocaleString()} ກີບ
-                    {type === 'delivery' && feeInfo.status !== 'ok' && ' (ຍອດຈະລວມຄ່າສົ່ງຫຼັງປັກໝຸດ)'}
                   </p>
                   <img className="ol-qr" src={qrSrc} alt="QR ຮັບເງິນ" />
                 </>
@@ -391,7 +419,7 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
                 style={slipBtnStyle}
                 onClick={() => fileRef.current && fileRef.current.click()}
               >
-                {slip ? '🔄 ປ່ຽນຮູບສະລິບການໂອນ' : '+ ສະລິບການໂອນ'}
+                {slip ? '🔄 ປ່ຽນຮູບສະລິບ' : '+ ສະລິບການໂອນ'}
               </button>
               {slip && (
                 <div className="ol-slip-preview">

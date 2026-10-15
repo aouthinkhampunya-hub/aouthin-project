@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
+const { ADMIN_COOKIE, KITCHEN_COOKIE, cookieOptions, pickCookieName, getToken } = require('../middleware/authCookie');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ປ່ຽນລະຫັດນີ້ໃນ production';
@@ -9,6 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'ປ່ຽນລະຫັດນີ�
 // ລັອກອິນ: ສົ່ງ area = 'admin' (ຄ່າເລີ່ມຕົ້ນ) ຫຼື 'kitchen' (ໜ້າລັອກອິນຄົວ)
 //  - ບັນຊີ role 'kitchen' ເຂົ້າໄດ້ສະເພາະ area 'kitchen'
 //  - ບັນຊີອື່ນ (owner / staff) ເຂົ້າໄດ້ທັງສອງ
+//  - admin ເກັບໃນ cookie 'token', ຄົວເກັບໃນ cookie 'kitchen_token' (ບໍ່ທັບກັນ)
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -38,11 +40,8 @@ router.post('/login', async (req, res) => {
       { expiresIn: area === 'kitchen' ? '12h' : '8h' }
     );
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV === 'production'
-    });
+    const cookieName = area === 'kitchen' ? KITCHEN_COOKIE : ADMIN_COOKIE;
+    res.cookie(cookieName, token, cookieOptions());
     res.json({ success: true, name: admin.name, role });
   } catch (err) {
     console.error(err);
@@ -51,12 +50,13 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  // ລຶບສະເພາະ cookie ຂອງໜ້າທີ່ກົດອອກຈາກລະບົບ
+  res.clearCookie(pickCookieName(req), cookieOptions());
   res.json({ success: true });
 });
 
 router.get('/me', (req, res) => {
-  const token = req.cookies.token;
+  const token = getToken(req);
   if (!token) return res.status(401).json({ error: 'ຍັງບໍ່ໄດ້ login' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
