@@ -14,6 +14,7 @@ const adminsRouter = require('./routes/admin');
 const staffCallRouter = require('./routes/staffcall');
 const authRouter = require('./routes/auth');
 const requireAuth = require('./middleware/requireAuth');
+const { getToken } = require('./middleware/authCookie');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -106,7 +107,8 @@ const KITCHEN_ALLOWED = [
 app.use('/api', (req, res, next) => {
   if (req.method === 'OPTIONS') return next();
 
-  const token = req.cookies && req.cookies.token;
+  // ໃຊ້ token ອັນດຽວກັບທີ່ requireAuth ເລືອກ (admin ຫຼື kitchen) ບໍ່ແມ່ນສະເພາະ cookie 'token'
+  const token = getToken(req);
   if (!token) return next();
 
   let user;

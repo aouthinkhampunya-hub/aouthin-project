@@ -62,6 +62,7 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   const [slip, setSlip] = useState('');           // data URL ຂອງສະລິບ
   const [payQr, setPayQr] = useState('');
   const [amountQr, setAmountQr] = useState('');   // QR ທີ່ມີຈຳນວນເງິນຢູ່ໃນ QR ແລ້ວ
+  const [amountQrStatus, setAmountQrStatus] = useState('loading'); // loading | ok | error
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   // ຄ່າສົ່ງ: status = idle | loading | ok | far | error
@@ -73,6 +74,7 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   const pinRef = useRef(null);
   const fileRef = useRef(null);
   const feeReqRef = useRef(0);
+  const amountQrCache = useRef({}); // ຈື່ QR ຕາມຈຳນວນເງິນ ເພື່ອສະແດງທັນທີເມື່ອກັບມາຍອດເກົ່າ
 
   // ຍອດອາຫານ (ແປງເປັນຕົວເລກສະເໝີ)
   const foodTotal = Number(String(total).replace(/[^\d.]/g, '')) || 0;
@@ -130,8 +132,11 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
     map.on('click', (e) => placePin(e.latlng.lat, e.latlng.lng, false));
     if (start) placePin(start.lat, start.lng, false);
     setTimeout(() => map.invalidateSize(), 100);
+    const onResize = () => map.invalidateSize();
+    window.addEventListener('resize', onResize);
 
     return () => {
+      window.removeEventListener('resize', onResize);
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
@@ -150,19 +155,35 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   // ສ້າງ QR ທີ່ມີຈຳນວນເງິນຢູ່ໃນ QR (ສະແກນແລ້ວຈຳນວນເງິນຂຶ້ນເອງ) ເມື່ອຍອດລວມປ່ຽນ
   // ສົ່ງເຖິງບ້ານ: ຕ້ອງຄິດຄ່າສົ່ງໄດ້ກ່ອນ ຈຶ່ງຈະສ້າງ (ກັນໂອນຂາດຄ່າສົ່ງ)
   const qrReady = type === 'pickup' || feeInfo.status === 'ok';
+  // ໂຫຼດລ່ວງໜ້າທັນທີທີ່ຮູ້ຍອດ (ກ່ອນລູກຄ້າກົດ "ໂອນເງິນ") ເພື່ອໃຫ້ QR ໃໝ່ຂຶ້ນທັນທີ ບໍ່ກະພິບ
   useEffect(() => {
-    if (payment !== 'transfer' || !qrReady || grandTotal < 1) {
-      setAmountQr('');
+    if (!qrReady || grandTotal < 1) return undefined;
+
+    const cached = amountQrCache.current[grandTotal];
+    if (cached) {
+      setAmountQr(cached);
+      setAmountQrStatus('ok');
       return undefined;
     }
+
+    // ຍອດປ່ຽນ: ເອົາ QR ເກົ່າອອກທັນທີ (ກັນລູກຄ້າສະແກນຍອດເກົ່າ)
+    setAmountQr('');
+    setAmountQrStatus('loading');
     let cancelled = false;
-    const t = setTimeout(() => {
-      getAmountQR(grandTotal)
-        .then((d) => { if (!cancelled) setAmountQr(d?.qrImage || ''); })
-        .catch(() => { if (!cancelled) setAmountQr(''); });
-    }, 250);
-    return () => { cancelled = true; clearTimeout(t); };
-  }, [payment, qrReady, grandTotal]);
+    getAmountQR(grandTotal)
+      .then((d) => {
+        if (cancelled) return;
+        if (d?.qrImage) {
+          amountQrCache.current[grandTotal] = d.qrImage;
+          setAmountQr(d.qrImage);
+          setAmountQrStatus('ok');
+        } else {
+          setAmountQrStatus('error');
+        }
+      })
+      .catch(() => { if (!cancelled) setAmountQrStatus('error'); });
+    return () => { cancelled = true; };
+  }, [qrReady, grandTotal]);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -295,9 +316,39 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
         .ol-box::-webkit-scrollbar {
           display: none;              /* Chrome, Safari, Edge */
         }
+        @keyframes olQrFade { from { opacity: 0; } to { opacity: 1; } }
+
+        .ol-qr-skel {
+          width: 160px;
+          height: 160px;
+          margin: 0 auto 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 14px;
+          background: #fff;
+          border: 1px solid #e8d5c4;
+          color: #6b5a4c;
+          font-weight: 700;
+          font-size: 13px;
+          text-align: center;
+        }
+
+        /* ຈໍໃຫຍ່ (1200px ຂຶ້ນໄປ): ບິນຕໍ່ກັນຖັນດຽວ ກວ້າງປະມານເຄິ່ງໜຶ່ງ ຢູ່ກາງຈໍ
+           ຈໍນ້ອຍ / ກາງ: ໃຊ້ແບບເກົ່າທຸກຢ່າງ */
+        @media (min-width: 1200px) {
+          .ol-overlay .ol-box {
+            box-sizing: border-box;
+            width: 448px !important;
+            max-width: 92vw !important;
+            max-height: 94vh;
+            overflow-y: auto;
+          }
+        }
       `}</style>
       <div className="ol-box">
         <h2>🛵 ຂໍ້ມູນການສັ່ງອອນລາຍ</h2>
+
 
         <div className="ol-types">
           <button
@@ -387,12 +438,24 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
                 <p className="ol-transfer-note">
                   1) ປັກໝຸດຈຸດສົ່ງເທິງແຜນທີ່ ເພື່ອຄິດຄ່າສົ່ງກ່ອນ ຈຶ່ງຈະສະແດງ QR ໂອນເງິນ
                 </p>
-              ) : amountQr ? (
+              ) : amountQrStatus === 'loading' ? (
+                <>
+                  <p className="ol-transfer-note">
+                    1) ສະແກນ QR ເພື່ອໂອນເງິນ {grandTotal.toLocaleString()} ກີບ
+                  </p>
+                  <div className="ol-qr-skel">⏳ ກຳລັງສ້າງ QR...</div>
+                </>
+              ) : amountQrStatus === 'ok' && amountQr ? (
                 <>
                   <p className="ol-transfer-note">
                     1) ສະແກນ QR ເພື່ອໂອນເງິນ {grandTotal.toLocaleString()} ກີບ (ຈຳນວນເງິນຈະຂຶ້ນໃຫ້ເອງ)
                   </p>
-                  <img className="ol-qr" src={amountQr} alt="QR ຮັບເງິນ" />
+                  <img
+                    className="ol-qr"
+                    src={amountQr}
+                    alt="QR ຮັບເງິນ"
+                    style={{ animation: 'olQrFade 0.25s ease' }}
+                  />
                 </>
               ) : qrSrc ? (
                 <>
