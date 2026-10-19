@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authMe, login } from '../../api.js';
+import { authMe, login, logout } from '../../api.js';
 
-// ===== ໜ້າລັອກອິນຂອງຄົວ (ແຍກຈາກລັອກອິນ admin) ທີ່ /kitchen/login =====
+// ໃຜເຂົ້າຫ້ອງຄົວໄດ້: ເຈົ້າຂອງຮ້ານ + ພະນັກງານຄົວ (ຫ້າມສະເພາະພະນັກງານທົ່ວໄປ role = 'staff')
+const canEnterKitchen = (u) => !!u && u.role !== 'staff';
+
 export default function KitchenLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -10,9 +12,13 @@ export default function KitchenLogin() {
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
-  // ຖ້າລັອກອິນຢູ່ແລ້ວ ໄປໜ້າຄົວເລີຍ
+  // ຖ້າມີສິດ ແລະ ລັອກອິນຢູ່ແລ້ວ ໄປໜ້າຄົວເລີຍ
   useEffect(() => {
-    authMe().then(() => navigate('/kitchen', { replace: true })).catch(() => {});
+    authMe()
+      .then((u) => {
+        if (canEnterKitchen(u)) navigate('/kitchen', { replace: true });
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -26,6 +32,13 @@ export default function KitchenLogin() {
     setBusy(true);
     try {
       await login(username.trim(), password, 'kitchen');
+      const me = await authMe();
+      if (!canEnterKitchen(me)) {
+        try { await logout(); } catch (e2) {}
+        setError('ບັນຊີນີ້ບໍ່ມີສິດເຂົ້າຫ້ອງຄົວ');
+        setBusy(false);
+        return;
+      }
       navigate('/kitchen', { replace: true });
     } catch (err) {
       setError(err.error || 'ເຂົ້າສູ່ລະບົບບໍ່ສຳເລັດ');

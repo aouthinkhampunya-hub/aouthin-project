@@ -80,6 +80,10 @@ export const getTableQRs = () => request('/qrcode/tables');
 export const getPaymentQR = () => request('/settings/qr');
 export const uploadPaymentQR = (formData) =>
   request('/settings/qr', { method: 'POST', body: formData });
+// ທີ່ຕັ້ງຮ້ານ (ພິກັດ): ຄືນ { lat, lng, isDefault }
+export const getRestaurantLocation = () => request('/settings/location');
+export const saveRestaurantLocation = (lat, lng) =>
+  request('/settings/location', { method: 'POST', body: JSON.stringify({ lat, lng }) });
 // QR ຮັບເງິນທີ່ມີຈຳນວນເງິນຢູ່ໃນ QR ແລ້ວ (ລູກຄ້າສະແກນແລ້ວຈຳນວນເງິນຂຶ້ນເອງ) ຄືນ { qrImage }
 export const getAmountQR = (amount) =>
   request(`/payqr/amount?amount=${encodeURIComponent(amount)}`);

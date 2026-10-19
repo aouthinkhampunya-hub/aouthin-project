@@ -4,6 +4,14 @@ const { pool } = require('../db');
 const multer = require('multer');
 const path = require('path');
 
+// delivery.js: ຖ້າຢູ່ໂຟນເດີ routes ໃຊ້ './delivery' ຖ້າຢູ່ໜຶ່ງຊັ້ນຂ້າງເທິງໃຊ້ '../delivery'
+let delivery;
+try {
+  delivery = require('../delivery');
+} catch (e) {
+  delivery = require('./delivery');
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../../public/uploads'));
@@ -55,6 +63,56 @@ router.post('/qr', upload.single('qr'), async (req, res) => {
     }
 
     res.json({ success: true, qrImage: imagePath });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// ===== ທີ່ຕັ້ງຮ້ານ (ແອັດມິນປັກມຸດເທິງແຜນທີ່) =====
+// ເກັບໃນຕາຕະລາງ settings: shop_lat, shop_lng
+async function loadShopLocation() {
+  try {
+    const [rows] = await pool.query(
+      "SELECT `key`, value FROM settings WHERE `key` IN ('shop_lat', 'shop_lng')"
+    );
+    const lat = rows.find((r) => r.key === 'shop_lat');
+    const lng = rows.find((r) => r.key === 'shop_lng');
+    if (lat && lng) {
+      delivery.setRestaurantLocation(lat.value, lng.value);
+    }
+  } catch (err) {
+    console.error('loadShopLocation:', err.message);
+  }
+}
+loadShopLocation(); // ໂຫຼດຄັ້ງດຽວຕອນເປີດ server
+
+async function saveSetting(key, value) {
+  await pool.query(
+    'INSERT INTO settings (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = ?',
+    [key, String(value), String(value)]
+  );
+}
+
+// ດຶງພິກັດຮ້ານ (ລູກຄ້າໃຊ້ຕອນສັ່ງອອນລາຍ, ແອັດມິນໃຊ້ໃນໜ້າ Settings)
+router.get('/location', (req, res) => {
+  res.json(delivery.getRestaurantLocation());
+});
+
+// ບັນທຶກພິກັດຮ້ານ
+router.post('/location', async (req, res) => {
+  try {
+    const lat = Number(req.body.lat);
+    const lng = Number(req.body.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ error: 'ພິກັດບໍ່ຖືກຕ້ອງ' });
+    }
+    const latStr = lat.toFixed(6);
+    const lngStr = lng.toFixed(6);
+    await saveSetting('shop_lat', latStr);
+    await saveSetting('shop_lng', lngStr);
+    delivery.setRestaurantLocation(latStr, lngStr); // ໃຊ້ທັນທີ ບໍ່ຕ້ອງ restart
+    res.json({ success: true, ...delivery.getRestaurantLocation() });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Database error' });

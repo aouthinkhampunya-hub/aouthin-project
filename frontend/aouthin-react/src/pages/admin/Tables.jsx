@@ -50,8 +50,7 @@ export default function Tables() {
   const [calls, setCalls] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [tableList, setTableList] = useState([]);        // ລາຍຊື່ເລກໂຕະຈາກ backend (ອາດຂ້າມເລກ)
-  const [listOpen, setListOpen] = useState(null);        // null | 'dinein' | 'pickup' | 'delivery'
-  const [focusTable, setFocusTable] = useState(null);
+  const [tab, setTab] = useState('dinein');              // 'dinein' | 'pickup' | 'delivery'
   const [popup, setPopup] = useState(null);
   const [askPaid, setAskPaid] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -145,29 +144,17 @@ export default function Tables() {
     return () => { clearInterval(t); document.removeEventListener('click', unlock); };
   }, []);
 
-  // Esc ປິດ popup (ປິດອັນເທິງສຸດກ່ອນ: ຮູບສະລິບຂະຫຍາຍ → ຢືນຢັນຈ່າຍ → ໃບບິນ → ລາຍການ)
+  // Esc ປິດ popup (ປິດອັນເທິງສຸດກ່ອນ: ຮູບສະລິບຂະຫຍາຍ → ຢືນຢັນຈ່າຍ → ໃບບິນ)
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
       if (zoomSrc) setZoomSrc(null);
       else if (askPaid) setAskPaid(false);
       else if (popup) closePopup();
-      else if (listOpen) setListOpen(null);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   });
-
-  // ກົດໂຕະໃນກະດານ -> ເປີດປັອບອັບໜ້າໂຕະ ແລ້ວເລື່ອນໄປຫາໂຕະນັ້ນ
-  useEffect(() => {
-    if (listOpen !== 'dinein' || focusTable === null) return undefined;
-    const t = setTimeout(() => {
-      const el = document.getElementById(`table-section-${focusTable}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setFocusTable(null);
-    }, 80);
-    return () => clearTimeout(t);
-  }, [listOpen, focusTable]);
 
   const updateItem = async (id, status) => {
     await updateOrderStatus(id, status);
@@ -179,9 +166,10 @@ export default function Tables() {
   };
   const handleAck = async (id) => { await ackStaffCall(id); loadCalls(); };
 
+  // ກົດໂຕະໃນກະດານ -> ເລື່ອນລົງໄປຫາບັດຂອງໂຕະນັ້ນ (ບໍ່ມີ popup)
   const openTable = (n) => {
-    setFocusTable(n);
-    setListOpen('dinein');
+    const el = document.getElementById(`table-section-${n}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
   /* ===== popup ໃບບິນ ===== */
@@ -230,15 +218,15 @@ export default function Tables() {
     ])
   ).sort((a, b) => a - b);
 
-  const LISTS = {
-    dinein: { bills: dineInBills, title: '🍽️ ອໍເດີ້ໜ້າໂຕະ', empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
-    pickup: { bills: pickupBills, title: '🥡 ມາຮັບເຄື່ອງເອງ', empty: 'ຍັງບໍ່ມີອໍເດີ້ມາຮັບເຄື່ອງເອງ' },
-    delivery: { bills: deliveryBills, title: '🛵 ສົ່ງເຖິງບ້ານ', empty: 'ຍັງບໍ່ມີອໍເດີ້ສົ່ງເຖິງບ້ານ' },
-  };
-  const current = listOpen ? LISTS[listOpen] : null;
-  const listBills = current ? current.bills : [];
+  const TABS = [
+    { key: 'dinein', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ', bills: dineInBills, empty: 'ຍັງບໍ່ມີໂຕະທີ່ເປີດຢູ່' },
+    { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ', bills: pickupBills, empty: 'ຍັງບໍ່ມີອໍເດີ້ມາຮັບເຄື່ອງເອງ' },
+    { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ', bills: deliveryBills, empty: 'ຍັງບໍ່ມີອໍເດີ້ສົ່ງເຖິງບ້ານ' },
+  ];
+  const current = TABS.find((t) => t.key === tab) || TABS[0];
+  const listBills = current.bills;
 
-  // ບັດບິນ (ໃຊ້ໃນປັອບອັບທັງໝົດ)
+  // ບັດບິນ
   const renderBillCard = (bill) => {
     const total = billTotal(bill);
     const online = isOnline(bill);
@@ -326,8 +314,108 @@ export default function Tables() {
 
   return (
     <main>
-      {/* ສະໄຕລ໌ຂອງຮູບສະລິບຂະຫຍາຍ (lightbox) */}
+      {/* ສະໄຕລ໌ຂອງແຖບ, ຕາຂ່າຍບັດ ແລະ ຮູບສະລິບຂະຫຍາຍ (lightbox) */}
       <style>{`
+        body.is-admin .tbv-tabs {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+          margin: 0 0 16px;
+        }
+        body.is-admin .tbv-tab {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 16px 10px;
+          border: 2px solid #daa520;
+          border-radius: 14px;
+          background: #fff3cd;
+          color: #7a1f0f;
+          font-size: 16px;
+          font-weight: 800;
+          font-family: inherit;
+          cursor: pointer;
+          transition: filter 0.15s ease, transform 0.1s ease;
+        }
+        body.is-admin .tbv-tab:hover { filter: brightness(0.97); }
+        body.is-admin .tbv-tab:active { transform: scale(0.98); }
+        body.is-admin .tbv-tab.active {
+          background: #7a1f0f;
+          border-color: #7a1f0f;
+          color: #fff;
+        }
+        body.is-admin .tbv-tab-count {
+          min-width: 24px;
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: #b8a898;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 800;
+          text-align: center;
+        }
+        body.is-admin .tbv-tab.has .tbv-tab-count { background: #c0392b; }
+        body.is-admin .tbv-tab.active .tbv-tab-count { background: #fff; color: #7a1f0f; }
+
+        /* ບັດກວ້າງຂຶ້ນ (ປະມານ 4 ອັນຕໍ່ແຖວໃນຈໍໃຫຍ່) */
+        body.is-admin .tbv-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
+          gap: 18px;
+          align-items: start;
+          margin-top: 18px;
+        }
+        body.is-admin .tbv-grid .table-card {
+          margin: 0;
+          min-width: 0;
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        /* ຕາຕະລາງພໍດີບັດສະເໝີ: ຊື່ຍາວຂຶ້ນແຖວໃໝ່ ບໍ່ດັນອອກນອກບັດ */
+        body.is-admin .tbv-grid .table-card table {
+          width: 100%;
+          table-layout: fixed;
+          border-collapse: collapse;
+        }
+        body.is-admin .tbv-grid .table-card th,
+        body.is-admin .tbv-grid .table-card td {
+          padding: 10px 8px;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          vertical-align: middle;
+          font-size: 14px;
+        }
+        body.is-admin .tbv-grid .table-card tr > :nth-child(2) {
+          width: 62px;
+          text-align: center;
+        }
+        body.is-admin .tbv-grid .table-card tr > :nth-child(3) {
+          width: 92px;
+        }
+        body.is-admin .tbv-grid .table-card tr > :nth-child(4) {
+          width: 74px;
+          text-align: center;
+        }
+        body.is-admin .tbv-grid .table-card .delete-btn {
+          max-width: 100%;
+          padding: 6px 8px;
+          font-size: 12px;
+          line-height: 1.3;
+          white-space: normal;
+        }
+
+        body.is-admin .tbv-empty {
+          padding: 40px 0;
+          text-align: center;
+          color: #6b5a4c;
+          font-weight: 700;
+        }
+        @media (max-width: 640px) {
+          body.is-admin .tbv-tab { padding: 12px 6px; font-size: 13px; }
+        }
+
         body.is-admin .tb-slip-trigger {
           display: block;
           margin: 0;
@@ -402,57 +490,51 @@ export default function Tables() {
         ))}
       </div>
 
-      {/* 3 ປຸ່ມ: ໜ້າໂຕະ / ມາຮັບເຄື່ອງເອງ / ສົ່ງເຖິງບ້ານ */}
-      <div className="ord-tabs">
-        {[
-          { key: 'dinein', icon: '🍽️', label: 'ອໍເດີ້ໜ້າໂຕະ', count: dineInBills.length },
-          { key: 'pickup', icon: '🥡', label: 'ມາຮັບເຄື່ອງເອງ', count: pickupBills.length },
-          { key: 'delivery', icon: '🛵', label: 'ສົ່ງເຖິງບ້ານ', count: deliveryBills.length },
-        ].map((t) => (
+      {/* 3 ແຖບ: ກົດແລ້ວເນື້ອໃນຂຶ້ນຢູ່ລຸ່ມ (ບໍ່ມີ popup) */}
+      <div className="tbv-tabs">
+        {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
-            className={`ord-tab${t.key !== 'dinein' ? ' online' : ''}${t.count > 0 ? ' has-orders' : ''}`}
-            onClick={() => setListOpen(t.key)}
+            className={`tbv-tab${tab === t.key ? ' active' : ''}${t.bills.length > 0 ? ' has' : ''}`}
+            onClick={() => setTab(t.key)}
           >
             {t.icon} {t.label}
-            <span className="ord-count">{t.count}</span>
+            <span className="tbv-tab-count">{t.bills.length}</span>
           </button>
         ))}
       </div>
 
-      {/* ກະດານໂຕະໃນຮ້ານ (ອ່ານຈາກລາຍຊື່ເລກໂຕະ ກົດໂຕະທີ່ມີຄົນ ເພື່ອເປີດລາຍລະອຽດ) */}
-      <div id="table-board" className="table-board">
-        {boardNumbers.map((n) => {
-          const bill = byTable[n];
-          return bill ? (
-            <div key={n} className="board-cell occupied" onClick={() => openTable(n)}>
-              <div className="board-num">{n}</div>
-              <div className="board-sub">{billTotal(bill).toLocaleString()} ກີບ</div>
-            </div>
-          ) : (
-            <div key={n} className="board-cell empty">
-              <div className="board-num">{n}</div>
-              <div className="board-sub">ວ່າງ</div>
-            </div>
-          );
-        })}
-      </div>
+      {/* ກະດານເລກໂຕະ: ສະແດງສະເພາະແຖບ "ອໍເດີ້ໜ້າໂຕະ" */}
+      {tab === 'dinein' && (
+        <div id="table-board" className="table-board">
+          {boardNumbers.map((n) => {
+            const bill = byTable[n];
+            return bill ? (
+              <div key={n} className="board-cell occupied" onClick={() => openTable(n)}>
+                <div className="board-num">{n}</div>
+                <div className="board-sub">{billTotal(bill).toLocaleString()} ກີບ</div>
+              </div>
+            ) : (
+              <div key={n} className="board-cell empty">
+                <div className="board-num">{n}</div>
+                <div className="board-sub">ວ່າງ</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {!loaded && <p>ກຳລັງໂຫລດ...</p>}
 
-      {/* ===== ປັອບອັບລາຍການ ===== */}
-      {current && createPortal(
-        <div className="olx-overlay" onClick={(e) => e.target === e.currentTarget && setListOpen(null)}>
-          <div className="olx-box">
-            <button className="olx-close" onClick={() => setListOpen(null)}>✕</button>
-            <h2 className="olx-title">{current.title} ({current.bills.length})</h2>
-            {listBills.length === 0
-              ? <p className="olx-empty">{current.empty}</p>
-              : listBills.map(renderBillCard)}
-          </div>
-        </div>,
-        document.body
+      {/* ບັດບິນຂອງແຖບທີ່ເລືອກ */}
+      {loaded && listBills.length === 0 && (
+        <div className="tbv-empty">{current.empty}</div>
+      )}
+      {loaded && listBills.length > 0 && (
+        <div className="tbv-grid">
+          {listBills.map(renderBillCard)}
+        </div>
       )}
 
       {/* ===== popup ໃບບິນ ===== */}
