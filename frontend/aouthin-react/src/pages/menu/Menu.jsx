@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { getProducts, createOrder, callStaff, createOnlineOrder, getOnlineBill, API_BASE } from '../../api.js';
+import { getProducts, createOrder, callStaff, createOnlineOrder, getOnlineBill, getAmountQR, API_BASE } from '../../api.js';
 import OnlineOrderModal from '../../components/OnlineOrderModal.jsx';
 
 // ເລກໂຕະ: ມາຈາກລິ້ງ ?table=N (QR ຂອງໂຕະ). ຖ້າບໍ່ມີ → ສັ່ງອອນລາຍ ('online')
@@ -234,6 +234,8 @@ export default function Menu() {
     setQrImage('');
     setOnlineFee({ fee: 0, km: null });
 
+    let dineTotal = 0; // ຍອດລວມຂອງໂຕະ ໄວ້ສ້າງ QR ທີ່ມີຈຳນວນເງິນ
+
     try {
       if (isOnlineMode) {
         const saved = JSON.parse(sessionStorage.getItem('onlineBill') || 'null');
@@ -254,7 +256,9 @@ export default function Menu() {
       if (!res.ok) throw new Error('bill api failed');
       const bills = await res.json();
       const myBill = bills.find(b => String(b.table_number) === String(tableNumber));
-      setBillItems(myBill ? myBill.items : []);
+      const items = myBill ? myBill.items : [];
+      setBillItems(items);
+      dineTotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
     } catch (e) {
       // ອອນລາຍທີ່ບໍ່ພົບບິນ (404) ຖືວ່າຍັງບໍ່ມີການສັ່ງ
       if (isOnlineMode && e?.status === 404) {
@@ -267,12 +271,23 @@ export default function Menu() {
     }
     setBillLoading(false);
 
-    // QR ຈ່າຍເງິນ (ຖ້າໂຫລດບໍ່ໄດ້ກໍຂ້າມໄປ)
-    try {
-      const qres = await fetch(`${API_BASE}/api/settings/qr`);
-      const qdata = await qres.json();
-      if (qdata.qrImage) setQrImage(qdata.qrImage);
-    } catch (e) {}
+    // QR ຈ່າຍເງິນ: ລອງ QR ທີ່ມີຈຳນວນເງິນຢູ່ໃນ QR ກ່ອນ (ສະແກນແລ້ວເງິນຂຶ້ນເອງ)
+    // ຖ້າສ້າງບໍ່ໄດ້ ຫຼື ບໍ່ມີລາຍການ ໃຊ້ QR ທຳມະດາຂອງຮ້ານແທນ
+    let img = '';
+    if (dineTotal > 0) {
+      try {
+        const r = await getAmountQR(dineTotal);
+        if (r && r.qrImage) img = r.qrImage;
+      } catch (e) {}
+    }
+    if (!img) {
+      try {
+        const qres = await fetch(`${API_BASE}/api/settings/qr`);
+        const qdata = await qres.json();
+        if (qdata.qrImage) img = qdata.qrImage;
+      } catch (e) {}
+    }
+    if (img) setQrImage(img);
   }
 
   function openBill() {

@@ -1,11 +1,27 @@
 export const API_BASE = import.meta.env.VITE_API_URL || '';
 const BASE = API_BASE + '/api';
 
+// ບອກ backend ວ່າຄຳຂໍມາຈາກໜ້າໃດ (kitchen / admin) ເພື່ອເລືອກ cookie ລັອກອິນໃຫ້ຖືກ
+// ຕ້ອງສົ່ງເອງ ເພາະ Referer ຂ້າມ origin (5173 -> 3000, Firebase -> Render) ບໍ່ມີ path
+function currentArea() {
+  const p = window.location.pathname;
+  if (p === '/kitchen' || p.startsWith('/kitchen/')) return 'kitchen';
+  if (p === '/admin' || p.startsWith('/admin/')) return 'admin';
+  return null; // ໜ້າລູກຄ້າ (/menu) ບໍ່ຕ້ອງໃຊ້
+}
+
 async function request(path, options = {}) {
+  const headers = {};
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+  const area = currentArea();
+  if (area) headers['x-area'] = area;
+
   const res = await fetch(BASE + path, {
     credentials: 'include',
-    headers: options.body instanceof FormData ? undefined : { 'Content-Type': 'application/json' },
-    ...options
+    ...options,
+    headers: { ...headers, ...(options.headers || {}) },
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw { status: res.status, ...data };
