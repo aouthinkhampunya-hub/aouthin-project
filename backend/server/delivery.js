@@ -2,8 +2,12 @@
 const DEFAULT_LOCATION = { lat: 17.9757, lng: 102.6331 }; // ຄ່າເລີ່ມຕົ້ນ ຖ້າແອັດມິນຍັງບໍ່ໄດ້ປັກມຸດ
 const PER_KM = 2500;        // ຄ່າສົ່ງຕໍ່ 1 ກມ (ກີບ)
 const MIN_KM = 1;           // ຄິດຢ່າງໜ້ອຍ 1 ກມ
-const MAX_KM = 20;          // ໄກສຸດທີ່ຮັບສົ່ງ
+const DEFAULT_MAX_KM = 20;  // ໄກສຸດທີ່ຮັບສົ່ງ (ຄ່າເລີ່ມຕົ້ນ ຖ້າແອັດມິນຍັງບໍ່ໄດ້ຕັ້ງ)
+const MAX_KM_LIMIT = 100;   // ແອັດມິນຕັ້ງໄດ້ສູງສຸດບໍ່ເກີນນີ້
 const ROAD_FACTOR = 1.3;    // ເສັ້ນຊື່ → ໄລຍະຖະໜົນ (ປະມານ)
+
+// ໄລຍະສົ່ງສູງສຸດປັດຈຸບັນ (ແອັດມິນປ່ຽນໄດ້ຜ່ານໜ້າ QR Code → ທີ່ຕັ້ງຮ້ານ)
+let MAX_KM = DEFAULT_MAX_KM;
 
 // ພິກັດຮ້ານປັດຈຸບັນ (ແອັດມິນປ່ຽນໄດ້ຜ່ານໜ້າ Settings)
 let RESTAURANT = { lat: DEFAULT_LOCATION.lat, lng: DEFAULT_LOCATION.lng };
@@ -18,8 +22,21 @@ function setRestaurantLocation(lat, lng) {
   return true;
 }
 
+// ຕັ້ງໄລຍະສົ່ງສູງສຸດ (ກມ) ຕ້ອງຢູ່ລະຫວ່າງ 1 ຫາ MAX_KM_LIMIT
+function setMaxKm(km) {
+  km = Number(km);
+  if (!Number.isFinite(km) || km < 1 || km > MAX_KM_LIMIT) return false;
+  MAX_KM = Math.round(km);
+  return true;
+}
+
 function getRestaurantLocation() {
-  return { lat: RESTAURANT.lat, lng: RESTAURANT.lng, isDefault: usingDefault };
+  return {
+    lat: RESTAURANT.lat,
+    lng: RESTAURANT.lng,
+    isDefault: usingDefault,
+    max_km: MAX_KM,
+  };
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -60,5 +77,8 @@ module.exports = {
   calcDelivery,
   setRestaurantLocation,
   getRestaurantLocation,
+  setMaxKm,
   DEFAULT_LOCATION,
+  DEFAULT_MAX_KM,
+  MAX_KM_LIMIT,
 };

@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { getPaymentQR, getAmountQR, getDeliveryFee, API_BASE } from '../api.js';
 import './online-order.css';
 
-// ປ່ຽນເປັນພິກັດຮ້ານຂອງເຈົ້າ (ເປີດ Google Maps ກົດຂວາທີ່ຮ້ານ ຈະເຫັນເລກ lat, lng)
+// ຈຸດເລີ່ມຕົ້ນຂອງແຜນທີ່ ຖ້າດຶງພິກັດຮ້ານຈາກ server ບໍ່ໄດ້ (ປົກກະຕິຈະໃຊ້ພິກັດຮ້ານທີ່ແອດມິນປັກໄວ້)
 const DEFAULT_CENTER = [17.9757, 102.6331];
 
 // ເບີໂທລາວ: 020 + ເລກ 8 ໂຕ = 11 ໂຕ ພໍດີ
@@ -18,6 +18,14 @@ const pinIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   shadowSize: [41, 41],
+});
+
+// ໝຸດຮ້ານ (ສີສົ້ມ + ຕົວໜັງສື "ຮ້ານ") ແຍກຈາກໝຸດຈຸດສົ່ງຂອງລູກຄ້າ
+const shopIcon = L.divIcon({
+  className: 'ol-shop-pin-wrap',
+  html: '<div class="ol-shop-pin"><span class="ol-shop-pin-icon">🏪</span><span class="ol-shop-pin-text">ຮ້ານ</span></div>',
+  iconSize: [64, 44],
+  iconAnchor: [32, 44],
 });
 
 // ຫຍໍ້ຮູບສະລິບໃຫ້ນ້ອຍລົງກ່ອນສົ່ງ (ປະຢັດເນັດ ແລະ ພື້ນທີ່)
@@ -67,10 +75,14 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   const [busy, setBusy] = useState(false);
   // ຄ່າສົ່ງ: status = idle | loading | ok | far | error
   const [feeInfo, setFeeInfo] = useState({ status: 'idle' });
+  // ພິກັດຮ້ານ (ດຶງຈາກ server) ເພື່ອສະແດງໝຸດຮ້ານເທິງແຜນທີ່
+  const [shop, setShop] = useState(null);
 
   const mapDivRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const shopMarkerRef = useRef(null);
+  const shopRef = useRef(null);
   const pinRef = useRef(null);
   const fileRef = useRef(null);
   const feeReqRef = useRef(0);
@@ -82,6 +94,25 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   const grandTotal = foodTotal + deliveryFee;
   const feeBlocked =
     type === 'delivery' && ['loading', 'far', 'error'].includes(feeInfo.status);
+
+  // ດຶງພິກັດຮ້ານຈາກ server ຕອນເປີດຟອມ
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE}/api/settings/location`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return;
+        const lat = Number(d.lat);
+        const lng = Number(d.lng);
+        // ຖ້າແອດມິນຍັງບໍ່ໄດ້ປັກໝຸດຮ້ານ (isDefault) ບໍ່ສະແດງໝຸດ ເພາະບໍ່ແມ່ນຕຳແໜ່ງຈິງ
+        if (Number.isFinite(lat) && Number.isFinite(lng) && !d.isDefault) {
+          shopRef.current = { lat, lng };
+          setShop({ lat, lng });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // ຖາມ server ວ່າຄ່າສົ່ງເທົ່າໃດ (ເອີ້ນທຸກຄັ້ງທີ່ປັກ / ລາກໝຸດ)
   const fetchFee = async (lat, lng) => {
@@ -120,10 +151,19 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
   useEffect(() => {
     if (type !== 'delivery' || !mapDivRef.current) return undefined;
     const start = pinRef.current;
-    const map = L.map(mapDivRef.current).setView(
-      start ? [start.lat, start.lng] : DEFAULT_CENTER,
-      start ? 17 : 13
-    );
+    const shopPos = shopRef.current;
+
+    let center = DEFAULT_CENTER;
+    let zoom = 13;
+    if (start) {
+      center = [start.lat, start.lng];
+      zoom = 17;
+    } else if (shopPos) {
+      center = [shopPos.lat, shopPos.lng];
+      zoom = 15;
+    }
+
+    const map = L.map(mapDivRef.current).setView(center, zoom);
     mapRef.current = map;
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -140,9 +180,31 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
+      shopMarkerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
+
+  // ໃສ່ໝຸດຮ້ານເທິງແຜນທີ່ (ຕ້ອງຢູ່ຕໍ່ຈາກ effect ສ້າງແຜນທີ່ ເພື່ອໃຫ້ຖືກຣັນຫຼັງ)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (type !== 'delivery' || !map || !shop) return;
+
+    if (shopMarkerRef.current) {
+      shopMarkerRef.current.remove();
+      shopMarkerRef.current = null;
+    }
+    // interactive: false ເພື່ອໃຫ້ກົດທະລຸໝຸດຮ້ານໄປປັກຈຸດສົ່ງໄດ້
+    shopMarkerRef.current = L.marker([shop.lat, shop.lng], {
+      icon: shopIcon,
+      interactive: false,
+      keyboard: false,
+      zIndexOffset: 1000,
+    }).addTo(map);
+
+    // ຖ້າລູກຄ້າຍັງບໍ່ໄດ້ປັກຈຸດສົ່ງ ໃຫ້ຍ້າຍແຜນທີ່ມາຢູ່ບ່ອນຮ້ານ
+    if (!pinRef.current) map.setView([shop.lat, shop.lng], 15);
+  }, [type, shop]);
 
   // ໂຫລດ QR ຮັບເງິນຂອງຮ້ານ ເມື່ອເລືອກໂອນເງິນ
   useEffect(() => {
@@ -334,6 +396,41 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
           text-align: center;
         }
 
+        /* ໝຸດຮ້ານເທິງແຜນທີ່ */
+        .ol-shop-pin-wrap {
+          background: transparent !important;
+          border: none !important;
+        }
+        .ol-shop-pin {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          line-height: 1;
+        }
+        .ol-shop-pin-icon {
+          width: 34px;
+          height: 34px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          background: #f2760c;
+          border: 3px solid #fff;
+          border-radius: 50%;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+        }
+        .ol-shop-pin-text {
+          margin-top: 2px;
+          padding: 2px 8px;
+          font-size: 12px;
+          font-weight: 800;
+          color: #fff;
+          background: #7a1f0f;
+          border-radius: 999px;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+          white-space: nowrap;
+        }
+
         /* ຈໍໃຫຍ່ (1200px ຂຶ້ນໄປ): ບິນຕໍ່ກັນຖັນດຽວ ກວ້າງປະມານເຄິ່ງໜຶ່ງ ຢູ່ກາງຈໍ
            ຈໍນ້ອຍ / ກາງ: ໃຊ້ແບບເກົ່າທຸກຢ່າງ */
         @media (min-width: 1200px) {
@@ -408,6 +505,11 @@ export default function OnlineOrderModal({ total, onClose, onSubmit }) {
             </button>
             <div ref={mapDivRef} className="ol-map" />
             <p className="ol-map-hint">{hint}</p>
+            {shop && (
+              <p className="ol-map-hint" style={{ marginTop: 2 }}>
+                🏪 ໝຸດສີສົ້ມ = ທີ່ຕັ້ງຮ້ານ
+              </p>
+            )}
           </div>
         )}
 

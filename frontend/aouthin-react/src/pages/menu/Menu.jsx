@@ -39,6 +39,7 @@ function billStatusLabel(status) {
 export default function Menu() {
   const [tableNumber, setTableNumber] = useState(getTableNumber);
   const [products, setProducts] = useState([]);
+  const [bestIds, setBestIds] = useState([]);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState(() => loadSavedCart(getTableNumber()));
@@ -78,6 +79,20 @@ export default function Menu() {
   }, [tableNumber]);
 
   useEffect(() => { loadProducts(); }, []);
+
+  // ດຶງເມນູຂາຍດີ 3 ອັນດັບ ເພື່ອໃສ່ປ້າຍ
+  useEffect(() => {
+    async function loadBest() {
+      try {
+        const res = await fetch(`${API_BASE}/api/orders/best-sellers`);
+        if (!res.ok) return;
+        const ids = await res.json();
+        if (Array.isArray(ids)) setBestIds(ids);
+      } catch (e) {}
+    }
+    loadBest();
+  }, []);
+
   useEffect(() => { setCartError(false); }, [cart, cartOpen]);
 
   async function loadProducts() {
@@ -366,6 +381,7 @@ export default function Menu() {
           return (
             <div className="product-card" key={p.id}>
               {p.image && <img src={p.image.startsWith('http') ? p.image : API_BASE + p.image} className="product-img" alt={p.name} />}
+              {bestIds.includes(p.id) && <span className="best-badge">🔥 ຂາຍດີ</span>}
               <h3>{p.name}</h3>
               <p>ປະເພດ: {p.size} | ລົດຊາດ: {p.color}</p>
               <p>ເຫຼືອ: {p.stock} ຈານ</p>

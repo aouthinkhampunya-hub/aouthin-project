@@ -124,6 +124,25 @@ router.get('/bills', async (req, res) => {
   }
 });
 
+// ເມນູຂາຍດີ 3 ອັນດັບ (7 ວັນຫຼ້າສຸດ) ສົ່ງສະເພາະ id ເທົ່ານັ້ນ ລູກຄ້າເບິ່ງໄດ້
+router.get('/best-sellers', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT product_id, SUM(quantity) AS total
+       FROM orders
+       WHERE status = 'completed'
+         AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+       GROUP BY product_id
+       ORDER BY total DESC
+       LIMIT 3`
+    );
+    res.json(rows.map((r) => r.product_id));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // ຄິດຄ່າສົ່ງຕາມພິກັດທີ່ປັກໝຸດ: GET /api/orders/delivery-fee?lat=..&lng=..
 router.get('/delivery-fee', (req, res) => {
   const lat = toCoord(req.query.lat);

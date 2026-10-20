@@ -69,17 +69,21 @@ router.post('/qr', upload.single('qr'), async (req, res) => {
   }
 });
 
-// ===== ທີ່ຕັ້ງຮ້ານ (ແອັດມິນປັກມຸດເທິງແຜນທີ່) =====
-// ເກັບໃນຕາຕະລາງ settings: shop_lat, shop_lng
+// ===== ທີ່ຕັ້ງຮ້ານ (ແອັດມິນປັກມຸດເທິງແຜນທີ່) + ໄລຍະສົ່ງສູງສຸດ =====
+// ເກັບໃນຕາຕະລາງ settings: shop_lat, shop_lng, delivery_max_km
 async function loadShopLocation() {
   try {
     const [rows] = await pool.query(
-      "SELECT `key`, value FROM settings WHERE `key` IN ('shop_lat', 'shop_lng')"
+      "SELECT `key`, value FROM settings WHERE `key` IN ('shop_lat', 'shop_lng', 'delivery_max_km')"
     );
     const lat = rows.find((r) => r.key === 'shop_lat');
     const lng = rows.find((r) => r.key === 'shop_lng');
+    const maxKm = rows.find((r) => r.key === 'delivery_max_km');
     if (lat && lng) {
       delivery.setRestaurantLocation(lat.value, lng.value);
+    }
+    if (maxKm) {
+      delivery.setMaxKm(maxKm.value);
     }
   } catch (err) {
     console.error('loadShopLocation:', err.message);
@@ -94,12 +98,12 @@ async function saveSetting(key, value) {
   );
 }
 
-// ດຶງພິກັດຮ້ານ (ລູກຄ້າໃຊ້ຕອນສັ່ງອອນລາຍ, ແອັດມິນໃຊ້ໃນໜ້າ Settings)
+// ດຶງພິກັດຮ້ານ + ໄລຍະສົ່ງສູງສຸດ (ລູກຄ້າໃຊ້ຕອນສັ່ງອອນລາຍ, ແອັດມິນໃຊ້ໃນໜ້າ Settings)
 router.get('/location', (req, res) => {
   res.json(delivery.getRestaurantLocation());
 });
 
-// ບັນທຶກພິກັດຮ້ານ
+// ບັນທຶກພິກັດຮ້ານ (ແລະ ໄລຍະສົ່ງສູງສຸດ ຖ້າສົ່ງ max_km ມາ)
 router.post('/location', async (req, res) => {
   try {
     const lat = Number(req.body.lat);
@@ -107,11 +111,32 @@ router.post('/location', async (req, res) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return res.status(400).json({ error: 'ພິກັດບໍ່ຖືກຕ້ອງ' });
     }
+
+    // ໄລຍະສົ່ງສູງສຸດ (ບໍ່ບັງຄັບ): ຕ້ອງເປັນເລກ 1 ຫາ 100 ກມ
+    const hasMaxKm =
+      req.body.max_km !== undefined && req.body.max_km !== null && req.body.max_km !== '';
+    let maxKm = null;
+    if (hasMaxKm) {
+      maxKm = Number(req.body.max_km);
+      if (!Number.isFinite(maxKm) || maxKm < 1 || maxKm > delivery.MAX_KM_LIMIT) {
+        return res.status(400).json({
+          error: `ໄລຍະສົ່ງສູງສຸດຕ້ອງຢູ່ລະຫວ່າງ 1 ຫາ ${delivery.MAX_KM_LIMIT} ກມ`,
+        });
+      }
+      maxKm = Math.round(maxKm);
+    }
+
     const latStr = lat.toFixed(6);
     const lngStr = lng.toFixed(6);
     await saveSetting('shop_lat', latStr);
     await saveSetting('shop_lng', lngStr);
     delivery.setRestaurantLocation(latStr, lngStr); // ໃຊ້ທັນທີ ບໍ່ຕ້ອງ restart
+
+    if (maxKm !== null) {
+      await saveSetting('delivery_max_km', maxKm);
+      delivery.setMaxKm(maxKm);
+    }
+
     res.json({ success: true, ...delivery.getRestaurantLocation() });
   } catch (err) {
     console.error(err);
