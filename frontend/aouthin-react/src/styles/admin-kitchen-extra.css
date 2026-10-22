@@ -179,11 +179,12 @@ body.is-admin .kc-yes:hover {
 @keyframes kcPopIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* ===================================================================
-   ເຕັມຈໍ + ບັດຊິດກັນບໍ່ໃຫ້ມີບ່ອນຫວ່າງ (masonry)
+   ເຕັມຈໍ + ບິນທຸກໃບສູງເທົ່າກັນ (grid)
    =================================================================== */
 
-/* ເນື້ອໃນເຕັມຄວາມກວ້າງຈໍ (ເອົາ max-width ທີ່ເຮັດໃຫ້ຢູ່ກາງຈໍອອກ) */
-body.is-admin .kitchen-page {
+/* ເນື້ອໃນເຕັມຄວາມກວ້າງຈໍ */
+body.is-admin .kitchen-page,
+.kitchen-page {
   width: 100% !important;
   max-width: none !important;
   margin: 0 !important;
@@ -199,23 +200,35 @@ body.is-admin .kitchen-tabs {
   box-sizing: border-box;
 }
 
-/* ບັດ: ຈັດເປັນຖັນ ບັດສັ້ນຈະມີບັດຖັດໄປຂຶ້ນມາເຕີມຊ່ອງຫວ່າງ */
-body.is-admin .kitchen-grid {
-  display: block !important;
+/* ຕາຕະລາງບິນ: ແຕ່ລະແຖວສູງເທົ່າກັນ */
+body.is-admin .kitchen-grid,
+.kitchen-page .kitchen-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)) !important;
+  gap: 16px !important;
+  align-items: stretch !important;
   width: 100% !important;
   max-width: none !important;
   margin: 0 !important;
-  column-width: 340px;
-  column-gap: 16px;
+  column-width: auto !important;   /* ຍົກເລີກ masonry ເກົ່າ */
   box-sizing: border-box;
 }
-body.is-admin .kitchen-grid > .kitchen-card {
-  display: block;
-  width: 100% !important;
+
+body.is-admin .kitchen-grid > .kitchen-card,
+.kitchen-page .kitchen-grid > .kitchen-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-self: stretch !important;
+  height: auto !important;
+  width: auto !important;
   max-width: none !important;
-  margin: 0 0 16px !important;
+  margin: 0 !important;
   box-sizing: border-box;
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
-  page-break-inside: avoid;
+}
+
+@media (max-width: 700px) {
+  body.is-admin .kitchen-grid,
+  .kitchen-page .kitchen-grid {
+    grid-template-columns: 1fr !important;
+  }
 }

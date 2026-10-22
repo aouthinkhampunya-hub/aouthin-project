@@ -1,0 +1,377 @@
+/* ============================================================
+   ໜ້າຄົວ (React /kitchen) - ດີໄຊນ໌ໃໝ່
+   ໂຫຼດຫຼັງ admin-kitchen.css ແລະ admin-kitchen-extra.css ເພື່ອທັບແບບເກົ່າ
+   ທຸກກົດຂຶ້ນຕົ້ນດ້ວຍ body.is-admin (ຕາມກົດຂອງໂປຣເຈັກ)
+   ============================================================ */
+
+body.is-admin .kitchen-page {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 22px 24px 48px;
+  box-sizing: border-box;
+}
+
+/* ---------- ແຖບ 3 ປະເພດ ---------- */
+body.is-admin .kitchen-page .kitchen-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 24px;
+}
+
+body.is-admin .kitchen-page .kitchen-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: auto;
+  margin: 0;
+  padding: 16px 18px;
+  border: 2px solid #ecd9c8;
+  border-radius: 18px;
+  background: #fff;
+  color: #7a1f0f;
+  font-size: 18px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(122, 31, 15, 0.06);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+body.is-admin .kitchen-page .kitchen-tab:hover {
+  border-color: #b8380e;
+  transform: translateY(-1px);
+}
+
+body.is-admin .kitchen-page .kitchen-tab.has {
+  background: #fff4d6;
+  border-color: #e8b923;
+}
+
+body.is-admin .kitchen-page .kitchen-tab.active {
+  background: linear-gradient(135deg, #7a1f0f, #a32a12);
+  border-color: #7a1f0f;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(122, 31, 15, 0.3);
+}
+
+body.is-admin .kitchen-page .kitchen-tab-count {
+  min-width: 34px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: #c9b8a6;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+}
+
+body.is-admin .kitchen-page .kitchen-tab.has .kitchen-tab-count {
+  background: #d9362b;
+  animation: kPulse 1.6s ease-in-out infinite;
+}
+
+body.is-admin .kitchen-page .kitchen-tab.active .kitchen-tab-count {
+  background: #ffc93c;
+  color: #2b1b0e;
+  animation: none;
+}
+
+/* ---------- ສະຖານະວ່າງ (ບໍ່ມີອາຫານ) ---------- */
+body.is-admin .kitchen-page .kitchen-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 64px 16px 56px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  text-align: center;
+}
+
+body.is-admin .kitchen-page .kitchen-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  font-size: 50px;
+  box-shadow: 0 10px 28px rgba(46, 125, 50, 0.16);
+}
+
+body.is-admin .kitchen-page .kitchen-empty-title {
+  margin-top: 14px;
+  font-size: 23px;
+  font-weight: 900;
+  color: #2e6b1f;
+}
+
+body.is-admin .kitchen-page .kitchen-empty-sub {
+  font-size: 15px;
+  font-weight: 600;
+  color: #8a7a6c;
+}
+
+/* ---------- ບັດອໍເດີ້ ---------- */
+body.is-admin .kitchen-page .kitchen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+body.is-admin .kitchen-page .kitchen-card {
+  position: relative;
+  box-sizing: border-box;
+  padding: 16px 18px 10px;
+  border: none;
+  border-left: 0 !important;
+  border-top: 8px solid #e8b923;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(43, 27, 14, 0.1);
+  overflow: hidden;
+  animation: kCardIn 0.3s ease;
+}
+
+body.is-admin .kitchen-page .kitchen-card.cooking {
+  border-top-color: #2e7d32;
+}
+
+body.is-admin .kitchen-page .kcard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+body.is-admin .kitchen-page .kitchen-card h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.2;
+  color: #7a1f0f;
+}
+
+/* ປ້າຍເວລາທີ່ລໍມາແລ້ວ */
+body.is-admin .kitchen-page .kcard-timer {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+body.is-admin .kitchen-page .kcard-timer.ok { background: #e8f5e9; color: #2e6b1f; }
+body.is-admin .kitchen-page .kcard-timer.warn { background: #fff3cd; color: #7a5b00; }
+body.is-admin .kitchen-page .kcard-timer.late {
+  background: #fdecea;
+  color: #b3261e;
+  animation: kPulse 1.4s ease-in-out infinite;
+}
+
+body.is-admin .kitchen-page .kitchen-cust {
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff6ee;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #4a3a2c;
+}
+
+/* ---------- ປຸ່ມທັງໝົດ ---------- */
+body.is-admin .kitchen-page .kitchen-bulk-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+body.is-admin .kitchen-page .kitchen-card .btn-start-all,
+body.is-admin .kitchen-page .kitchen-card .btn-done-all {
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+body.is-admin .kitchen-page .kitchen-card .btn-start-all {
+  background: linear-gradient(135deg, #f0922b, #e0720f);
+  box-shadow: 0 6px 16px rgba(224, 114, 15, 0.32);
+}
+body.is-admin .kitchen-page .kitchen-card .btn-done-all {
+  background: linear-gradient(135deg, #43a047, #2e7d32);
+  box-shadow: 0 6px 16px rgba(46, 125, 50, 0.3);
+}
+body.is-admin .kitchen-page .kitchen-card .btn-start-all:hover,
+body.is-admin .kitchen-page .kitchen-card .btn-done-all:hover { filter: brightness(1.07); }
+body.is-admin .kitchen-page .kitchen-card .btn-start-all:active,
+body.is-admin .kitchen-page .kitchen-card .btn-done-all:active { transform: scale(0.985); }
+
+/* ---------- ແຖວເມນູ ---------- */
+body.is-admin .kitchen-page .kitchen-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  padding: 14px 0;
+  border: none;
+  border-top: 1px dashed #ecd9c8;
+}
+
+body.is-admin .kitchen-page .kitchen-item-info {
+  flex: 1 1 150px;
+  min-width: 0;
+  line-height: 1.5;
+}
+
+body.is-admin .kitchen-page .kitchen-item-name {
+  font-size: 19px;
+  font-weight: 800;
+  color: #2b1b0e;
+}
+
+/* ຈຳນວນ: ເປັນເມັດມົນເດັ່ນ ອ່ານງ່າຍຈາກໄກ */
+body.is-admin .kitchen-page .kitchen-item-qty {
+  display: inline-block;
+  min-width: 46px;
+  margin-left: 4px;
+  padding: 2px 11px;
+  border-radius: 999px;
+  background: #b8380e;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+}
+
+body.is-admin .kitchen-page .kitchen-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+body.is-admin .kitchen-page .kitchen-item-actions button {
+  min-height: 46px;
+  margin: 0;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+body.is-admin .kitchen-page .kitchen-item-actions button:active { transform: scale(0.97); }
+
+body.is-admin .kitchen-page .kitchen-item-actions .btn-start {
+  background: #e67e22;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
+}
+body.is-admin .kitchen-page .kitchen-item-actions .btn-done {
+  background: #2e7d32;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.28);
+}
+/* ປຸ່ມຍົກເລີກ: ເບົາກວ່າ ເພື່ອບໍ່ໃຫ້ກົດຜິດ */
+body.is-admin .kitchen-page .kitchen-item-actions .btn-cancel {
+  background: #fdecea;
+  color: #b3261e;
+  border: 1.5px solid #f3c0ba;
+}
+body.is-admin .kitchen-page .kitchen-item-actions .btn-cancel:hover {
+  background: #c0392b;
+  color: #fff;
+  border-color: #c0392b;
+}
+
+/* ---------- ປັອບອັບຢືນຢັນຍົກເລີກ ---------- */
+body.is-admin .kc-overlay {
+  background: rgba(30, 20, 10, 0.6);
+  animation: kFade 0.18s ease;
+}
+body.is-admin .kc-box {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  padding: 28px 24px 22px;
+  border-radius: 22px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: kPop 0.25s ease;
+}
+body.is-admin .kc-box .kc-icon { font-size: 44px; line-height: 1.1; }
+body.is-admin .kc-box h3 { margin: 8px 0 6px; font-size: 20px; font-weight: 900; color: #7a1f0f; }
+body.is-admin .kc-box p { margin: 0 0 18px; font-size: 15px; line-height: 1.6; color: #4a3a2c; }
+body.is-admin .kc-box .kc-actions { display: flex; gap: 10px; }
+body.is-admin .kc-box .kc-actions button {
+  flex: 1;
+  min-height: 48px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+body.is-admin .kc-box .kc-no { background: #f3e4de; color: #7a1f0f; }
+body.is-admin .kc-box .kc-yes { background: #c0392b; color: #fff; }
+
+/* ---------- ຂໍ້ຄວາມແຈ້ງສັ້ນ ---------- */
+body.is-admin .kitchen-toast {
+  padding: 13px 24px;
+  border-radius: 999px;
+  background: #2b1b0e;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- ຈໍນ້ອຍ ---------- */
+@media (max-width: 900px) {
+  body.is-admin .kitchen-page { padding: 16px 14px 40px; }
+  body.is-admin .kitchen-page .kitchen-tab { font-size: 16px; padding: 14px 10px; gap: 8px; }
+  body.is-admin .kitchen-page .kitchen-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  body.is-admin .kitchen-page .kitchen-tabs { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* ---------- ການເຄື່ອນໄຫວ ---------- */
+@keyframes kPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes kCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes kFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kPop {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.is-admin .kitchen-page .kitchen-tab.has .kitchen-tab-count,
+  body.is-admin .kitchen-page .kcard-timer.late,
+  body.is-admin .kitchen-page .kitchen-card { animation: none; }
+}

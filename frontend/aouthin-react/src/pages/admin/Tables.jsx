@@ -257,16 +257,13 @@ export default function Tables() {
             </p>
             {bill.payment_method === 'transfer' && (
               bill.slip_image ? (
-                <div className="olx-slip-wrap">
-                  <div className="olx-slip-label">🧾 ສະລິບການໂອນເງິນ (ກົດເພື່ອຂະຫຍາຍ)</div>
-                  <button
-                    type="button"
-                    className="tb-slip-trigger"
-                    onClick={() => setZoomSrc(API_BASE + bill.slip_image)}
-                  >
-                    <img className="olx-slip" src={API_BASE + bill.slip_image} alt="ສະລິບໂອນເງິນ" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="tb-slip-btn"
+                  onClick={() => setZoomSrc(API_BASE + bill.slip_image)}
+                >
+                  🧾 ເບິ່ງສະລິບການໂອນເງິນ
+                </button>
               ) : (
                 <p className="olx-slip-missing">⚠️ ບໍ່ພົບຮູບສະລິບ</p>
               )
@@ -292,22 +289,24 @@ export default function Tables() {
             ))}
           </tbody>
         </table>
-        {Number(bill.delivery_fee) > 0 && (
-          <p style={{ margin: '0 0 6px', fontWeight: 700 }}>
-            🛵 ຄ່າສົ່ງ ({bill.delivery_distance} ກມ): {Number(bill.delivery_fee).toLocaleString()} ກີບ
-          </p>
-        )}
-        <p className="cart-total">ລວມ: {total} ກີບ</p>
-        {readyIds.length > 0 && (
-          <button className="confirm-btn" onClick={() => markAllServed(readyIds)}>
-            {online ? '📦 ອໍເດີ້ພ້ອມສົ່ງແລ້ວ' : '🍽️ ເສີບທັງໝົດ'}
+        <div className="tbv-bottom">
+          {Number(bill.delivery_fee) > 0 && (
+            <p style={{ margin: '0 0 6px', fontWeight: 700 }}>
+              🛵 ຄ່າສົ່ງ ({bill.delivery_distance} ກມ): {Number(bill.delivery_fee).toLocaleString()} ກີບ
+            </p>
+          )}
+          <p className="cart-total">ລວມ: {total} ກີບ</p>
+          {readyIds.length > 0 && (
+            <button className="confirm-btn" onClick={() => markAllServed(readyIds)}>
+              {online ? '📦 ອໍເດີ້ພ້ອມສົ່ງແລ້ວ' : '🍽️ ເສີບທັງໝົດ'}
+            </button>
+          )}
+          <button className="confirm-btn" disabled={!allServed} onClick={() => goToBill(bill.id)}>
+            {allServed
+              ? (online ? 'ອອກບິນ / ຮັບເງິນແລ້ວ' : 'ອອກບິນ / ຈ່າຍແລ້ວ')
+              : 'ລໍຖ້າເສີບອາຫານກ່ອນ'}
           </button>
-        )}
-        <button className="confirm-btn" disabled={!allServed} onClick={() => goToBill(bill.id)}>
-          {allServed
-            ? (online ? 'ອອກບິນ / ຮັບເງິນແລ້ວ' : 'ອອກບິນ / ຈ່າຍແລ້ວ')
-            : 'ລໍຖ້າເສີບອາຫານກ່ອນ'}
-        </button>
+        </div>
       </div>
     );
   };
@@ -358,19 +357,32 @@ export default function Tables() {
         body.is-admin .tbv-tab.has .tbv-tab-count { background: #c0392b; }
         body.is-admin .tbv-tab.active .tbv-tab-count { background: #fff; color: #7a1f0f; }
 
-        /* ບັດກວ້າງຂຶ້ນ (ປະມານ 4 ອັນຕໍ່ແຖວໃນຈໍໃຫຍ່) */
+        /* ບັດກວ້າງຂຶ້ນ (ປະມານ 4 ອັນຕໍ່ແຖວໃນຈໍໃຫຍ່) ແລະ ສູງເທົ່າກັນໃນແຖວດຽວກັນ */
         body.is-admin .tbv-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
           gap: 18px;
-          align-items: start;
+          align-items: stretch;
           margin-top: 18px;
         }
         body.is-admin .tbv-grid .table-card {
+          display: flex;
+          flex-direction: column;
           margin: 0;
           min-width: 0;
           width: 100%;
           box-sizing: border-box;
+        }
+
+        /* ສ່ວນລຸ່ມ (ຍອດລວມ + ປຸ່ມ) ຕິດກ້ນບັດສະເໝີ */
+        body.is-admin .tbv-grid .table-card .tbv-bottom {
+          margin-top: auto;
+          padding-top: 10px;
+        }
+        body.is-admin .tbv-grid .table-card .tbv-bottom .confirm-btn {
+          display: block;
+          width: 100%;
+          margin: 10px 0 0;
         }
 
         /* ຕາຕະລາງພໍດີບັດສະເໝີ: ຊື່ຍາວຂຶ້ນແຖວໃໝ່ ບໍ່ດັນອອກນອກບັດ */
@@ -416,14 +428,25 @@ export default function Tables() {
           body.is-admin .tbv-tab { padding: 12px 6px; font-size: 13px; }
         }
 
-        body.is-admin .tb-slip-trigger {
-          display: block;
-          margin: 0;
-          padding: 0;
-          border: none;
-          background: none;
-          cursor: zoom-in;
+        /* ປຸ່ມເບິ່ງສະລິບ */
+        body.is-admin .tb-slip-btn {
+          align-self: flex-start;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin: 0 0 12px;
+          padding: 9px 16px;
+          border: 1.5px solid #2e7d32;
+          border-radius: 10px;
+          background: #f1f8f1;
+          color: #2e7d32;
+          font-size: 14px;
+          font-weight: 700;
+          font-family: inherit;
+          cursor: pointer;
         }
+        body.is-admin .tb-slip-btn:hover { background: #2e7d32; color: #fff; }
+
         body.is-admin .tb-lightbox {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;

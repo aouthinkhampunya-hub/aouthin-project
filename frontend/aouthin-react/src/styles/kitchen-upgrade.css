@@ -1,0 +1,211 @@
+/* ===== ແຖບເຄື່ອງມືເທິງຈໍຄົວ ===== */
+/* ===== 3 ແຖບປະເພດອໍເດີ້ ===== */
+.kitchen-page .kitchen-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+.kitchen-page .kitchen-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 10px;
+  border: 2px solid #eadfd3;
+  border-radius: 14px;
+  background: #fff;
+  color: #7a1f10;
+  font-size: 17px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.kitchen-page .kitchen-tab:hover { background: #fff8f0; }
+.kitchen-page .kitchen-tab.has { background: #fff3cd; border-color: #d9a520; }
+.kitchen-page .kitchen-tab.active {
+  background: #7a1f10;
+  border-color: #7a1f10;
+  color: #fff;
+}
+.kitchen-page .kitchen-tab-count {
+  min-width: 28px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #b8a898;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+.kitchen-page .kitchen-tab.has .kitchen-tab-count { background: #c0392b; }
+
+/* ສີຂອບບັດຕາມປະເພດ */
+.kitchen-page .kitchen-card.online-pickup { border-left-color: #d9a520; }
+.kitchen-page .kitchen-card.online-delivery { border-left-color: #2e8b57; }
+.kitchen-page .kitchen-cust {
+  margin: -4px 0 10px;
+  font-weight: 700;
+  color: #1a73e8;
+}
+
+@media (max-width: 600px) {
+  .kitchen-page .kitchen-tabs { flex-direction: column; gap: 8px; }
+}
+.kitchen-page .kx-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.kitchen-page .kx-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1.5px solid #eadfd3;
+  color: #7a1f10;
+  font-size: 14px;
+  font-weight: 800;
+}
+.kitchen-page .kx-pill.cook { background: #eaf6ea; border-color: #7bbf7b; color: #2e7d32; }
+.kitchen-page .kx-pill.wait { background: #fff3cd; border-color: #d9a520; color: #8a5a00; }
+.kitchen-page .kx-pill.late { background: #fdecea; border-color: #e0786b; color: #c0392b; }
+.kitchen-page .kx-spacer { flex: 1; }
+.kitchen-page .kx-btn {
+  padding: 8px 14px;
+  border: 1.5px solid #7a1f10;
+  border-radius: 10px;
+  background: #fff;
+  color: #7a1f10;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.kitchen-page .kx-btn:hover { background: #7a1f10; color: #fff; }
+.kitchen-page .kx-btn.on { background: #7a1f10; color: #fff; }
+
+/* ===== ສະຫຼຸບອາຫານທີ່ຕ້ອງເຮັດ (ລວມທຸກບິນ) ===== */
+.kitchen-page .kx-summary {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid #eadfd3;
+}
+.kitchen-page .kx-summary-title {
+  margin: 0 0 10px;
+  color: #7a1f10;
+  font-size: 15px;
+  font-weight: 800;
+}
+.kitchen-page .kx-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kitchen-page .kx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #fff8f0;
+  border: 1px solid #eadfd3;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2b1b0e;
+}
+.kitchen-page .kx-chip b {
+  min-width: 26px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #c0392b;
+  color: #fff;
+  text-align: center;
+  font-size: 13px;
+}
+.kitchen-page .kx-chip small { color: #2e7d32; font-weight: 800; }
+
+/* ===== ຫົວບິນ: ຊື່ + ປ້າຍໃໝ່ + ເວລາ ===== */
+.kitchen-page .kx-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 0 6px;
+}
+.kitchen-page .kx-head h2 { margin: 0; flex: 1 1 auto; }
+.kitchen-page .kx-new {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  animation: kxBlink 1s ease-in-out infinite;
+}
+.kitchen-page .kx-time {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.kitchen-page .kx-time.ok   { background: #eaf6ea; color: #2e7d32; }
+.kitchen-page .kx-time.warn { background: #fff3cd; color: #8a5a00; }
+.kitchen-page .kx-time.late { background: #c0392b; color: #fff; }
+
+/* ແຖວນັບ: ກຳລັງເຮັດ / ລໍຖ້າ */
+.kitchen-page .kx-counts {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.kitchen-page .kx-counts .c { color: #2e7d32; }
+.kitchen-page .kx-counts .w { color: #b8380e; }
+
+/* ບິນຊ້າ = ຂອບບນສີແດງ ແລະ ກະພິບເບົາໆ */
+.kitchen-page .kitchen-card.kx-warn { box-shadow: 0 0 0 2px #e6a817 inset; }
+.kitchen-page .kitchen-card.kx-late { animation: kxLate 1.6s ease-in-out infinite; }
+.kitchen-page .kitchen-card.kx-flash { box-shadow: 0 0 0 3px #c0392b, 0 8px 24px rgba(192, 57, 43, 0.35); }
+
+/* ລາຍການໃນບິນ: ເລື່ອນໄດ້ ບໍ່ໃຫ້ບິນຍາວເກີນຈໍ */
+.kitchen-page .kx-items {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(100vh - 360px);
+  overflow-y: auto;
+  padding-right: 0;
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* Edge ເກົ່າ */
+}
+.kitchen-page .kx-items::-webkit-scrollbar {
+  display: none;              /* Chrome, Edge, Safari */
+  width: 0;
+  height: 0;
+}
+
+/* ແຖວທີ່ກຳລັງເຮັດ: ພື້ນຂຽວອ່ອນ */
+.kitchen-page .kitchen-item.is-cooking {
+  background: #f1f8f1;
+  border-radius: 8px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+@keyframes kxBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes kxLate {
+  0%, 100% { box-shadow: 0 0 0 2px #c0392b inset; }
+  50% { box-shadow: 0 0 0 4px #c0392b inset; }
+}
+
+@media (max-width: 640px) {
+  .kitchen-page .kx-items { max-height: none; }
+}
