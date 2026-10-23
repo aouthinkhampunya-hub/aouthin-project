@@ -15,6 +15,9 @@ const clamp = (v, max) => {
 
 const emptyAdd = { name: '', price: '', stock: '', size: '', color: '' };
 
+// ເມນູເປີດຢູ່ບໍ (ຄ່າ 0 = ປິດ, ຄ່າອື່ນ/ບໍ່ມີ = ເປີດ)
+const isOpen = (p) => Number(p.is_available) !== 0;
+
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +87,22 @@ export default function Products() {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   });
+
+  /* ===================== ເປີດ / ປິດ ເມນູ ===================== */
+  const setAvailable = async (p, open) => {
+    if (isOpen(p) === open) return; // ສະຖານະເທົ່າເດີມ ບໍ່ຕ້ອງເຮັດຫຍັງ
+    const value = open ? 1 : 0;
+    // ປ່ຽນໜ້າຈໍທັນທີ ແລ້ວຄ່ອຍບັນທຶກ
+    setProducts((list) => list.map((x) => (x.id === p.id ? { ...x, is_available: value } : x)));
+    try {
+      await updateProductField(p.id, 'is_available', value);
+      showToast(open ? `🟢 ເປີດ "${p.name}" ແລ້ວ` : `🔴 ປິດ "${p.name}" ແລ້ວ`);
+    } catch (e) {
+      // ບັນທຶກບໍ່ໄດ້ → ຄືນຄ່າເກົ່າ
+      setProducts((list) => list.map((x) => (x.id === p.id ? { ...x, is_available: p.is_available } : x)));
+      showToast('❌ ປ່ຽນສະຖານະບໍ່ສຳເລັດ');
+    }
+  };
 
   /* ===================== ແກ້ໄຂ ===================== */
   const openEdit = (p) => {
@@ -252,6 +271,44 @@ export default function Products() {
 
   return (
     <main>
+      {/* ສະໄຕລ໌ຈຸດ ເປີດ/ປິດ ເມນູ */}
+      <style>{`
+        .pd-status-cell { white-space: nowrap; }
+        .pd-dots {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .pd-dot {
+          width: 26px;
+          height: 26px;
+          min-width: 0;
+          padding: 0;
+          margin: 0;
+          border: 3px solid #fff;
+          border-radius: 50%;
+          cursor: pointer;
+          opacity: 0.25;
+          transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+        }
+        .pd-dot:hover { opacity: 0.7; }
+        .pd-dot:active { transform: scale(0.9); }
+        .pd-dot.open { background: #16a34a; }
+        .pd-dot.close { background: #dc2626; }
+        .pd-dot.on { opacity: 1; cursor: default; }
+        .pd-dot.open.on { box-shadow: 0 0 0 3px #86efac; }
+        .pd-dot.close.on { box-shadow: 0 0 0 3px #fca5a5; }
+        .pd-label {
+          min-width: 34px;
+          font-size: 13px;
+          font-weight: 800;
+        }
+        .pd-label.open { color: #15803d; }
+        .pd-label.close { color: #b91c1c; }
+        tr.pd-row-closed td:not(.pd-status-cell):not(.action-cell) { opacity: 0.5; }
+        tr.pd-row-closed td { background: #f6efe8; }
+      `}</style>
+
       <button type="button" className="confirm-btn"
         style={{ display: 'inline-block', width: 'auto', marginBottom: 16 }}
         onClick={openAdd}>
@@ -264,28 +321,50 @@ export default function Products() {
             <thead>
               <tr>
                 <th>ຮູບ</th><th>ຊື່ເມນູ</th><th>ລາຄາ</th><th>ປະເພດ</th>
-                <th>ຄວາມເຜັດ</th><th>ຈຳນວນ</th><th></th>
+                <th>ຄວາມເຜັດ</th><th>ຈຳນວນ</th><th>ສະຖານະ</th><th></th>
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    {p.image
-                      ? <img src={imgUrl(p.image)} width="50" height="50" alt="" style={{ objectFit: 'cover', borderRadius: 6 }} />
-                      : <div className="no-img-box">ບໍ່ມີຮູບ</div>}
-                  </td>
-                  <td>{p.name}</td>
-                  <td>{Number(p.price)} ກີບ</td>
-                  <td>{p.size}</td>
-                  <td>{p.color}</td>
-                  <td>{p.stock} ຈານ</td>
-                  <td className="action-cell">
-                    <button className="edit-btn" onClick={() => openEdit(p)}>ແກ້ໄຂ</button>
-                    <button className="delete-btn" onClick={() => setDeleting(p)}>ລຶບ</button>
-                  </td>
-                </tr>
-              ))}
+              {products.map((p) => {
+                const open = isOpen(p);
+                return (
+                  <tr key={p.id} className={open ? '' : 'pd-row-closed'}>
+                    <td>
+                      {p.image
+                        ? <img src={imgUrl(p.image)} width="50" height="50" alt="" style={{ objectFit: 'cover', borderRadius: 6 }} />
+                        : <div className="no-img-box">ບໍ່ມີຮູບ</div>}
+                    </td>
+                    <td>{p.name}</td>
+                    <td>{Number(p.price)} ກີບ</td>
+                    <td>{p.size}</td>
+                    <td>{p.color}</td>
+                    <td>{p.stock} ຈານ</td>
+                    <td className="pd-status-cell">
+                      <div className="pd-dots">
+                        <button
+                          type="button"
+                          className={`pd-dot open${open ? ' on' : ''}`}
+                          title="ເປີດຂາຍ"
+                          aria-label="ເປີດຂາຍ"
+                          onClick={() => setAvailable(p, true)}
+                        />
+                        <button
+                          type="button"
+                          className={`pd-dot close${open ? '' : ' on'}`}
+                          title="ປິດຊົ່ວຄາວ (ລູກຄ້າເພີ່ມໃສ່ກະຕ່າບໍ່ໄດ້)"
+                          aria-label="ປິດຊົ່ວຄາວ"
+                          onClick={() => setAvailable(p, false)}
+                        />
+                        <span className={`pd-label ${open ? 'open' : 'close'}`}>{open ? 'ເປີດ' : 'ປິດ'}</span>
+                      </div>
+                    </td>
+                    <td className="action-cell">
+                      <button className="edit-btn" onClick={() => openEdit(p)}>ແກ້ໄຂ</button>
+                      <button className="delete-btn" onClick={() => setDeleting(p)}>ລຶບ</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

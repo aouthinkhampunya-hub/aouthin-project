@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getProducts, createOrder, callStaff, createOnlineOrder, getOnlineBill, getAmountQR, API_BASE } from '../../api.js';
 import OnlineOrderModal from '../../components/OnlineOrderModal.jsx';
 
@@ -36,6 +36,9 @@ function billStatusLabel(status) {
   return status;
 }
 
+// ເມນູທີ່ແອັດມິນປິດຊົ່ວຄາວ (is_available = 0)
+const isClosed = (p) => Number(p.is_available) === 0;
+
 export default function Menu() {
   const [tableNumber, setTableNumber] = useState(getTableNumber);
   const [products, setProducts] = useState([]);
@@ -65,6 +68,10 @@ export default function Menu() {
   const isOnlineMode = tableNumber === 'online';
   const dineTable = getDineTable();
 
+  // ເກັບກະຕ່າປັດຈຸບັນໄວ້ໃນ ref ເພື່ອໃຫ້ຟັງຊັນໂຫລດເມນູ (ທີ່ແລ່ນທຸກ 15 ວິນາທີ) ອ່ານໄດ້
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
+
   // ບັນທຶກກະຕ່າທຸກຄັ້ງທີ່ປ່ຽນ
   useEffect(() => {
     if (!tableNumber) return;
@@ -78,7 +85,12 @@ export default function Menu() {
     if (tableNumber) setCart(loadSavedCart(tableNumber));
   }, [tableNumber]);
 
-  useEffect(() => { loadProducts(); }, []);
+  // ໂຫລດເມນູຕອນເປີດ ແລະ ໂຫລດໃໝ່ທຸກ 15 ວິນາທີ (ເພື່ອໃຫ້ເມນູທີ່ຖືກປິດ/ເປີດ ອັບເດດເອງ)
+  useEffect(() => {
+    loadProducts();
+    const t = setInterval(() => { loadProducts().catch(() => {}); }, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   // ດຶງເມນູຂາຍດີ 3 ອັນດັບ ເພື່ອໃສ່ປ້າຍ
   useEffect(() => {
@@ -99,12 +111,23 @@ export default function Menu() {
     const data = await getProducts();
     setProducts(data);
 
-    // ປັບກະຕ່າທີ່ບັນທຶກໄວ້ໃຫ້ກົງກັບສະຕັອກປັດຈຸບັນ
+    // ເມນູໃນກະຕ່າທີ່ຖືກປິດພາຍຫຼັງ → ແຈ້ງລູກຄ້າ
+    const closedInCart = cartRef.current
+      .filter(item => {
+        const p = data.find(x => x.id === item.product_id);
+        return p && isClosed(p);
+      })
+      .map(item => item.name);
+    if (closedInCart.length > 0) {
+      showToast(`⚠️ "${closedInCart.join(', ')}" ປິດຊົ່ວຄາວ ເອົາອອກຈາກກະຕ່າແລ້ວ`);
+    }
+
+    // ປັບກະຕ່າທີ່ບັນທຶກໄວ້ໃຫ້ກົງກັບສະຕັອກ ແລະ ສະຖານະປັດຈຸບັນ
     setCart(prev =>
       prev
         .map(item => {
           const p = data.find(x => x.id === item.product_id);
-          if (!p || p.stock <= 0) return null;
+          if (!p || p.stock <= 0 || isClosed(p)) return null;
           return {
             ...item,
             price: p.price,
@@ -129,10 +152,14 @@ export default function Menu() {
 
   function showToast(msg) {
     setToast(msg);
-    setTimeout(() => setToast(''), 1800);
+    setTimeout(() => setToast(''), 2600);
   }
 
   function addToCart(product) {
+    if (isClosed(product)) {
+      showToast('🔒 ເມນູນີ້ປິດຊົ່ວຄາວ');
+      return;
+    }
     const existing = cart.find(i => i.product_id === product.id);
     const currentQty = existing ? existing.quantity : 0;
     if (currentQty + 1 > product.stock) {
@@ -199,6 +226,7 @@ export default function Menu() {
       loadProducts();
     } catch (err) {
       showToast('❌ ' + (err.error || 'ສັ່ງອາຫານບໍ່ສຳເລັດ'));
+      loadProducts();
     }
   }
 
@@ -220,6 +248,7 @@ export default function Menu() {
       loadProducts();
       return '';
     } catch (err) {
+      loadProducts();
       return err?.error || 'ສັ່ງອາຫານບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່';
     }
   }
@@ -345,7 +374,25 @@ export default function Menu() {
   const showModeSwitch = !isOnlineMode || Boolean(dineTable);
 
   return (
-    <div className="customer-app">
+        <div className="customer-app">
+      {/* ປຸ່ມ "ເພີ່ມໃສ່ກະຕ່າ" ຢູ່ແນວດຽວກັນທຸກການ໌ດ */}
+      <style>{`
+        .customer-app #product-list .product-card {
+          display: flex;
+          flex-direction: column;
+          height: auto;
+          box-sizing: border-box;
+        }
+        /* ແຖວລາຄາ (ແລະ ປຸ່ມທີ່ຕາມມາ) ຖືກດັນລົງຕິດກ້ນການ໌ດ */
+        .customer-app #product-list .product-card > div:last-of-type {
+          margin-top: auto;
+        }
+        .customer-app #product-list .product-card > button {
+          margin-top: 8px;
+          width: 100%;
+        }
+      `}</style>
+
       <header>
         <h1>ຮ້ານອາຫານຕາມສັ່ງ AOUTHIN</h1>
         <p id="table-label">
@@ -377,17 +424,49 @@ export default function Menu() {
         {filtered.length === 0 ? <p>ບໍ່ພົບເມນູທີ່ຄົ້ນຫາ</p> : filtered.map(p => {
           const inCart = cart.find(i => i.product_id === p.id);
           const qty = inCart ? inCart.quantity : 0;
+          const closed = isClosed(p);
 
           return (
-            <div className="product-card" key={p.id}>
-              {p.image && <img src={p.image.startsWith('http') ? p.image : API_BASE + p.image} className="product-img" alt={p.name} />}
-              {bestIds.includes(p.id) && <span className="best-badge">🔥 ຂາຍດີ</span>}
-              <h3>{p.name}</h3>
-              <p>ປະເພດ: {p.size} | ລົດຊາດ: {p.color}</p>
-              <p>ເຫຼືອ: {p.stock} ຈານ</p>
+            <div
+              className="product-card"
+              key={p.id}
+              style={closed ? { position: 'relative' } : undefined}
+            >
+              {p.image && (
+                <img
+                  src={p.image.startsWith('http') ? p.image : API_BASE + p.image}
+                  className="product-img"
+                  alt={p.name}
+                  style={closed ? { filter: 'grayscale(1)', opacity: 0.5 } : undefined}
+                />
+              )}
+              {closed && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 24,
+                    left: 24,
+                    padding: '5px 12px',
+                    borderRadius: 999,
+                    background: '#b91c1c',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 800,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  🔒 ປິດຊົ່ວຄາວ
+                </span>
+              )}
+                           {!closed && bestIds.includes(p.id)
+                ? <span className="best-badge">🔥 ຂາຍດີ</span>
+                : <span className="best-badge" style={{ visibility: 'hidden' }} aria-hidden="true">🔥 ຂາຍດີ</span>}
+              <h3 style={closed ? { opacity: 0.55 } : undefined}>{p.name}</h3>
+              <p style={closed ? { opacity: 0.55 } : undefined}>ປະເພດ: {p.size} | ລົດຊາດ: {p.color}</p>
+              <p style={closed ? { opacity: 0.55 } : undefined}>ເຫຼືອ: {p.stock} ຈານ</p>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <p className="price">{p.price} ກີບ</p>
+                <p className="price" style={closed ? { opacity: 0.55 } : undefined}>{p.price} ກີບ</p>
                 {qty > 0 && (
                   <span
                     title={`ໃນກະຕ່າ ${qty} ຈານ`}
@@ -412,8 +491,12 @@ export default function Menu() {
                 )}
               </div>
 
-              <button onClick={() => addToCart(p)} disabled={p.stock <= 0}>
-                {p.stock <= 0 ? 'ອາຫານໝົດ' : 'ເພີ່ມໃສ່ກະຕ່າ'}
+              <button
+                onClick={() => addToCart(p)}
+                disabled={closed || p.stock <= 0}
+                style={closed ? { background: '#9ca3af', cursor: 'not-allowed' } : undefined}
+              >
+                {closed ? '🔒 ປິດຊົ່ວຄາວ' : p.stock <= 0 ? 'ອາຫານໝົດ' : 'ເພີ່ມໃສ່ກະຕ່າ'}
               </button>
             </div>
           );

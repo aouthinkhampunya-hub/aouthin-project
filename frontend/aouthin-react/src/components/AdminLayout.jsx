@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { authMe, logout } from '../api.js';
+import { authMe, logout, API_BASE } from '../api.js';
 
 // ===== ແທນ auth-guard.js ເກົ່າ: ກວດ login + ສະແດງແຖບເທິງສຸດ + nav =====
 export default function AdminLayout() {
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [contactCount, setContactCount] = useState(0); // ຈຳນວນເລື່ອງທີ່ຍັງບໍ່ໄດ້ຕິດຕໍ່ລູກຄ້າ
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -22,6 +23,27 @@ export default function AdminLayout() {
       .catch(() => navigate('/admin/login'))
       .finally(() => setLoading(false));
   }, []);
+
+  // ເລກສີແດງຂອງແທັບ "ຕິດຕໍ່ລູກຄ້າ": ກວດທຸກ 10 ວິນາທີ + ເມື່ອປ່ຽນໜ້າ + ເມື່ອໜ້າຕິດຕໍ່ລູກຄ້າແຈ້ງວ່າມີການປ່ຽນ
+  useEffect(() => {
+    if (!admin) return undefined;
+    let stop = false;
+    const loadCount = async () => {
+      try {
+        const res = await fetch(API_BASE + '/api/kitchen-alerts/count', { credentials: 'include' });
+        const d = await res.json().catch(() => ({}));
+        if (!stop && res.ok) setContactCount(Number(d.open) || 0);
+      } catch (e) { /* ignore */ }
+    };
+    loadCount();
+    const t = setInterval(loadCount, 10000);
+    window.addEventListener('kitchen-alerts-changed', loadCount);
+    return () => {
+      stop = true;
+      clearInterval(t);
+      window.removeEventListener('kitchen-alerts-changed', loadCount);
+    };
+  }, [admin, location.pathname]);
 
   async function handleLogout() {
     await logout();
@@ -87,6 +109,28 @@ export default function AdminLayout() {
           <Link to="/admin/qrcode" className={isActive('/admin/qrcode')}>QR Code</Link>
           <Link to="/admin/dashboard" className={isActive('/admin/dashboard')}>ລາຍງານ</Link>
           <Link to="/admin/staff" className={isActive('/admin/staff')}>ພະນັກງານ</Link>
+          <Link to="/admin/contact" className={isActive('/admin/contact')}>
+            📞 ຕິດຕໍ່ລູກຄ້າ
+            {contactCount > 0 && (
+              <span
+                style={{
+                  display: 'inline-block',
+                  marginLeft: 8,
+                  minWidth: 22,
+                  padding: '1px 7px',
+                  borderRadius: 999,
+                  background: '#d9362b',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 900,
+                  lineHeight: 1.5,
+                  textAlign: 'center',
+                }}
+              >
+                {contactCount}
+              </span>
+            )}
+          </Link>
         </nav>
       </header>
       <Outlet context={{ admin }} />

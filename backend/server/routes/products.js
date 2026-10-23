@@ -74,7 +74,7 @@ router.post('/', (req, res) => {
 // ແກ້ໄຂຂໍ້ມູນເມນູ (ຊື່, ລາຄາ, ປະເພດ, ຄວາມເຜັດ, ສະຕັອກ) - ແກ້ໄດ້ທີລະ field
 router.put('/:id', async (req, res) => {
   try {
-    const allowedFields = ['name', 'price', 'size', 'color', 'stock'];
+        const allowedFields = ['name', 'price', 'size', 'color', 'stock', 'is_available'];
     const updates = [];
     const values = [];
 

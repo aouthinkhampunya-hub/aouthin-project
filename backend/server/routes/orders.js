@@ -231,6 +231,12 @@ router.post('/', async (req, res) => {
         connection.release();
         return res.status(404).json({ error: `ບໍ່ພົບເມນູ id ${item.product_id}` });
       }
+      // ✅ ເມນູປິດ: ແອັດມິນປິດຊົ່ວຄາວ ບໍ່ໃຫ້ສັ່ງ
+      if (Number(product.is_available) === 0) {
+        await connection.rollback();
+        connection.release();
+        return res.status(400).json({ error: `${product.name} ປິດຊົ່ວຄາວ ບໍ່ສາມາດສັ່ງໄດ້` });
+      }
       if (product.stock < item.quantity) {
         await connection.rollback();
         connection.release();
@@ -346,6 +352,10 @@ router.post('/online', async (req, res) => {
       );
       const product = products[0];
       if (!product) throw { status: 404, message: 'ບໍ່ພົບເມນູ' };
+      // ✅ ເມນູປິດ: ແອັດມິນປິດຊົ່ວຄາວ ບໍ່ໃຫ້ສັ່ງ
+      if (Number(product.is_available) === 0) {
+        throw { status: 400, message: `${product.name} ປິດຊົ່ວຄາວ ບໍ່ສາມາດສັ່ງໄດ້` };
+      }
       if (product.stock < qty) throw { status: 400, message: `${product.name} ບໍ່ພໍ` };
     }
 

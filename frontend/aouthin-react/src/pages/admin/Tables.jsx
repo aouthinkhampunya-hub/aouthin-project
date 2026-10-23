@@ -56,6 +56,7 @@ export default function Tables() {
   const [paying, setPaying] = useState(false);
   const [toast, setToast] = useState('');
   const [zoomSrc, setZoomSrc] = useState(null);          // ຮູບສະລິບທີ່ຂະຫຍາຍຢູ່
+  const [donePop, setDonePop] = useState(null);          // ກ່ອງ "ປິດບິນແລ້ວ" ກາງຈໍ
 
   const audioCtxRef = useRef(null);
   const knownOrderIds = useRef(new Set());
@@ -64,11 +65,22 @@ export default function Tables() {
   const knownOnlineIds = useRef(new Set());
   const firstLoad = useRef(true);
   const toastTimer = useRef();
+  const doneTimer = useRef();
 
   const showToast = (msg, ms = 2200) => {
     setToast(msg);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), ms);
+  };
+
+  const showDonePop = (title, detail) => {
+    clearTimeout(doneTimer.current);
+    setDonePop({ key: Date.now(), title, detail });
+    doneTimer.current = setTimeout(() => setDonePop(null), 3000);
+  };
+  const closeDonePop = () => {
+    clearTimeout(doneTimer.current);
+    setDonePop(null);
   };
 
   async function loadTableCount() {
@@ -141,14 +153,20 @@ export default function Tables() {
       load().catch(() => {});
       loadCalls().catch(() => {});
     }, 5000);
-    return () => { clearInterval(t); document.removeEventListener('click', unlock); };
+    return () => {
+      clearInterval(t);
+      clearTimeout(doneTimer.current);
+      clearTimeout(toastTimer.current);
+      document.removeEventListener('click', unlock);
+    };
   }, []);
 
-  // Esc ປິດ popup (ປິດອັນເທິງສຸດກ່ອນ: ຮູບສະລິບຂະຫຍາຍ → ຢືນຢັນຈ່າຍ → ໃບບິນ)
+  // Esc ປິດ popup (ປິດອັນເທິງສຸດກ່ອນ: ກ່ອງປິດບິນແລ້ວ → ຮູບສະລິບຂະຫຍາຍ → ຢືນຢັນຈ່າຍ → ໃບບິນ)
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
-      if (zoomSrc) setZoomSrc(null);
+      if (donePop) closeDonePop();
+      else if (zoomSrc) setZoomSrc(null);
       else if (askPaid) setAskPaid(false);
       else if (popup) closePopup();
     };
@@ -191,15 +209,19 @@ export default function Tables() {
 
   const doConfirmPaid = async () => {
     setPaying(true);
+    const paidBill = popup.bill;
     try {
-      await closeBill(popup.bill.id);
+      await closeBill(paidBill.id);
     } catch (e) {
       setPaying(false);
       return showToast('❌ ປິດບິນບໍ່ສຳເລັດ');
     }
     closePopup();
     await load();
-    showToast('✅ ປິດບິນແລ້ວ');
+    const who = isOnline(paidBill)
+      ? `${onlineLabel(paidBill)} #${billNo(paidBill)}`
+      : `ໂຕະ ${paidBill.table_number}`;
+    showDonePop(who, `${billTotal(paidBill).toLocaleString()} ກີບ`);
   };
 
   // ແຍກບິນ 3 ປະເພດ (ອອນລາຍ: ໃໝ່ສຸດຢູ່ເທິງ)
@@ -253,21 +275,23 @@ export default function Tables() {
                   </a>
                 </>
               )}
-              <br />{bill.payment_method === 'transfer' ? '🏦 ໂອນເງິນ' : '💵 ຈ່າຍເງິນສົດ'}
             </p>
-            {bill.payment_method === 'transfer' && (
-              bill.slip_image ? (
-                <button
-                  type="button"
-                  className="tb-slip-btn"
-                  onClick={() => setZoomSrc(API_BASE + bill.slip_image)}
-                >
-                  🧾 ເບິ່ງສະລິບການໂອນເງິນ
-                </button>
-              ) : (
-                <p className="olx-slip-missing">⚠️ ບໍ່ພົບຮູບສະລິບ</p>
-              )
-            )}
+            <div className="tb-pay-row">
+              <span>{bill.payment_method === 'transfer' ? '🏦 ໂອນເງິນ' : '💵 ຈ່າຍເງິນສົດ'}</span>
+              {bill.payment_method === 'transfer' && (
+                bill.slip_image ? (
+                  <button
+                    type="button"
+                    className="tb-slip-btn"
+                    onClick={() => setZoomSrc(API_BASE + bill.slip_image)}
+                  >
+                    🧾 ເບິ່ງສະລິບການໂອນເງິນ
+                  </button>
+                ) : (
+                  <span className="olx-slip-missing" style={{ margin: 0 }}>⚠️ ບໍ່ພົບຮູບສະລິບ</span>
+                )
+              )}
+            </div>
           </>
         ) : (
           <h2>ໂຕະ {bill.table_number}</h2>
@@ -313,7 +337,7 @@ export default function Tables() {
 
   return (
     <main>
-      {/* ສະໄຕລ໌ຂອງແຖບ, ຕາຂ່າຍບັດ ແລະ ຮູບສະລິບຂະຫຍາຍ (lightbox) */}
+      {/* ສະໄຕລ໌ຂອງແຖບ, ຕາຂ່າຍບັດ, ຮູບສະລິບຂະຫຍາຍ ແລະ ກ່ອງປິດບິນແລ້ວ */}
       <style>{`
         body.is-admin .tbv-tabs {
           display: grid;
@@ -447,6 +471,95 @@ export default function Tables() {
         }
         body.is-admin .tb-slip-btn:hover { background: #2e7d32; color: #fff; }
 
+        /* ແຖວ "ຈ່າຍແບບໃດ + ປຸ່ມສະລິບ": ຄວາມສູງຄົງທີ່ ເພື່ອໃຫ້ຕາຕະລາງຢູ່ແນວດຽວກັນ */
+        body.is-admin .tbv-grid .table-card .tb-pay-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          min-height: 46px;
+          margin: 0 0 12px;
+          font-weight: 700;
+        }
+        body.is-admin .tbv-grid .table-card .tb-pay-row .tb-slip-btn {
+          margin: 0;
+          align-self: auto;
+        }
+
+        /* ກ່ອງ "ປິດບິນແລ້ວ" ກາງຈໍ */
+        @keyframes tbDoneFade { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes tbDonePop {
+          0% { opacity: 0; transform: scale(0.88) translateY(10px); }
+          60% { opacity: 1; transform: scale(1.03) translateY(0); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes tbDoneIcon {
+          0% { transform: scale(0.6); }
+          60% { transform: scale(1.15); }
+          100% { transform: scale(1); }
+        }
+        body.is-admin .tb-done-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          z-index: 20050;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(30, 20, 10, 0.6);
+          animation: tbDoneFade 0.18s ease;
+        }
+        body.is-admin .tb-done-card {
+          width: 100%;
+          max-width: 340px;
+          box-sizing: border-box;
+          padding: 30px 28px 28px;
+          border-radius: 22px;
+          background: #fff8e8;
+          text-align: center;
+          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+          animation: tbDonePop 0.3s ease;
+        }
+        body.is-admin .tb-done-icon {
+          margin: 0 auto 8px;
+          font-size: 54px;
+          line-height: 1.1;
+          animation: tbDoneIcon 0.45s ease;
+        }
+        body.is-admin .tb-done-title {
+          margin: 0 0 8px;
+          font-size: 22px;
+          font-weight: 900;
+          color: #2e6b1f;
+        }
+        body.is-admin .tb-done-sub {
+          margin: 0;
+          font-size: 17px;
+          font-weight: 800;
+          color: #2b1b0e;
+        }
+        body.is-admin .tb-done-detail {
+          margin: 4px 0 18px;
+          font-size: 20px;
+          font-weight: 800;
+          color: #7a1f0f;
+        }
+        body.is-admin .tb-done-ok {
+          display: block;
+          width: 100%;
+          padding: 14px 16px;
+          border: none;
+          border-radius: 12px;
+          background: #3a7d34;
+          color: #fff;
+          font-size: 16px;
+          font-weight: 800;
+          font-family: inherit;
+          cursor: pointer;
+        }
+        body.is-admin .tb-done-ok:hover { filter: brightness(1.1); }
+
+        /* ຮູບສະລິບຂະຫຍາຍ (lightbox) */
         body.is-admin .tb-lightbox {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
@@ -658,6 +771,26 @@ export default function Tables() {
           <a className="tb-lightbox-open" href={zoomSrc} target="_blank" rel="noreferrer">
             ເປີດໃນແທັບໃໝ່
           </a>
+        </div>,
+        document.body
+      )}
+
+      {/* ===== ກ່ອງ "ປິດບິນແລ້ວ" ກາງຈໍ ===== */}
+      {donePop && createPortal(
+        <div
+          className="tb-done-overlay"
+          key={donePop.key}
+          onClick={(e) => e.target === e.currentTarget && closeDonePop()}
+        >
+          <div className="tb-done-card">
+            <div className="tb-done-icon">✅</div>
+            <h2 className="tb-done-title">ປິດບິນແລ້ວ!</h2>
+            <p className="tb-done-sub">{donePop.title}</p>
+            <p className="tb-done-detail">{donePop.detail}</p>
+            <button type="button" className="tb-done-ok" onClick={closeDonePop} autoFocus>
+              ຕົກລົງ
+            </button>
+          </div>
         </div>,
         document.body
       )}

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getBills, updateOrderStatus, cancelOrder } from '../../api.js';
+import KitchenStockButton from '../../components/KitchenStockButton.jsx';
 import '../../styles/admin-kitchen.css';
 import '../../styles/admin-kitchen-extra.css';
 import '../../styles/kitchen-upgrade.css';
@@ -69,7 +70,7 @@ const urgencyOf = (m) => (m === null ? 'ok' : m >= 20 ? 'late' : m >= 10 ? 'warn
 export default function Kitchen() {
   const [bills, setBills] = useState(null); // null = ກຳລັງໂຫລດ
   const [toast, setToast] = useState(null); // { msg, key }
-   const [readyPop, setReadyPop] = useState(null);
+  const [readyPop, setReadyPop] = useState(null);
   const [cancelPop, setCancelPop] = useState(null); // ກ່ອງຜົນການຍົກເລີກ ກາງຈໍ
   const [cancelGroup, setCancelGroup] = useState(null);
   const [tab, setTab] = useState('dine_in');
@@ -86,7 +87,7 @@ export default function Kitchen() {
   const knownIds = useRef(new Set());
   const firstLoad = useRef(true);
   const toastTimer = useRef(null);
-    const readyTimer = useRef(null);
+  const readyTimer = useRef(null);
   const cancelPopTimer = useRef(null);
   const flashTimer = useRef(null);
 
@@ -155,6 +156,7 @@ export default function Kitchen() {
     clearTimeout(readyTimer.current);
     setReadyPop(null);
   };
+
   // ກ່ອງຜົນການຍົກເລີກ ກາງຈໍ (ປິດເອງຫຼັງ 3 ວິນາທີ)
   const showCancelPop = (kind, detail) => {
     clearTimeout(cancelPopTimer.current);
@@ -166,6 +168,7 @@ export default function Kitchen() {
     clearTimeout(cancelPopTimer.current);
     setCancelPop(null);
   };
+
   const load = useCallback(async () => {
     try {
       const data = await getBills();
@@ -214,6 +217,7 @@ export default function Kitchen() {
       clearInterval(clock);
       clearTimeout(toastTimer.current);
       clearTimeout(readyTimer.current);
+      clearTimeout(cancelPopTimer.current);
       clearTimeout(flashTimer.current);
       document.removeEventListener('click', unlock);
       document.removeEventListener('fullscreenchange', onFs);
@@ -245,7 +249,7 @@ export default function Kitchen() {
     load();
   };
 
-   const confirmCancel = async () => {
+  const confirmCancel = async () => {
     const group = cancelGroup;
     setCancelGroup(null);
     if (!group) return;
@@ -396,6 +400,7 @@ export default function Kitchen() {
         <span className="kx-pill wait">⏳ ລໍຖ້າ {totalPending}</span>
         {lateBills > 0 && <span className="kx-pill late">🚨 ບິນຊ້າ {lateBills}</span>}
         <span className="kx-spacer" />
+        <KitchenStockButton />
         <button type="button" className={`kx-btn${showSummary ? ' on' : ''}`} onClick={() => setShowSummary((v) => !v)}>
           📋 ສະຫຼຸບ
         </button>
@@ -577,6 +582,7 @@ export default function Kitchen() {
           </div>
         </div>
       )}
+
       {/* ກ່ອງຜົນການຍົກເລີກອໍເດີ້ ກາງຈໍ */}
       {cancelPop && (
         <div
@@ -611,6 +617,7 @@ export default function Kitchen() {
           </div>
         </div>
       )}
+
       {toast && (
         <div className="kitchen-toast" key={toast.key}>{toast.msg}</div>
       )}

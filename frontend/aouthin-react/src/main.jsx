@@ -16,6 +16,7 @@ import QrCodePage from './pages/admin/QrCodePage.jsx';
 import Settings from './pages/admin/Settings.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
 import Staff from './pages/admin/Staff.jsx';
+import ContactCustomers from './pages/admin/ContactCustomers.jsx';
 
 // ໜ້າຄົວ (ແຍກຈາກ admin): ລັອກອິນຄົວ + ໂຄງໜ້າຄົວ
 import KitchenLogin from './pages/Kitchen/KitchenLogin.jsx';
@@ -56,6 +57,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="settings" element={<Settings />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="staff" element={<Staff />} />
+          <Route path="contact" element={<ContactCustomers />} />
         </Route>
 
         {/* ===== ຄົວ (ແຍກຕ່າງຫາກ ມີລັອກອິນຂອງຕົນເອງ) ===== */}
