@@ -3,18 +3,23 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+// ເປີດ SSL ເມື່ອຕັ້ງ DB_SSL=true (ຈຳເປັນສຳລັບ Aiven)
+const useSsl = String(process.env.DB_SSL || '').toLowerCase() === 'true';
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
+  port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  connectTimeout: 20000,
+  ...(useSsl ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 pool.on('error', (err) => {
-  console.error('⚠️ MySQL pool error (ignored, pool will reconnect):', err.code || err.message);
+  console.error('MySQL pool error (ignored, pool will reconnect):', err.code || err.message);
 });
 
 async function columnExists(tableName, columnName) {
@@ -26,7 +31,7 @@ async function columnExists(tableName, columnName) {
   return rows.length > 0;
 }
 
-// ຈຳນວນໂຕະທີ່ເຄີຍເກັບໃນໄຟລ໌ເກົ່າ (ໃຊ້ຕອນຍ້າຍມາ MySQL ຄັ້ງທຳອິດເທົ່ານັ້ນ)
+// ອ່ານຈຳນວນໂຕະຈາກໄຟລ໌ເກົ່າ (ໃຊ້ຕອນຍ້າຍມາ MySQL ຄັ້ງທຳອິດເທົ່ານັ້ນ)
 function legacyTableCount() {
   try {
     const file = path.join(__dirname, 'table-settings.json');
@@ -83,7 +88,7 @@ async function initDb() {
     await pool.query(`ALTER TABLE orders ADD COLUMN slip_image VARCHAR(500)`);
   }
 
-  // ===== ຄໍລຳຂອງ bills ສຳລັບອໍເດີ້ອອນລາຍ + ຄ່າສົ່ງ + ເລກບິນແຍກຕາມແຖບ =====
+  // ຄໍລຳຂອງ bills ສຳລັບອໍເດີອອນລາຍ + ຄ່າສົ່ງ + ເລກບິນແຍກຕາມແຖບ
   const billCols = [
     ['order_type', `VARCHAR(20) NOT NULL DEFAULT 'dine_in'`],
     ['customer_name', `VARCHAR(255) NULL`],
@@ -103,9 +108,8 @@ async function initDb() {
     }
   }
 
-  // ===== ໃສ່ເລກບິນ (bill_no) ໃຫ້ບິນເກົ່າທີ່ຍັງບໍ່ມີ =====
-  // ໜ້າໂຕະ ນັບ 1,2,3... ແຍກ ແລະ ອອນລາຍ ນັບ 1,2,3... ແຍກ (ຮຽງຕາມ id ເດີມ)
-  // ເຮັດຄັ້ງດຽວ: ຖ້າບິນທຸກໃບມີ bill_no ແລ້ວ ຈະບໍ່ເຮັດຫຍັງ
+  // ໃສ່ເລກບິນ (bill_no) ໃຫ້ບິນເກົ່າທີ່ຍັງບໍ່ມີ
+  // ໜ້າໂຕະ ນັບ 1,2,3... ແຍກ ແລະ ອອນລາຍ ນັບ 1,2,3... ແຍກ
   const [missing] = await pool.query(
     `SELECT id, order_type FROM bills WHERE bill_no IS NULL ORDER BY id`
   );
@@ -122,7 +126,7 @@ async function initDb() {
       const no = b.order_type === 'dine_in' ? ++dineNo : ++onlineNo;
       await pool.query(`UPDATE bills SET bill_no = ? WHERE id = ?`, [no, b.id]);
     }
-    console.log(`✅ ໃສ່ເລກບິນ (bill_no) ໃຫ້ບິນເກົ່າ ${missing.length} ໃບແລ້ວ`);
+    console.log(`ໃສ່ເລກບິນ (bill_no) ໃຫ້ບິນເກົ່າ ${missing.length} ໃບແລ້ວ`);
   }
 
   await pool.query(`
@@ -141,7 +145,7 @@ async function initDb() {
     )
   `);
 
-  // ===== ລາຍຊື່ໂຕະ (ເພີ່ມເລກເອງ / ລຶບໂຕະໃດກໍໄດ້) =====
+  // ລາຍຊື່ໂຕະ (ເພີ່ມ/ລຶບໂຕະໄດ້)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS restaurant_tables (
       table_number INT PRIMARY KEY
@@ -152,7 +156,7 @@ async function initDb() {
     const count = legacyTableCount();
     const rows = Array.from({ length: count }, (_, i) => [i + 1]);
     await pool.query(`INSERT INTO restaurant_tables (table_number) VALUES ?`, [rows]);
-    console.log(`✅ ສ້າງລາຍຊື່ໂຕະ 1-${count} ຈາກຄ່າເກົ່າແລ້ວ`);
+    console.log(`ສ້າງລາຍຊື່ໂຕະ 1-${count} ຈາກຄ່າເກົ່າແລ້ວ`);
   }
 
   await pool.query(`
@@ -171,7 +175,7 @@ async function initDb() {
     await pool.query(`ALTER TABLE admins ADD COLUMN role VARCHAR(20) DEFAULT 'staff'`);
   }
 
-  console.log('✅ Database schema ກຳລັງເຮັດວຽກ');
+  console.log('Database schema ພ້ອມແລ້ວ');
 }
 
 module.exports = { pool, initDb };
