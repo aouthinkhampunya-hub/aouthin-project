@@ -15,6 +15,7 @@ const staffCallRouter = require('./routes/staffcall');
 const authRouter = require('./routes/auth');
 const requireAuth = require('./middleware/requireAuth');
 const { getToken } = require('./middleware/authCookie');
+const kitchenAlertsRouter = require('./routes/kitchenalerts');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -44,8 +45,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // ===== ໜ້າ React (ຟ້ອນເອັນ) ທີ່ build ແລ້ວ =====
-// ຖ້າມີໂຟລເດີ dist (ຜົນຈາກ `npm run build` ໃນ frontend/aouthin-react) ຈະສົ່ງໜ້າ React ແທນໜ້າ HTML ເກົ່າ
-// ຕັ້ງ path ເອງໄດ້ດ້ວຍ env FRONTEND_DIST. ຖ້າບໍ່ມີ dist ຈະເຮັດວຽກແບບເກົ່າທຸກຢ່າງ
 const DIST_DIR = process.env.FRONTEND_DIST || path.join(__dirname, '../../frontend/aouthin-react/dist');
 const HAS_REACT = fs.existsSync(path.join(DIST_DIR, 'index.html'));
 
@@ -54,8 +53,7 @@ function sendReactIndex(req, res) {
   res.sendFile(path.join(DIST_DIR, 'index.html'));
 }
 
-// ===== ແຍກໜ້າ (ຝັ່ງ backend / ໜ້າ HTML ເກົ່າ): ບັນຊີຄົວ (role 'kitchen') ເປີດໜ້າ admin ເກົ່າ (/admin/*.html) ບໍ່ໄດ້ =====
-// ຖືກສົ່ງໄປໜ້າຄົວຂອງ backend ເອງ (/kitchen/) ບໍ່ໄດ້ສົ່ງໄປ frontend. ຍົກເວັ້ນໜ້າລັອກອິນ ເພື່ອໃຫ້ສະຫຼັບບັນຊີໄດ້
+// ===== ແຍກໜ້າ: ບັນຊີຄົວ (role 'kitchen') ເປີດໜ້າ admin ເກົ່າ (/admin/*.html) ບໍ່ໄດ້ =====
 const KITCHEN_HOME = '/kitchen/';
 
 app.use((req, res, next) => {
@@ -81,21 +79,16 @@ app.use((req, res, next) => {
 if (HAS_REACT) {
   // ໄຟລ໌ຂອງ React (js, css, ຮູບ) ຢູ່ /assets/...
   app.use(express.static(DIST_DIR, { index: false }));
-  // ໜ້າ /menu, /admin/..., /kitchen/... (ບໍ່ມີຈຸດໃນ path) ໃຫ້ React ຈັດການ
-  // ຕ້ອງຢູ່ກ່ອນ express.static(public) ເພື່ອບໍ່ໃຫ້ /kitchen/ ແລະ /admin/ ໄປຕົກທີ່ HTML ເກົ່າ
+  // ໜ້າ /menu, /admin/..., /kitchen/... ໃຫ້ React ຈັດການ
   app.get(/^\/(menu|admin|kitchen)(\/[^.]*)?$/, sendReactIndex);
 } else {
-  // ===== ໜ້າຄົວຂອງ backend (ແຍກຈາກ admin): /kitchen/ ແລະ ໜ້າລັອກອິນຄົວ /kitchen/login =====
-  // ໄຟລ໌ຢູ່ backend/public/kitchen/ (index.html = ໜ້າຄົວ, login.html = ລັອກອິນຄົວ)
+  // ໜ້າຄົວຂອງ backend: /kitchen/login
   app.get('/kitchen/login', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/kitchen/login.html'));
   });
 }
 
 // ===== ເອົາ "ຄົວ" ອອກຈາກໜ້າ admin ເກົ່າ (/admin/*.html) =====
-// - /admin/kitchen.html ສົ່ງໄປໜ້າຄົວແຍກຂອງ backend (/kitchen/) ສຳລັບທຸກຄົນ
-// - ໜ້າ admin ອື່ນ: ລຶບລິ້ງ "ຄົວ" (href="kitchen.html") ອອກຈາກແຖບເມນູກ່ອນສົ່ງໃຫ້ browser
-//   (ວິທີຊົ່ວຄາວ ບໍ່ຕ້ອງແກ້ HTML ທຸກໄຟລ໌)
 app.get(/^\/admin\/([\w-]+)\.html$/, (req, res, next) => {
   const name = req.params[0];
   if (name === 'kitchen') return res.redirect(KITCHEN_HOME);
@@ -111,8 +104,6 @@ app.get(/^\/admin\/([\w-]+)\.html$/, (req, res, next) => {
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ===== ບັນຊີຄົວ (role 'kitchen') ໃຊ້ API ໄດ້ສະເພາະທີ່ຄົວຕ້ອງໃຊ້ =====
-// ຄົວຕ້ອງໃຊ້ແຕ່: ກວດ session, ອອກຈາກລະບົບ, ເບິ່ງບິນ, ປ່ຽນສະຖານະອາຫານ, ຍົກເລີກລາຍການ
-// API ອື່ນທັງໝົດ (ເມນູ, ລາຍງານ, ພະນັກງານ, ຕັ້ງຄ່າ, ປິດບິນ...) ຖືກບລັອກສຳລັບບັນຊີຄົວ
 const KITCHEN_ALLOWED = [
   ['GET', /^\/api\/auth\/me$/],
   ['POST', /^\/api\/auth\/login$/],
@@ -121,12 +112,13 @@ const KITCHEN_ALLOWED = [
   ['GET', /^\/api\/orders\/bills$/],
   ['PUT', /^\/api\/orders\/\d+$/],
   ['DELETE', /^\/api\/orders\/\d+$/],
+  ['GET', /^\/api\/products$/],          // ← ເພີ່ມ (ປຸ່ມສະຕ໊ອກສິນຄ້າໂຫຼດລາຍການເມນູ)
+  ['POST', /^\/api\/kitchen-alerts$/],   // ← ເພີ່ມ (ຄົວແຈ້ງແອັດມິນ)
 ];
 
 app.use('/api', (req, res, next) => {
   if (req.method === 'OPTIONS') return next();
 
-  // ໃຊ້ token ອັນດຽວກັບທີ່ requireAuth ເລືອກ (admin ຫຼື kitchen) ບໍ່ແມ່ນສະເພາະ cookie 'token'
   const token = getToken(req);
   if (!token) return next();
 
@@ -158,6 +150,7 @@ app.use('/api/settings', settingsRouter);
 app.use('/api/payqr', payqrRouter);
 app.use('/api/admins', adminsRouter);
 app.use('/api/staffcall', staffCallRouter);
+app.use('/api/kitchen-alerts', kitchenAlertsRouter);   // ← ເພີ່ມ (ແກ້ 404)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server ກຳລັງເຮັດວຽກຢູ່' });
