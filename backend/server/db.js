@@ -55,6 +55,11 @@ async function initDb() {
     )
   `);
 
+  // ເປີດ/ປິດເມນູ (ປຸ່ມວົງມົນຂຽວ/ແດງໃນໜ້າ admin)
+  if (!(await columnExists('products', 'is_available'))) {
+    await pool.query(`ALTER TABLE products ADD COLUMN is_available TINYINT(1) NOT NULL DEFAULT 1`);
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS bills (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,8 +92,11 @@ async function initDb() {
   if (!(await columnExists('orders', 'slip_image'))) {
     await pool.query(`ALTER TABLE orders ADD COLUMN slip_image VARCHAR(500)`);
   }
+  if (!(await columnExists('orders', 'notice_at'))) {
+    await pool.query(`ALTER TABLE orders ADD COLUMN notice_at DATETIME NULL`);
+  }
 
-  // ຄໍລຳຂອງ bills ສຳລັບອໍເດີອອນລາຍ + ຄ່າສົ່ງ + ເລກບິນແຍກຕາມແຖບ
+  // ຄໍລຳຂອງ bills ສຳລັບອໍເດີອອນລາຍ + ຄ່າສົ່ງ + ເລກບິນແຍກຕາມແຖບ + ສະຖານະຈ່າຍເງິນ
   const billCols = [
     ['order_type', `VARCHAR(20) NOT NULL DEFAULT 'dine_in'`],
     ['customer_name', `VARCHAR(255) NULL`],
@@ -101,6 +109,7 @@ async function initDb() {
     ['delivery_fee', `INT NOT NULL DEFAULT 0`],
     ['delivery_distance', `DECIMAL(6,1) NULL`],
     ['bill_no', `INT NULL`],
+    ['payment_status', `VARCHAR(20) NOT NULL DEFAULT 'unpaid'`],
   ];
   for (const [name, def] of billCols) {
     if (!(await columnExists('bills', name))) {
