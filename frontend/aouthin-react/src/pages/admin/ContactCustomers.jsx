@@ -37,11 +37,49 @@ const waLink = (phone) => {
   return 'https://wa.me/856' + digits.replace(/^0+/, '');
 };
 
+const keyOf = (a) => String(a.product_id ?? a.product_name);
+
+// ລວມເລື່ອງທີ່ຄົວແຈ້ງເມນູດຽວກັນ (ສະຖານະດຽວກັນ) ໃຫ້ເປັນບັດດຽວ
+// - ລູກຄ້າລວມກັນ (ບິນດຽວກັນນັບຄັ້ງດຽວ ໃຊ້ຂໍ້ມູນຈາກການແຈ້ງຄັ້ງຫຼ້າສຸດ)
+// - ids = ລະຫັດທຸກການແຈ້ງທີ່ຖືກລວມ (ໃຊ້ຕອນກົດ "ຕິດຕໍ່ແລ້ວ" ແລະ "ລຶບ")
+function groupAlerts(list) {
+  const sorted = [...list].sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
+  const map = new Map();
+  sorted.forEach((a) => {
+    const k = `${a.status === 'open' ? 'open' : 'done'}|${keyOf(a)}`;
+    let g = map.get(k);
+    if (!g) {
+      g = { ...a, ids: [], notes: [], reports: 0, byBill: new Map() };
+      map.set(k, g);
+    }
+    g.ids.push(a.id);
+    g.reports += 1;
+    g.created_at = a.created_at; // ເວລາແຈ້ງຫຼ້າສຸດ
+    g.reported_by = a.reported_by || g.reported_by;
+    g.product_name = a.product_name;
+    g.product_image = a.product_image || g.product_image;
+    if (a.note && !g.notes.includes(a.note)) g.notes.push(a.note);
+    (a.customers || []).forEach((c) => g.byBill.set(c.bill_id, c));
+  });
+  return [...map.values()]
+    .map((g) => {
+      const out = { ...g, customers: [...g.byBill.values()], note: g.notes.join(' • ') };
+      delete out.byBill;
+      return out;
+    })
+    .sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+}
+
 export default function ContactCustomers() {
   const [alerts, setAlerts] = useState(null); // null = ກຳລັງໂຫຼດ
   const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null); // ເລື່ອງທີ່ກຳລັງຈະລຶບ
   const [deleting, setDeleting] = useState(false);
+  // ລູກຄ້າໜ້າໂຕະທີ່ແຈ້ງແລ້ວ (ຈື່ໄວ້ ເຖິງຣີເຟຣຊໜ້າກໍບໍ່ຫາຍ)
+  const [notified, setNotified] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('notifiedCustomers') || '[]')); }
+    catch (e) { return new Set(); }
+  });
 
   const loadAlerts = useCallback(async () => {
     try {
@@ -61,9 +99,9 @@ export default function ContactCustomers() {
     return () => clearInterval(t);
   }, [loadAlerts]);
 
-  const resolve = async (id) => {
+  const resolve = async (ids) => {
     try {
-      await api(`/kitchen-alerts/${id}/resolve`, { method: 'PUT' });
+      await Promise.all(ids.map((id) => api(`/kitchen-alerts/${id}/resolve`, { method: 'PUT' })));
     } catch (e) {
       setError(e?.error || 'ບັນທຶກບໍ່ສຳເລັດ');
     }
@@ -72,11 +110,34 @@ export default function ContactCustomers() {
     window.dispatchEvent(new Event('kitchen-alerts-changed'));
   };
 
+  // ແຈ້ງລູກຄ້າໜ້າໂຕະ: ຂຶ້ນຈຸດແດງທີ່ປຸ່ມ "ເບິ່ງບິນ" ຂອງໂຕະນັ້ນ ແລະສະແດງວ່າເມນູຍັງບໍ່ພ້ອມ
+  const notifyCustomer = async (a, c) => {
+    try {
+      await api('/orders/notify-unavailable', {
+        method: 'POST',
+        body: JSON.stringify({
+          bill_id: c.bill_id,
+          product_id: a.product_id,
+          product_name: a.product_name,
+        }),
+      });
+      setError('');
+      setNotified((prev) => {
+        const next = new Set(prev);
+        next.add(`${keyOf(a)}|${c.bill_id}`);
+        try { localStorage.setItem('notifiedCustomers', JSON.stringify([...next].slice(-300))); } catch (e) { /* ignore */ }
+        return next;
+      });
+    } catch (e) {
+      setError(e?.error || 'ແຈ້ງລູກຄ້າບໍ່ສຳເລັດ');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await api(`/kitchen-alerts/${deleteTarget.id}`, { method: 'DELETE' });
+      await Promise.all(deleteTarget.ids.map((id) => api(`/kitchen-alerts/${id}`, { method: 'DELETE' })));
       setError('');
     } catch (e) {
       setError(e?.error || 'ລຶບບໍ່ສຳເລັດ');
@@ -87,13 +148,14 @@ export default function ContactCustomers() {
     window.dispatchEvent(new Event('kitchen-alerts-changed'));
   };
 
-  const openAlerts = (alerts || []).filter((a) => a.status === 'open');
-  const doneAlerts = (alerts || []).filter((a) => a.status !== 'open');
+  const grouped = groupAlerts(alerts || []);
+  const openAlerts = grouped.filter((a) => a.status === 'open');
+  const doneAlerts = grouped.filter((a) => a.status !== 'open');
 
   const renderAlert = (a) => {
     const isOpen = a.status === 'open';
     return (
-      <div className={`ccp-card${isOpen ? '' : ' done'}`} key={a.id}>
+      <div className={`ccp-card${isOpen ? '' : ' done'}`} key={`${a.status}-${keyOf(a)}`}>
         <div className="ccp-card-head">
           {a.product_image
             ? <img className="ccp-img" src={imgSrc(a.product_image)} alt="" />
@@ -101,7 +163,7 @@ export default function ContactCustomers() {
           <div className="ccp-card-title">
             <div className="ccp-menu">{a.product_name}</div>
             <div className="ccp-meta">
-              ແຈ້ງໂດຍ {a.reported_by || 'ຄົວ'} • {fmt(a.created_at)}
+              ແຈ້ງໂດຍ {a.reported_by || 'ຄົວ'} • {fmt(a.created_at)}{a.reports > 1 ? ` • ແຈ້ງ ${a.reports} ຄັ້ງ` : ''}
             </div>
             {a.note && <div className="ccp-note">📝 {a.note}</div>}
           </div>
@@ -116,6 +178,7 @@ export default function ContactCustomers() {
           <div className="ccp-customers">
             {a.customers.map((c) => {
               const hasPhone = !!c.customer_phone;
+              const sent = notified.has(`${keyOf(a)}|${c.bill_id}`);
               return (
                 <div className="ccp-cust" key={c.bill_id}>
                   <div className="ccp-cust-main">
@@ -131,6 +194,15 @@ export default function ContactCustomers() {
                       <a className="ccp-phone" href={`tel:${c.customer_phone}`}>📞 {c.customer_phone}</a>
                       <a className="ccp-wa" href={waLink(c.customer_phone)} target="_blank" rel="noreferrer">💬 WhatsApp</a>
                     </div>
+                  ) : isOpen && c.order_type !== 'pickup' && c.order_type !== 'delivery' ? (
+                    <button
+                      type="button"
+                      className={`ccp-notify${sent ? ' sent' : ''}`}
+                      disabled={sent}
+                      onClick={() => notifyCustomer(a, c)}
+                    >
+                      {sent ? '✅ ແຈ້ງລູກຄ້າແລ້ວ' : '🔔 ແຈ້ງລູກຄ້າ (ເມນູບໍ່ພ້ອມ)'}
+                    </button>
                   ) : (
                     <div className="ccp-nophone">ບໍ່ມີເບີໂທ (ສັ່ງໜ້າໂຕະ)</div>
                   )}
@@ -141,7 +213,7 @@ export default function ContactCustomers() {
         )}
 
         {isOpen && (
-          <button type="button" className="ccp-resolve" onClick={() => resolve(a.id)}>
+          <button type="button" className="ccp-resolve" onClick={() => resolve(a.ids)}>
             ✅ ຕິດຕໍ່ລູກຄ້າແລ້ວ
           </button>
         )}
@@ -253,6 +325,15 @@ export default function ContactCustomers() {
         body.is-admin .ccp-dlg-no { background: #f3e4de; color: #7a1f0f; }
         body.is-admin .ccp-dlg-yes { background: #d9362b; color: #fff; }
         body.is-admin .ccp-dlg-actions button:disabled { opacity: 0.6; cursor: default; }
+
+        body.is-admin .ccp-notify {
+          padding: 12px 20px; border: none; border-radius: 12px;
+          background: #d9362b; color: #fff;
+          font-size: 18px; font-weight: 800; font-family: inherit; cursor: pointer;
+          white-space: nowrap;
+        }
+        body.is-admin .ccp-notify:hover { filter: brightness(1.1); }
+        body.is-admin .ccp-notify.sent { background: #e8f5e9; color: #1b5e20; cursor: default; filter: none; }
 
         @media (max-width: 700px) {
           body.is-admin .ccp-grid { grid-template-columns: 1fr; }

@@ -3,11 +3,16 @@
 const ADMIN_COOKIE = 'token';
 const KITCHEN_COOKIE = 'kitchen_token';
 
-function cookieOptions() {
+function cookieOptions(req) {
+  const isReqSecure = req && (req.secure || req.get('x-forwarded-proto') === 'https');
+  const isProd = process.env.NODE_ENV === 'production';
+  const forceSecure = process.env.COOKIE_SECURE === 'true';
+  const forceInsecure = process.env.COOKIE_SECURE === 'false';
+  const secure = forceSecure || (isReqSecure && !forceInsecure) || (isProd && !forceInsecure && !req);
   return {
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: secure ? 'none' : 'lax',
+    secure: !!secure,
   };
 }
 

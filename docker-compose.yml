@@ -1,0 +1,68 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aouthin-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DOCKER=true
+      - COOKIE_SECURE=false
+      - DB_HOST=${DB_HOST:-host.docker.internal}
+      - DB_PORT=${DB_PORT:-3307}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-Aouthinkpy/11}
+      - DB_NAME=${DB_NAME:-aouthin}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - JWT_SECRET=${JWT_SECRET:-aouthin_jwt_secret_key_change_in_production}
+    volumes:
+      # Keep uploaded images persistent on host
+      - ./backend/public/uploads:/app/public/uploads
+    extra_hosts:
+      # Allows container to access MySQL running on host machine
+      - "host.docker.internal:host-gateway"
+    networks:
+      - aouthin-network
+
+  frontend:
+    build:
+      context: ./frontend/aouthin-react
+      dockerfile: Dockerfile
+    container_name: aouthin-frontend
+    restart: unless-stopped
+    ports:
+      # Map host 5173 to container port 80 (standard Nginx)
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - aouthin-network
+
+  # Optional MySQL container if you want database inside Docker instead of host MySQL
+  # Start with: docker compose --profile with-db up -d
+  mysql:
+    image: mysql:8.4
+    container_name: aouthin-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-Aouthinkpy/11}
+      MYSQL_DATABASE: ${DB_NAME:-aouthin}
+    ports:
+      - "3308:3306"
+    volumes:
+      - aouthin-db-data:/var/lib/mysql
+    networks:
+      - aouthin-network
+    profiles:
+      - with-db
+
+networks:
+  aouthin-network:
+    driver: bridge
+
+volumes:
+  aouthin-db-data:

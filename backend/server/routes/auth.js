@@ -41,7 +41,7 @@ router.post('/login', async (req, res) => {
     );
 
     const cookieName = area === 'kitchen' ? KITCHEN_COOKIE : ADMIN_COOKIE;
-    res.cookie(cookieName, token, cookieOptions());
+    res.cookie(cookieName, token, cookieOptions(req));
     res.json({ success: true, name: admin.name, role });
   } catch (err) {
     console.error(err);
@@ -51,7 +51,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', (req, res) => {
   // ລຶບສະເພາະ cookie ຂອງໜ້າທີ່ກົດອອກຈາກລະບົບ
-  res.clearCookie(pickCookieName(req), cookieOptions());
+  res.clearCookie(pickCookieName(req), cookieOptions(req));
   res.json({ success: true });
 });
 

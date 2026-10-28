@@ -24,20 +24,31 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost',
   'https://aouthin-123.web.app',
   'https://aouthin-123.firebaseapp.com',
   'https://aouthin-project-1.onrender.com',
 ];
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 
 app.use(cors({
   origin: function (origin, callback) {
-    const isLocalNetwork = origin && /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)\d+\.\d+(:\d+)?$/.test(origin);
+    if (!origin) return callback(null, true);
 
-    if (!origin || allowedOrigins.includes(origin) || isLocalNetwork) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    const isLocalNetwork = /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)\d+\.\d+(:\d+)?$/.test(origin);
+    const isCloudflare = /^https?:\/\/[a-z0-9\-]+\.trycloudflare\.com(:\d+)?$/i.test(origin);
+    const isCloudflarePages = /^https?:\/\/[a-z0-9\-]+\.pages\.dev(:\d+)?$/i.test(origin);
+    const isFirebase = /^https?:\/\/[a-z0-9\-]+\.(web\.app|firebaseapp\.com)(:\d+)?$/i.test(origin);
+    const isRender = /^https?:\/\/[a-z0-9\-]+\.onrender\.com(:\d+)?$/i.test(origin);
+
+    if (allowedOrigins.includes(origin) || isLocalNetwork || isCloudflare || isCloudflarePages || isFirebase || isRender) {
+      return callback(null, true);
     }
+
+    // Allow all other origins dynamically rather than throwing a 500 error
+    callback(null, true);
   },
   credentials: true,
 }));
@@ -180,6 +191,12 @@ if (HAS_REACT) {
   app.get(/^\/(?!api(\/|$)|uploads(\/|$)|app(\/|$))[^.]*$/, sendReactIndex);
 }
 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
+
 async function startServer() {
   try {
     await initDb();
@@ -191,7 +208,7 @@ async function startServer() {
         : 'ໜ້າເວັບ: ໃຊ້ໜ້າ HTML ເກົ່າ (ຍັງບໍ່ມີ dist ຂອງ React)');
 
       // ເປີດເບຣົາເຊີອັດຕະໂນມັດສະເພາະຕອນຣັນໃນເຄື່ອງ (ບໍ່ເປີດເທິງ Render)
-      if (process.env.NODE_ENV !== 'production') {
+      if (process.env.NODE_ENV !== 'production' && !process.env.DOCKER) {
         const menuUrl = `http://localhost:${PORT}${HAS_REACT ? '/menu' : '/menu/index.html'}`;
         const adminUrl = `http://localhost:${PORT}${HAS_REACT ? '/admin' : '/admin/index.html'}`;
         try {

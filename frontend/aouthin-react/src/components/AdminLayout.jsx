@@ -30,9 +30,15 @@ export default function AdminLayout() {
     let stop = false;
     const loadCount = async () => {
       try {
-        const res = await fetch(API_BASE + '/api/kitchen-alerts/count', { credentials: 'include' });
-        const d = await res.json().catch(() => ({}));
-        if (!stop && res.ok) setContactCount(Number(d.open) || 0);
+        const res = await fetch(API_BASE + '/api/kitchen-alerts', { credentials: 'include' });
+        const d = await res.json().catch(() => []);
+        if (!stop && res.ok && Array.isArray(d)) {
+          // ນັບຕາມເມນູ (ເມນູດຽວກັນທີ່ແຈ້ງຫຼາຍຄັ້ງ ນັບເປັນ 1)
+          const keys = new Set(
+            d.filter((a) => a.status === 'open').map((a) => String(a.product_id ?? a.product_name))
+          );
+          setContactCount(keys.size);
+        }
       } catch (e) { /* ignore */ }
     };
     loadCount();

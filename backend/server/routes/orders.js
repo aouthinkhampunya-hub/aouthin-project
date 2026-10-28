@@ -516,6 +516,61 @@ router.post('/online/:id/slip', async (req, res) => {
   }
 });
 
+// ===== ແອັດມິນແຈ້ງລູກຄ້າໜ້າໂຕະວ່າ "ເມນູຍັງບໍ່ພ້ອມ" (ເກັບເວລາແຈ້ງໃນ orders.notice_at) =====
+// ສ້າງຄໍລຳ notice_at ຖ້າຍັງບໍ່ມີ (ເຮັດຄັ້ງດຽວ)
+let noticeColumnReady = null;
+function ensureNoticeColumn() {
+  if (!noticeColumnReady) {
+    noticeColumnReady = (async () => {
+      const [rows] = await pool.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'orders' AND COLUMN_NAME = 'notice_at'`,
+        [process.env.DB_NAME]
+      );
+      if (rows.length === 0) {
+        await pool.query(`ALTER TABLE orders ADD COLUMN notice_at DATETIME NULL`);
+      }
+    })().catch((e) => { noticeColumnReady = null; throw e; });
+  }
+  return noticeColumnReady;
+}
+ensureNoticeColumn().catch(() => {}); // ລອງຕອນ server ເລີ່ມ (ຖ້າບໍ່ໄດ້ ຈະລອງໃໝ່ຕອນໃຊ້ງານ)
+
+router.post('/notify-unavailable', async (req, res) => {
+  try {
+    const billId = Number(req.body.bill_id);
+    const productId = req.body.product_id ? Number(req.body.product_id) : null;
+    const productName = String(req.body.product_name || '').trim();
+    if (!Number.isInteger(billId) || billId < 1 || (!productId && !productName)) {
+      return res.status(400).json({ error: 'ຂໍ້ມູນບໍ່ຄົບ' });
+    }
+
+    await ensureNoticeColumn();
+
+    // ໝາຍທຸກລາຍການຂອງເມນູນີ້ໃນບິນນັ້ນ ທີ່ຍັງບໍ່ໄດ້ເສີບ
+    const [result] = productId
+      ? await pool.query(
+          `UPDATE orders SET notice_at = CURRENT_TIMESTAMP
+           WHERE bill_id = ? AND product_id = ? AND status IN ('pending', 'cooking')`,
+          [billId, productId]
+        )
+      : await pool.query(
+          `UPDATE orders o JOIN products p ON p.id = o.product_id
+           SET o.notice_at = CURRENT_TIMESTAMP
+           WHERE o.bill_id = ? AND p.name = ? AND o.status IN ('pending', 'cooking')`,
+          [billId, productName]
+        );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'ລູກຄ້າບໍ່ມີລາຍການນີ້ທີ່ລໍຖ້າແລ້ວ (ອາດຖືກຍົກເລີກ ຫຼື ເສີບແລ້ວ)' });
+    }
+    res.json({ success: true, updated: result.affectedRows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 router.put('/:id', async (req, res) => {
   try {
     const { status } = req.body;

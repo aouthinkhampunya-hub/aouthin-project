@@ -39,6 +39,18 @@ function billStatusLabel(status) {
 // ເມນູທີ່ແອັດມິນປິດຊົ່ວຄາວ (is_available = 0)
 const isClosed = (p) => Number(p.is_available) === 0;
 
+// ===== ແຈ້ງເຕືອນຈາກແອັດມິນ: "ເມນູຍັງບໍ່ພ້ອມ" =====
+const hasActiveNotice = (i) =>
+  !!i.notice_at && (i.status === 'pending' || i.status === 'cooking');
+const noticeKey = (i) => `${i.id}:${i.notice_at}`;
+function getSeenNotices() {
+  try { return new Set(JSON.parse(localStorage.getItem('seenNotices') || '[]')); }
+  catch (e) { return new Set(); }
+}
+function saveSeenNotices(set) {
+  try { localStorage.setItem('seenNotices', JSON.stringify([...set].slice(-200))); } catch (e) {}
+}
+
 export default function Menu() {
   const [tableNumber, setTableNumber] = useState(getTableNumber);
   const [products, setProducts] = useState([]);
@@ -64,6 +76,7 @@ export default function Menu() {
   const [billToast, setBillToast] = useState('');
   const [onlinePay, setOnlinePay] = useState('cash');
   const [onlineFee, setOnlineFee] = useState({ fee: 0, km: null });
+  const [noticeUnseen, setNoticeUnseen] = useState(false); // ມີແຈ້ງເຕືອນຈາກແອັດມິນທີ່ຍັງບໍ່ໄດ້ເບິ່ງ
 
   const isOnlineMode = tableNumber === 'online';
   const dineTable = getDineTable();
@@ -106,6 +119,26 @@ export default function Menu() {
   }, []);
 
   useEffect(() => { setCartError(false); }, [cart, cartOpen]);
+
+  // ກວດແຈ້ງເຕືອນຈາກແອັດມິນທຸກ 8 ວິນາທີ (ສະເພາະສັ່ງຢູ່ໂຕະ) ເພື່ອສະແດງຈຸດແດງທີ່ປຸ່ມ "ເບິ່ງບິນ"
+  useEffect(() => {
+    if (isOnlineMode || !tableNumber) { setNoticeUnseen(false); return undefined; }
+    let stop = false;
+    const check = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/orders/bills`);
+        if (!res.ok) return;
+        const bills = await res.json();
+        const mine = bills.find(b => String(b.table_number) === String(tableNumber));
+        const seen = getSeenNotices();
+        const unseen = (mine ? mine.items : []).some(i => hasActiveNotice(i) && !seen.has(noticeKey(i)));
+        if (!stop) setNoticeUnseen(unseen);
+      } catch (e) { /* ignore */ }
+    };
+    check();
+    const t = setInterval(check, 8000);
+    return () => { stop = true; clearInterval(t); };
+  }, [tableNumber, isOnlineMode]);
 
   async function loadProducts() {
     const data = await getProducts();
@@ -302,6 +335,11 @@ export default function Menu() {
       const myBill = bills.find(b => String(b.table_number) === String(tableNumber));
       const items = myBill ? myBill.items : [];
       setBillItems(items);
+      // ເປີດບິນແລ້ວ ຖືວ່າລູກຄ້າເຫັນແຈ້ງເຕືອນແລ້ວ → ເອົາຈຸດແດງອອກ
+      const seen = getSeenNotices();
+      items.filter(hasActiveNotice).forEach(i => seen.add(noticeKey(i)));
+      saveSeenNotices(seen);
+      setNoticeUnseen(false);
       dineTotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
     } catch (e) {
       // ອອນລາຍທີ່ບໍ່ພົບບິນ (404) ຖືວ່າຍັງບໍ່ມີການສັ່ງ
@@ -374,7 +412,7 @@ export default function Menu() {
   const showModeSwitch = !isOnlineMode || Boolean(dineTable);
 
   return (
-        <div className="customer-app">
+    <div className="customer-app">
       {/* ປຸ່ມ "ເພີ່ມໃສ່ກະຕ່າ" ຢູ່ແນວດຽວກັນທຸກການ໌ດ */}
       <style>{`
         .customer-app #product-list .product-card {
@@ -458,7 +496,7 @@ export default function Menu() {
                   🔒 ປິດຊົ່ວຄາວ
                 </span>
               )}
-                           {!closed && bestIds.includes(p.id)
+              {!closed && bestIds.includes(p.id)
                 ? <span className="best-badge">🔥 ຂາຍດີ</span>
                 : <span className="best-badge" style={{ visibility: 'hidden' }} aria-hidden="true">🔥 ຂາຍດີ</span>}
               <h3 style={closed ? { opacity: 0.55 } : undefined}>{p.name}</h3>
@@ -504,7 +542,23 @@ export default function Menu() {
       </main>
 
       <div className="left-buttons">
-        <button id="bill-button" onClick={openBill}>🧾 ເບິ່ງບິນ</button>
+        <button id="bill-button" onClick={openBill}>
+          🧾 ເບິ່ງບິນ
+          {noticeUnseen && (
+            <span
+              style={{
+                display: 'inline-block',
+                width: 11,
+                height: 11,
+                marginLeft: 8,
+                borderRadius: '50%',
+                background: '#e53935',
+                boxShadow: '0 0 0 3px rgba(229,57,53,0.35)',
+                verticalAlign: 'middle',
+              }}
+            />
+          )}
+        </button>
         {!isOnlineMode && (
           <button id="call-staff-button" onClick={handleCallStaff} disabled={callState !== 'idle'}>
             {callState === 'idle' && '🔔 ເອີ້ນພະນັກງານ'}
@@ -594,6 +648,22 @@ export default function Menu() {
                             </button>
                           )}
                         </div>
+                        {hasActiveNotice(i) && (
+                          <div
+                            style={{
+                              marginTop: 6,
+                              padding: '6px 10px',
+                              borderRadius: 8,
+                              background: '#fdecea',
+                              color: '#b3261e',
+                              fontSize: 13,
+                              fontWeight: 700,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            ⚠️ ເມນູນີ້ຍັງບໍ່ພ້ອມ ກະລຸນາຕິດຕໍ່ພະນັກງານ ຫຼືຍົກເລີກລາຍການ
+                          </div>
+                        )}
                       </td>
                       <td>{i.quantity}</td>
                       <td>{i.price * i.quantity} ກີບ</td>

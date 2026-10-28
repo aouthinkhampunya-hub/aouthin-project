@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Binaries & logs
+cloudflared.exe
+*.log
+
+# Environment variables
+.env
+.env.local
+backend/.env
+frontend/aouthin-react/.env
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
